@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../core/constants/colors.dart';
-import 'match_details_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../data/models/match_model.dart';
+import '../logic/blocs/matches/match_bloc.dart';
+import 'match_details_screen.dart';
 
 class AdvancedSearchScreen extends StatefulWidget {
   const AdvancedSearchScreen({super.key});
@@ -19,12 +20,12 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.onSurface),
+          icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -43,19 +44,19 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search matches, players, or clubs',
-                prefixIcon: const Icon(Icons.search, color: AppColors.outline),
+                prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.outline),
                 filled: true,
-                fillColor: AppColors.surface,
+                fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide(
-                    color: AppColors.outlineVariant.withValues(alpha: 0.5),
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide(
-                    color: AppColors.outlineVariant.withValues(alpha: 0.5),
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -82,7 +83,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
             _buildFilterSection(
               context,
               'Skill Level',
-              ['All', 'Beginner', 'Intermediate', 'Advanced', 'Pro'],
+              ['All', 'Beginner', 'Intermediate', 'Advanced', 'Professional'],
               _selectedSkill,
               (val) => setState(() => _selectedSkill = val),
             ),
@@ -91,7 +92,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
             Text(
               'Distance (km)',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurface,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -104,8 +105,8 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 '${_distanceRange.start.round()} km',
                 '${_distanceRange.end.round()} km',
               ),
-              activeColor: AppColors.primaryContainer,
-              inactiveColor: AppColors.outlineVariant.withValues(alpha: 0.5),
+              activeColor: Theme.of(context).colorScheme.primaryContainer,
+              inactiveColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
               onChanged: (values) => setState(() => _distanceRange = values),
             ),
             const SizedBox(height: 32),
@@ -142,7 +143,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
       bottomSheet: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -168,9 +169,18 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    context.read<MatchBloc>().add(MatchFetched(
+                          sportType: _selectedSport,
+                          skillLevel: _selectedSkill,
+                          search: _searchController.text.trim().isEmpty
+                              ? null
+                              : _searchController.text.trim(),
+                        ));
+                    Navigator.pop(context);
+                  },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryContainer,
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -200,7 +210,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
         Text(
           title,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppColors.onSurface,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -216,17 +226,17 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               onSelected: (selected) {
                 if (selected) onSelected(opt);
               },
-              selectedColor: AppColors.primaryContainer,
+              selectedColor: Theme.of(context).colorScheme.primaryContainer,
               labelStyle: TextStyle(
-                color: isSelected ? Colors.white : AppColors.onSurfaceVariant,
+                color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              backgroundColor: AppColors.surface,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: BorderSide(
                   color: isSelected 
-                      ? AppColors.primaryContainer 
-                      : AppColors.outlineVariant.withValues(alpha: 0.5),
+                      ? Theme.of(context).colorScheme.primaryContainer 
+                      : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                 ),
               ),
             );
@@ -255,14 +265,13 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 title: title,
                 sportType: sport,
                 location: location,
-                dateTime: 'Today, $time',
+                dateTime: DateTime.now().toIso8601String(),
                 skillLevel: 'Intermediate',
                 availableSlots: 2,
+                maxSlots: 4,
+                joinedCount: 2,
+                participants: const [],
                 distance: 2.5,
-                avatars: [
-                  'assets/images/player_profile.png',
-                  'assets/images/player_profile.png',
-                ],
               ),
             ),
           ),
@@ -272,10 +281,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppColors.outlineVariant.withValues(alpha: 0.3),
+            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
           ),
         ),
         child: Row(
@@ -284,12 +293,12 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.primaryContainer.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 sport == 'Tennis' ? Icons.sports_tennis : Icons.sports_kabaddi,
-                color: AppColors.primaryContainer,
+                color: Theme.of(context).colorScheme.primaryContainer,
               ),
             ),
             const SizedBox(width: 16),
@@ -306,12 +315,12 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 14, color: AppColors.outline),
+                      Icon(Icons.location_on, size: 14, color: Theme.of(context).colorScheme.outline),
                       const SizedBox(width: 4),
                       Text(
                         '$location · $distance',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.outline,
+                          color: Theme.of(context).colorScheme.outline,
                         ),
                       ),
                     ],
@@ -325,14 +334,14 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 Text(
                   time,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.primaryContainer,
+                    color: Theme.of(context).colorScheme.primaryContainer,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   'Today',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.outline,
+                    color: Theme.of(context).colorScheme.outline,
                   ),
                 ),
               ],

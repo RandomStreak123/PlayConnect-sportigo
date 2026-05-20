@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../core/constants/colors.dart';
 import '../data/repositories/auth_repository.dart';
 import 'registration_screen.dart';
 
@@ -20,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -36,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(
                 'Sign in to join your next match',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
               const SizedBox(height: 48),
@@ -68,9 +67,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () {
                     // Handle forgot password
                   },
-                  child: const Text(
+                  child: Text(
                     'Forgot Password?',
-                    style: TextStyle(color: AppColors.primary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.primary),
                   ),
                 ),
               ),
@@ -101,18 +100,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                   username: _usernameController.text,
                                   password: _passwordController.text,
                                 );
-                            // Navigation is handled by AuthBloc listener in main.dart
                           } catch (e) {
-                            setState(() => _isLoading = false);
                             messenger.showSnackBar(
                               SnackBar(content: Text(e.toString())),
                             );
+                          } finally {
+                            if (mounted) setState(() => _isLoading = false);
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.outlineVariant,
+                    disabledBackgroundColor: Theme.of(context).colorScheme.outlineVariant,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -141,9 +140,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: AppColors.onSurfaceVariant),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                     GestureDetector(
                       onTap: () {
@@ -154,10 +153,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         );
                       },
-                      child: const Text(
+                      child: Text(
                         'Sign Up',
                         style: TextStyle(
-                          color: AppColors.primary,
+                          color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -201,27 +200,27 @@ class _LoginScreenState extends State<LoginScreen> {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hintText,
-            prefixIcon: Icon(icon, color: AppColors.outline),
+            prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.outline),
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
                       isPasswordVisible
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
-                      color: AppColors.outline,
+                      color: Theme.of(context).colorScheme.outline,
                     ),
                     onPressed: onToggleVisibility,
                   )
                 : null,
             filled: true,
-            fillColor: AppColors.surfaceDim.withValues(alpha: 0.3),
+            fillColor: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
             ),
           ),
         ),

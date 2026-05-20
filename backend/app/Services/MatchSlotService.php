@@ -1,0 +1,114 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\SportMatch;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Single source of truth for match capacity (slots).
+ * Every join, leave, create, or read path must go through here so
+ * available_slots / max_slots stay aligned with sport_match_user.
+ */
+class MatchSlotService
+{
+    public function syncMatch(SportMatch $match): SportMatch
+    {
+        $match->syncAvailableSlots();
+
+        return $match->fresh(['users:id,name,profile_picture']);
+    }
+
+    public function syncCollection(Collection $matches): Collection
+    {
+        $matches->each(fn (SportMatch $match) => $match->syncAvailableSlots());
+
+        return $matches;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    public function createMatch(array $validated, User $user, bool $womenOnly): SportMatch
+    {
+        $openSlots = (int) $validated['available_slots'];
+        $maxSlots = $openSlots + 1;
+
+        return DB::transaction(function () use ($validated, $womenOnly, $maxSlots, $user, $openSlots) {
+            $match = SportMatch::create([
+                ...collect($validated)->except('available_slots')->all(),
+                'available_slots' => $openSlots,
+                'max_slots' => $maxSlots,
+                'women_only' => $womenOnly,
+                'creator_id' => $user->id,
+            ]);
+
+            $match->users()->attach($user->id);
+            $match->syncAvailableSlots();
+
+            return $match->load('users:id,name,profile_picture');
+        });
+    }
+
+    public function updateOpenSlots(SportMatch $match, int $openSlots): SportMatch
+    {
+        $joined = $match->users()->count();
+        $match->update([
+            'available_slots' => $openSlots,
+            'max_slots' => $joined + $openSlots,
+        ]);
+        $match->syncAvailableSlots();
+
+        return $match->load('users:id,name,profile_picture');
+    }
+
+    /**
+     * @return array{error?: string, status?: int, match?: SportMatch}
+     */
+    public function join(SportMatch $match, User $user): array
+    {
+        return DB::transaction(function () use ($match, $user) {
+            $match = SportMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
+
+            if ($match->users()->where('user_id', $user->id)->exists()) {
+                return ['error' => 'Already joined', 'status' => 409];
+            }
+
+            if ($match->users()->count() >= $match->max_slots) {
+                return ['error' => 'Match is full', 'status' => 409];
+            }
+
+            $match->users()->attach($user->id);
+            $match->syncAvailableSlots();
+
+            return ['match' => $match->load('users:id,name,profile_picture')];
+        });
+    }
+
+    /**
+     * @return array{error?: string, status?: int, match?: SportMatch}
+     */
+    public function leave(SportMatch $match, User $user): array
+    {
+        if (! $match->users()->where('user_id', $user->id)->exists()) {
+            return ['error' => 'You are not a member of this match', 'status' => 404];
+        }
+
+        if ($match->creator_id === $user->id) {
+            return [
+                'error' => 'Match creators cannot leave. Delete the match instead.',
+                'status' => 403,
+            ];
+        }
+
+        return DB::transaction(function () use ($match, $user) {
+            $match = SportMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
+            $match->users()->detach($user->id);
+            $match->syncAvailableSlots();
+
+            return ['match' => $match->load('users:id,name,profile_picture')];
+        });
+    }
+}

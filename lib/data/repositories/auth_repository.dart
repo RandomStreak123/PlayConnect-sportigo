@@ -42,23 +42,28 @@ class AuthRepository {
     await prefs.setString('cached_user', jsonEncode(user.toJson()));
   }
 
-  Future<UserModel?> _getLocalUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString('cached_user');
-    if (userJson != null) {
-      return UserModel.fromJson(jsonDecode(userJson));
-    }
-    return null;
-  }
-
   Future<void> _removeLocalUser() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('cached_user');
   }
 
-  // ──────────────────────────────────────────────────────────
-  // REAL AUTH METHODS
-  // ──────────────────────────────────────────────────────────
+  Map<String, dynamic>? _decodeJsonBody(String body) {
+    if (body.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {}
+    return null;
+  }
+
+  String _extractErrorMessage(http.Response response, String fallback) {
+    final data = _decodeJsonBody(response.body);
+    if (data != null) {
+      final message = data['message'];
+      if (message is String && message.isNotEmpty) return message;
+    }
+    return fallback;
+  }
 
   /// Register.
   Future<UserModel> register({
@@ -66,6 +71,7 @@ class AuthRepository {
     required String username,
     required String password,
     String? phoneNumber,
+    String? gender,
   }) async {
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.register}'),
@@ -75,11 +81,13 @@ class AuthRepository {
         'username': username,
         'password': password,
         'phone_number': phoneNumber,
+        'gender': gender,
       }),
     );
 
     if (response.statusCode == 201) {
-      final data = jsonDecode(response.body);
+      final data = _decodeJsonBody(response.body);
+      if (data == null) throw Exception('Invalid server response');
       final user = UserModel.fromJson(data['user']);
       final token = data['access_token'];
 
@@ -88,8 +96,7 @@ class AuthRepository {
       _controller.add(AuthStatus.authenticated);
       return user;
     } else {
-      final data = jsonDecode(response.body);
-      throw Exception(data['message'] ?? 'Registration failed');
+      throw Exception(_extractErrorMessage(response, 'Registration failed'));
     }
   }
 
@@ -108,7 +115,8 @@ class AuthRepository {
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+      final data = _decodeJsonBody(response.body);
+      if (data == null) throw Exception('Invalid server response');
       final user = UserModel.fromJson(data['user']);
       final token = data['access_token'];
 
@@ -117,8 +125,7 @@ class AuthRepository {
       _controller.add(AuthStatus.authenticated);
       return user;
     } else {
-      final data = jsonDecode(response.body);
-      throw Exception(data['message'] ?? 'Login failed');
+      throw Exception(_extractErrorMessage(response, 'Login failed'));
     }
   }
 
@@ -134,7 +141,7 @@ class AuthRepository {
         },
       );
     }
-    
+
     await _removeToken();
     await _removeLocalUser();
     _controller.add(AuthStatus.unauthenticated);
@@ -142,11 +149,6 @@ class AuthRepository {
 
   /// Get user — returns local cache or fetches from server.
   Future<UserModel?> getUser() async {
-    final localUser = await _getLocalUser();
-    if (localUser != null) {
-      return localUser;
-    }
-    
     final token = await _getToken();
     if (token == null) return null;
 
@@ -159,7 +161,12 @@ class AuthRepository {
     );
 
     if (response.statusCode == 200) {
-      final user = UserModel.fromJson(jsonDecode(response.body));
+      final data = _decodeJsonBody(response.body);
+      if (data == null) {
+        await logOut();
+        return null;
+      }
+      final user = UserModel.fromJson(data);
       await _saveUserLocally(user);
       return user;
     } else {
@@ -188,21 +195,48 @@ class AuthRepository {
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+      final data = _decodeJsonBody(response.body);
+      if (data == null) throw Exception('Invalid server response');
       final user = UserModel.fromJson(data['user']);
       await _saveUserLocally(user);
       return user;
     } else {
-      try {
-        final data = jsonDecode(response.body);
-        throw Exception(data['message'] ?? 'Profile photo upload failed');
-      } catch (_) {
-        throw Exception('Profile photo upload failed: ${response.statusCode}');
-      }
+      throw Exception(_extractErrorMessage(response, 'Profile photo upload failed'));
+    }
+  }
+
+  Future<UserModel> updateProfile({
+    String? name,
+    String? phoneNumber,
+    bool? hidePhone,
+  }) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('User not authenticated');
+
+    final response = await http.put(
+      Uri.parse('${ApiConstants.baseUrl}/profile'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'name': ?name,
+        'phone_number': ?phoneNumber,
+        'hide_phone': ?hidePhone,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = _decodeJsonBody(response.body);
+      if (data == null) throw Exception('Invalid server response');
+      final user = UserModel.fromJson(data['user']);
+      await _saveUserLocally(user);
+      return user;
+    } else {
+      throw Exception(_extractErrorMessage(response, 'Failed to update profile'));
     }
   }
 
   void dispose() => _controller.close();
 }
-
-

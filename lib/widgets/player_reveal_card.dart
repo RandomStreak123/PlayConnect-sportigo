@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
+import '../core/utils/sport_icon_helper.dart';
 
 class PlayerRevealCard extends StatelessWidget {
-  const PlayerRevealCard({super.key});
+  final String playerName;
+  final String sportType;
+
+  const PlayerRevealCard({
+    super.key,
+    this.playerName = 'Player',
+    this.sportType = 'Sport',
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         children: [
@@ -19,22 +28,21 @@ class PlayerRevealCard extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.outlineVariant,
+              color: theme.colorScheme.outlineVariant,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 32),
-          // Profile Image
           Container(
             width: 120,
             height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: AppColors.primaryContainer.withValues(alpha: 0.1),
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
                 width: 4,
               ),
-              color: AppColors.surfaceDim,
+              color: theme.colorScheme.surfaceDim,
               image: const DecorationImage(
                 image: AssetImage('assets/images/player_profile.png'),
                 fit: BoxFit.cover,
@@ -43,8 +51,26 @@ class PlayerRevealCard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Alex Johnson',
+            playerName,
             style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                SportIconHelper.iconForSport(sportType),
+                color: theme.colorScheme.primaryContainer,
+                size: 20,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                sportType,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Row(
@@ -53,88 +79,34 @@ class PlayerRevealCard extends StatelessWidget {
               const Icon(Icons.star, color: AppColors.warmOrange, size: 20),
               const SizedBox(width: 4),
               Text(
-                '4.9 (42 matches)',
+                'Match participant',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 32),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildStatColumn(context, 'Level', 'Advanced'),
-                _buildStatColumn(context, 'Style', 'Attacking'),
-                _buildStatColumn(context, 'Sports', '3 types'),
-              ],
-            ),
-          ),
           const Spacer(),
           Padding(
             padding: const EdgeInsets.all(24.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.primaryContainer),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      'Message',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.primaryContainer,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+            child: SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryContainer,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Follow Player',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ],
+                child: const Text('Close'),
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatColumn(BuildContext context, String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(color: AppColors.primaryContainer),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: Theme.of(context).textTheme.labelSmall),
-      ],
     );
   }
 }

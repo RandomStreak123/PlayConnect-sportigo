@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../core/constants/colors.dart';
 import '../data/models/match_model.dart';
+import '../logic/blocs/auth/auth_bloc.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 
 class CreateMatchScreen extends StatefulWidget {
@@ -21,9 +21,13 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   String _selectedSport = 'Football';
   String _selectedSkill = 'Intermediate';
   DateTime _selectedDate = DateTime.now().add(const Duration(hours: 2));
+  bool _womenOnly = false;
+  bool _isSubmitting = false;
 
   final List<String> _sports = ['Football', 'Basketball', 'Tennis', 'Padel', 'Badminton', 'Cricket'];
   final List<String> _skills = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
+
+  static const double _fieldHeight = 52;
 
   Future<void> _selectDateTime() async {
     final DateTime? pickedDate = await showDatePicker(
@@ -34,10 +38,10 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primary,
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).colorScheme.primary,
               onPrimary: Colors.white,
-              onSurface: AppColors.onSurface,
+              onSurface: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           child: child!,
@@ -67,31 +71,46 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   }
 
   void _submitForm() {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && !_isSubmitting) {
+      final openSlots = int.parse(_slotsController.text);
       final match = MatchModel(
-        id: '', // Backend will generate
+        id: '',
         sportType: _selectedSport,
         title: _titleController.text,
         dateTime: DateFormat('yyyy-MM-dd HH:mm:ss').format(_selectedDate),
         location: _locationController.text,
-        availableSlots: int.parse(_slotsController.text),
+        availableSlots: openSlots,
+        maxSlots: openSlots + 1,
+        joinedCount: 0,
         skillLevel: _selectedSkill,
+        participants: const [],
         distance: 0.0,
-        avatars: [],
+        womenOnly: _womenOnly,
       );
 
+      setState(() => _isSubmitting = true);
       context.read<MatchBloc>().add(MatchCreated(match));
-      Navigator.pop(context);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return BlocListener<MatchBloc, MatchState>(
+      listenWhen: (previous, current) =>
+          previous.message != current.message && current.message != null,
+      listener: (context, state) {
+        if (!_isSubmitting || state.message == null) return;
+        if (state.isActionSuccess) {
+          Navigator.pop(context);
+        } else {
+          setState(() => _isSubmitting = false);
+        }
+      },
+      child: Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Create New Match'),
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -105,7 +124,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                 'Match Details',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 24),
@@ -135,13 +154,13 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.outlineVariant),
+                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today, color: AppColors.primary, size: 20),
+                      Icon(Icons.calendar_today, color: Theme.of(context).colorScheme.primary, size: 20),
                       const SizedBox(width: 12),
                       Text(
                         DateFormat('MMM dd, yyyy - hh:mm a').format(_selectedDate),
@@ -164,6 +183,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
               const SizedBox(height: 20),
 
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Column(
@@ -174,6 +194,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                           controller: _slotsController,
                           hint: 'e.g., 10',
                           keyboardType: TextInputType.number,
+                          fixedHeight: true,
                           validator: (val) {
                             if (val!.isEmpty) return 'Required';
                             if (int.tryParse(val) == null) return 'Invalid';
@@ -200,22 +221,96 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                 ],
               ),
               
+              // Women-Only Match Toggle (only for female users)
+              BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, authState) {
+                  if (authState.user?.gender != 'female') {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      decoration: BoxDecoration(
+                        gradient: _womenOnly
+                            ? LinearGradient(
+                                colors: [
+                                  const Color(0xFFFF4D8D).withValues(alpha: 0.08),
+                                  const Color(0xFF7B61FF).withValues(alpha: 0.05),
+                                ],
+                              )
+                            : null,
+                        color: _womenOnly ? null : Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _womenOnly
+                              ? const Color(0xFFFF4D8D).withValues(alpha: 0.4)
+                              : Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                      ),
+                      child: SwitchListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        title: Row(
+                          children: [
+                            Text(
+                              '🌸',
+                              style: TextStyle(fontSize: _womenOnly ? 20 : 16),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Women-Only Match',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                        subtitle: Text(
+                          _womenOnly
+                              ? 'Only female players can join this match'
+                              : 'Enable to restrict to women players',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _womenOnly
+                                ? const Color(0xFFFF4D8D)
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        value: _womenOnly,
+                        activeThumbColor: const Color(0xFFFF4D8D),
+                        onChanged: (val) => setState(() => _womenOnly = val),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
               const SizedBox(height: 40),
               
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _submitForm,
+                  onPressed: _isSubmitting ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
                     'Create Match',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
@@ -225,6 +320,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -233,10 +329,22 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w600,
-          color: AppColors.onSurfaceVariant,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
+      ),
+    );
+  }
+
+  InputBorder _fieldBorder({bool focused = false}) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: focused
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.outlineVariant,
+        width: focused ? 2 : 1,
       ),
     );
   }
@@ -246,31 +354,34 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     required String hint,
     IconData? icon,
     TextInputType? keyboardType,
+    bool fixedHeight = false,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
+    final field = TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
+      style: Theme.of(context).textTheme.bodyLarge,
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: icon != null ? Icon(icon, color: AppColors.outline) : null,
+        prefixIcon: icon != null
+            ? Icon(icon, color: Theme.of(context).colorScheme.outline)
+            : null,
         filled: true,
-        fillColor: AppColors.surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.outlineVariant),
+        fillColor: Theme.of(context).colorScheme.surface,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: icon != null ? 0 : 16,
+          vertical: fixedHeight ? 14 : 16,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-        ),
+        border: _fieldBorder(),
+        enabledBorder: _fieldBorder(),
+        focusedBorder: _fieldBorder(focused: true),
       ),
     );
+
+    if (!fixedHeight) return field;
+
+    return SizedBox(height: _fieldHeight, child: field);
   }
 
   Widget _buildDropdown({
@@ -279,16 +390,20 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     required void Function(String?) onChanged,
   }) {
     return Container(
+      height: _fieldHeight,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
+      alignment: Alignment.centerLeft,
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
+          isDense: true,
+          style: Theme.of(context).textTheme.bodyLarge,
           items: items.map((String item) {
             return DropdownMenuItem<String>(
               value: item,

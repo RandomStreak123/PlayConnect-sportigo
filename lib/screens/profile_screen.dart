@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/constants/colors.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../data/repositories/auth_repository.dart';
+import '../theme/theme_manager.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -46,7 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     super.dispose();
   }
 
-  Color _getSportColor(String sport) {
+  Color _getSportColor(BuildContext context, String sport) {
     switch (sport) {
       case 'Football':
         return AppColors.sportsGreen;
@@ -61,7 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       case 'Badminton':
         return Colors.purple.shade600;
       default:
-        return AppColors.primaryContainer;
+        return Theme.of(context).colorScheme.primaryContainer;
     }
   }
 
@@ -70,11 +71,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final authBloc = context.read<AuthBloc>();
     final authRepository = context.read<AuthRepository>();
+    final errorColor = Theme.of(context).colorScheme.error;
 
     try {
       final source = await showModalBottomSheet<ImageSource>(
         context: context,
-        backgroundColor: AppColors.surface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
@@ -90,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.outlineVariant,
+                      color: Theme.of(context).colorScheme.outlineVariant,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -107,10 +109,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryContainer.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.photo_library, color: AppColors.primaryContainer),
+                    child: Icon(Icons.photo_library, color: Theme.of(context).colorScheme.primaryContainer),
                   ),
                   title: const Text('Choose from Gallery'),
                   onTap: () => Navigator.pop(context, ImageSource.gallery),
@@ -119,10 +121,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryContainer.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.camera_alt, color: AppColors.primaryContainer),
+                    child: Icon(Icons.camera_alt, color: Theme.of(context).colorScheme.primaryContainer),
                   ),
                   title: const Text('Take a Photo'),
                   onTap: () => Navigator.pop(context, ImageSource.camera),
@@ -163,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Failed to upload profile photo: $e'),
-          backgroundColor: AppColors.error,
+          backgroundColor: errorColor,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -178,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final sportColor = _getSportColor(_selectedSport);
+    final sportColor = _getSportColor(context, _selectedSport);
     
     return Scaffold(
       body: Stack(
@@ -190,8 +192,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               gradient: LinearGradient(
                 colors: [
                   sportColor.withValues(alpha: 0.15),
-                  AppColors.background.withValues(alpha: 0.9),
-                  AppColors.background,
+                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+                  Theme.of(context).colorScheme.surface,
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -225,6 +227,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   // Responsive Segmented Activity/Streaks Section
                   _buildActivitySection(context, sportColor),
                   
+                  // Privacy & Personalization Section
+                  _buildPrivacySection(context, sportColor),
+                  
                   // Menu Settings Panel
                   _buildSettingsPanel(context, sportColor),
                   
@@ -249,17 +254,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
-              color: AppColors.onSurface,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           Container(
             decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.8),
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.4)),
+              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
             ),
             child: IconButton(
-              icon: const Icon(Icons.settings_outlined, color: AppColors.onSurface),
+              icon: Icon(Icons.settings_outlined, color: Theme.of(context).colorScheme.onSurface),
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -279,7 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.7),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(32),
         border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.5),
         boxShadow: [
@@ -347,9 +352,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           Container(
                             width: 136,
                             height: 136,
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: AppColors.background,
+                              color: Theme.of(context).colorScheme.surface,
                             ),
                           ),
                           
@@ -461,7 +466,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               userName,
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w900,
-                                color: AppColors.onSurface,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -471,9 +476,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                 color: AppColors.electricCyan,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.check,
-                                color: AppColors.primary,
+                                color: Theme.of(context).colorScheme.primary,
                                 size: 12,
                               ),
                             ),
@@ -496,16 +501,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             Container(
                               width: 4,
                               height: 4,
-                              decoration: const BoxDecoration(
-                                color: AppColors.outline,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.outline,
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Text(
+                            Text(
                               '🇮🇳 Kochi, IN',
                               style: TextStyle(
-                                color: AppColors.onSurfaceVariant,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
                               ),
@@ -529,7 +534,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.7),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
       ),
@@ -547,7 +552,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     'Level 24 Player',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: AppColors.onSurface,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -555,7 +560,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               Text(
                 '750 / 1000 XP',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -569,7 +574,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               children: [
                 Container(
                   height: 10,
-                  color: AppColors.surfaceDim.withValues(alpha: 0.4),
+                  color: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.4),
                 ),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 800),
@@ -594,7 +599,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               Text(
                 'Progress to Level 25: 75%',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
                 ),
               ),
@@ -667,7 +672,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.6),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
         boxShadow: [
@@ -688,7 +693,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               Text(
                 title,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -699,7 +704,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w900,
-              color: AppColors.onSurface,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -712,7 +717,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.7),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
       ),
@@ -748,12 +753,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     '48 Friends',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
-                      color: AppColors.onSurface,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   Text(
@@ -830,7 +835,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             'Favorite Sports Interests',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w900,
-              color: AppColors.onSurface,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
@@ -844,7 +849,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             itemBuilder: (context, index) {
               final sportItem = _sportsList[index];
               final isSelected = _selectedSport == sportItem['name'];
-              final dynamicColor = _getSportColor(sportItem['name']);
+                final dynamicColor = _getSportColor(context, sportItem['name']);
               
               return GestureDetector(
                 onTap: () {
@@ -859,12 +864,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   decoration: BoxDecoration(
                     color: isSelected
                         ? dynamicColor
-                        : AppColors.surface.withValues(alpha: 0.6),
+                        : Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: isSelected
                           ? dynamicColor
-                          : AppColors.outlineVariant.withValues(alpha: 0.5),
+                          : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                       width: 1.5,
                     ),
                     boxShadow: isSelected
@@ -887,7 +892,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       Text(
                         sportItem['name']!,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : AppColors.onSurface,
+                          color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -943,7 +948,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         child: Text(
           label,
           style: TextStyle(
-            color: isActive ? sportColor : AppColors.onSurfaceVariant,
+            color: isActive ? sportColor : Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w900,
             fontSize: 13,
           ),
@@ -1004,7 +1009,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.7),
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
             ),
@@ -1013,7 +1018,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -1021,13 +1026,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
-                            color: AppColors.onSurface,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         SizedBox(height: 4),
                         Text(
                           'Keep playing to multiply your XP gains!',
-                          style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -1070,7 +1075,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.6),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
       ),
@@ -1094,18 +1099,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
-                    color: AppColors.onSurface,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.onSurfaceVariant,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -1135,7 +1140,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.6),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
       ),
@@ -1147,10 +1152,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 11,
-              color: AppColors.onSurface,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -1159,9 +1164,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 9,
-              color: AppColors.onSurfaceVariant,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -1180,7 +1185,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: active ? sportColor : AppColors.surfaceDim.withValues(alpha: 0.3),
+            color: active ? sportColor : Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
             boxShadow: active
                 ? [
                     BoxShadow(
@@ -1195,20 +1200,224 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             child: Icon(
               active ? Icons.check : Icons.close,
               size: 14,
-              color: active ? Colors.white : AppColors.outline.withValues(alpha: 0.5),
+              color: active ? Colors.white : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
             ),
           ),
         ),
         const SizedBox(height: 6),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: AppColors.onSurfaceVariant,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPrivacySection(BuildContext context, Color sportColor) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        final user = authState.user;
+        if (user == null) return const SizedBox.shrink();
+
+        final themeManager = context.watch<ThemeManager>();
+        final genderLabel = switch (user.gender) {
+          'female' => '♀ Female',
+          'male' => '♂ Male',
+          'other' => '⚧ Other',
+          _ => '🏷️ Not Set',
+        };
+        final genderColor = switch (user.gender) {
+          'female' => const Color(0xFFFF4D8D),
+          'male' => const Color(0xFF4A90D9),
+          _ => Theme.of(context).colorScheme.onSurfaceVariant,
+        };
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Section Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.shield_outlined, color: sportColor, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Privacy & Personalization',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(indent: 20, endIndent: 20, height: 1),
+
+              // Gender Identity
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: genderColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.person_outline, color: genderColor, size: 20),
+                ),
+                title: const Text(
+                  'Gender Identity',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                subtitle: Text(
+                  genderLabel,
+                  style: TextStyle(fontSize: 12, color: genderColor, fontWeight: FontWeight.w600),
+                ),
+                trailing: Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.outlineVariant, size: 20),
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Gender can be updated during registration'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+
+              // Hide Phone Number Toggle
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                secondary: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.phone_disabled_outlined, color: Colors.teal, size: 20),
+                ),
+                title: const Text(
+                  'Hide Phone Number',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                subtitle: Text(
+                  user.hidePhone ? 'Phone hidden from other players' : 'Phone visible to match organizers',
+        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+                value: user.hidePhone,
+                activeThumbColor: Colors.teal,
+                onChanged: (val) async {
+                  try {
+                    final authRepo = context.read<AuthRepository>();
+                    final updatedUser = await authRepo.updateProfile(hidePhone: val);
+                    if (context.mounted) {
+                      context.read<AuthBloc>().add(AuthUserUpdated(updatedUser));
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to update: $e'),
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+
+              // Lavender Theme Toggle (only for female users)
+              if (user.gender == 'female')
+                AnimatedBuilder(
+                  animation: themeManager,
+                  builder: (context, _) {
+                    final isLavender = themeManager.isWomenMode;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: isLavender
+                            ? LinearGradient(
+                                colors: [
+                                  const Color(0xFFFF4D8D).withValues(alpha: 0.06),
+                                  const Color(0xFF7B61FF).withValues(alpha: 0.04),
+                                ],
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(16),
+                        border: isLavender
+                            ? Border.all(color: const Color(0xFFFF4D8D).withValues(alpha: 0.2))
+                            : null,
+                      ),
+                      child: SwitchListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        secondary: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: isLavender
+                                ? const LinearGradient(
+                                    colors: [Color(0xFFFF4D8D), Color(0xFF7B61FF)],
+                                  )
+                                : null,
+                            color: isLavender ? null : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.palette_outlined,
+                            color: isLavender ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+                            size: 20,
+                          ),
+                        ),
+                        title: Row(
+                          children: [
+                            const Text(
+                              'Elegant Lavender Theme',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            const SizedBox(width: 6),
+                            if (isLavender)
+                              const Text('🌸', style: TextStyle(fontSize: 14)),
+                          ],
+                        ),
+                        subtitle: Text(
+                          isLavender
+                              ? 'Soft pink & lavender experience active'
+                              : 'Switch to elegant lavender palette',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isLavender ? const Color(0xFFFF4D8D) : Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        value: isLavender,
+                        activeThumbColor: const Color(0xFFFF4D8D),
+                        onChanged: (val) {
+                          themeManager.setThemePreference(
+                            val
+                                ? ThemePreference.elegantLavender
+                                : ThemePreference.activeSteelBlue,
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1216,7 +1425,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.7),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
       ),
@@ -1291,17 +1500,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         title,
         style: TextStyle(
           fontWeight: FontWeight.bold,
-          color: isDestructive ? Colors.red : AppColors.onSurface,
+          color: isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface,
           fontSize: 14,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.chevron_right_rounded,
-        color: AppColors.outlineVariant,
+        color: Theme.of(context).colorScheme.outlineVariant,
         size: 20,
       ),
       onTap: onTap,

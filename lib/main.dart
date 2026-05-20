@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_manager.dart';
 import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
 import 'data/repositories/auth_repository.dart';
@@ -9,7 +11,6 @@ import 'logic/blocs/auth/auth_bloc.dart';
 import 'logic/blocs/matches/match_bloc.dart';
 import 'core/constants/colors.dart';
 import 'core/utils/sport_image_helper.dart';
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,18 +28,20 @@ class PlayConnectApp extends StatefulWidget {
 class _PlayConnectAppState extends State<PlayConnectApp> {
   late final AuthRepository _authRepository;
   late final MatchRepository _matchRepository;
+  late final ThemeManager _themeManager;
 
   @override
   void initState() {
     super.initState();
     _authRepository = AuthRepository();
     _matchRepository = MatchRepository();
+    _themeManager = ThemeManager();
   }
-
 
   @override
   void dispose() {
     _authRepository.dispose();
+    _themeManager.dispose();
     super.dispose();
   }
 
@@ -49,87 +52,92 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
         RepositoryProvider.value(value: _authRepository),
         RepositoryProvider.value(value: _matchRepository),
       ],
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider(
-            create: (_) => AuthBloc(authRepository: _authRepository)
-              ..add(const AuthCheckRequested()),
-          ),
-          BlocProvider(
-            create: (_) => MatchBloc(matchRepository: _matchRepository)
-              ..add(const MatchFetched()),
-          ),
-        ],
-        child: const AppView(),
+      child: ChangeNotifierProvider.value(
+        value: _themeManager,
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => AuthBloc(authRepository: _authRepository)
+                ..add(const AuthCheckRequested()),
+            ),
+            BlocProvider(
+              create: (_) => MatchBloc(matchRepository: _matchRepository),
+            ),
+          ],
+          child: const AppView(),
+        ),
       ),
     );
   }
 }
 
-class AppView extends StatefulWidget {
+class AppView extends StatelessWidget {
   const AppView({super.key});
 
   @override
-  State<AppView> createState() => _AppViewState();
-}
-
-class _AppViewState extends State<AppView> {
-  final _navigatorKey = GlobalKey<NavigatorState>();
-
-  NavigatorState get _navigator => _navigatorKey.currentState!;
-
-  @override
   Widget build(BuildContext context) {
+    final themeManager = context.watch<ThemeManager>();
+    final theme = AppTheme.themeData(themeManager.isWomenMode);
+
     return MaterialApp(
-      navigatorKey: _navigatorKey,
       title: 'PlayConnect',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      theme: theme,
       builder: (context, child) {
-        return BlocListener<MatchBloc, MatchState>(
-          listener: (context, state) {
-            if (state.status == MatchStatus.actionSuccess ||
-                state.status == MatchStatus.actionFailure) {
-              if (state.message != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message!),
-                    backgroundColor: state.status == MatchStatus.actionSuccess
-                        ? AppColors.sportsGreen
-                        : AppColors.error,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            }
-          },
-          child: BlocListener<AuthBloc, AuthState>(
-            listener: (context, state) {
-              switch (state.status) {
-                case AuthStatus.authenticated:
-                  _navigator.pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const MainScreen()),
-                    (route) => false,
+        return MultiBlocListener(
+          listeners: [
+            BlocListener<MatchBloc, MatchState>(
+              listenWhen: (previous, current) =>
+                  current.message != null && current.message != previous.message,
+              listener: (context, state) {
+                if (state.message != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message!),
+                      backgroundColor: state.isActionSuccess
+                          ? AppColors.sportsGreen
+                          : Theme.of(context).colorScheme.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
                   );
-                  break;
-                case AuthStatus.unauthenticated:
-                  _navigator.pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    (route) => false,
-                  );
-                  break;
-                case AuthStatus.unknown:
-                  break;
-              }
-            },
-            child: child,
-          ),
+                }
+              },
+            ),
+            BlocListener<AuthBloc, AuthState>(
+              listenWhen: (previous, current) {
+                if (previous.user?.gender != current.user?.gender) return true;
+                return previous.status != AuthStatus.authenticated &&
+                    current.status == AuthStatus.authenticated;
+              },
+              listener: (context, state) {
+                final themeManager = context.read<ThemeManager>();
+                if (state.status == AuthStatus.authenticated &&
+                    state.user != null) {
+                  themeManager.updateGender(state.user!.gender);
+                  context.read<MatchBloc>().add(const MatchFetched());
+                  context.read<MatchBloc>().add(const MyMatchesFetched());
+                } else if (state.status == AuthStatus.unauthenticated) {
+                  themeManager.updateGender(null);
+                }
+              },
+            ),
+          ],
+          child: child ?? const SizedBox.shrink(),
         );
       },
-      onGenerateRoute: (_) => MaterialPageRoute(
-        builder: (_) => const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
+      home: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, state) {
+          switch (state.status) {
+            case AuthStatus.unknown:
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            case AuthStatus.authenticated:
+              return const MainScreen();
+            case AuthStatus.unauthenticated:
+              return const LoginScreen();
+          }
+        },
       ),
     );
   }

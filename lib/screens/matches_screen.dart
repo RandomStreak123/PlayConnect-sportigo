@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../core/constants/colors.dart';
 import '../widgets/match_card.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import 'create_match_screen.dart';
@@ -18,7 +17,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
   void initState() {
     super.initState();
     // Fetch matches immediately on load
-    context.read<MatchBloc>().add(const MatchFetched());
+    context.read<MatchBloc>().add(const MyMatchesFetched());
   }
 
   @override
@@ -26,13 +25,13 @@ class _MatchesScreenState extends State<MatchesScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           toolbarHeight: 80,
           flexibleSpace: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryContainer],
+                colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primaryContainer],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -62,7 +61,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
               child: TabBar(
                 indicatorColor: Colors.transparent,
                 dividerColor: Colors.transparent,
-                labelColor: AppColors.primary,
+                labelColor: Theme.of(context).colorScheme.primary,
                 unselectedLabelColor: Colors.white.withValues(alpha: 0.8),
                 indicatorSize: TabBarIndicatorSize.tab,
                 indicator: BoxDecoration(
@@ -116,18 +115,18 @@ class _MatchesScreenState extends State<MatchesScreen> {
   Widget _buildMatchTab({required bool isUpcoming}) {
     return BlocBuilder<MatchBloc, MatchState>(
       builder: (context, state) {
-        if (state.status == MatchStatus.loading) {
-          return const Center(
+        if (state.myMatchesStatus == MatchStatus.loading &&
+            state.myMatches.isEmpty) {
+          return Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
             ),
           );
         }
 
         final now = DateTime.now();
 
-        // Categorize matches
-        var filteredMatches = state.matches.where((match) {
+        var filteredMatches = state.myMatches.where((match) {
           final isMatchUpcoming =
               match.parsedDateTime.isAfter(now) ||
               match.parsedDateTime.isAtSameMomentAs(now);
@@ -146,9 +145,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
         }
 
         return RefreshIndicator(
-          color: AppColors.primary,
+          color: Theme.of(context).colorScheme.primary,
           onRefresh: () async {
-            context.read<MatchBloc>().add(const MatchFetched());
+            context.read<MatchBloc>().add(const MyMatchesFetched());
           },
           child: filteredMatches.isEmpty
               ? _buildEmptyState(isUpcoming)
@@ -179,7 +178,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.05),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -187,7 +186,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                         ? Icons.sports_soccer_rounded
                         : Icons.history_toggle_off_rounded,
                     size: 80,
-                    color: AppColors.primary.withValues(alpha: 0.7),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -195,7 +194,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                   isUpcoming ? 'No Upcoming Matches' : 'No Match History',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.onSurface,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -205,7 +204,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                       ? 'You have no scheduled matches. Join an existing game or create your own to start playing!'
                       : 'You haven\'t played any matches yet. Once you complete a match, it will be saved here.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.onSurfaceVariant,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     height: 1.5,
                   ),
                   textAlign: TextAlign.center,
@@ -231,7 +230,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 16,

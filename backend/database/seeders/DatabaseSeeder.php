@@ -56,8 +56,15 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($matches as $matchData) {
-            $match = \App\Models\SportMatch::create($matchData);
+            $openSlots = $matchData['available_slots'];
+            $match = \App\Models\SportMatch::create([
+                ...$matchData,
+                'available_slots' => $openSlots,
+                'max_slots' => $openSlots + 1,
+                'creator_id' => $user->id,
+            ]);
             $match->users()->attach($user->id);
+            $match->syncAvailableSlots();
         }
     }
 }

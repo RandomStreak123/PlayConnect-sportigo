@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use App\Models\User;
 
 class AuthController extends Controller
@@ -13,9 +14,10 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'username' => 'required|string|max:255|unique:users',
-            'password' => 'required|string|min:6',
+            'username' => 'required|string|max:255|unique:users|alpha_dash|min:3',
+            'password' => ['required', 'string', Password::min(8)],
             'phone_number' => 'nullable|string|max:20',
+            'gender' => 'nullable|string|in:male,female,other',
         ]);
 
         $user = User::create([
@@ -23,6 +25,7 @@ class AuthController extends Controller
             'username' => $validated['username'],
             'password' => Hash::make($validated['password']),
             'phone_number' => $validated['phone_number'] ?? null,
+            'gender' => $validated['gender'] ?? null,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -48,6 +51,9 @@ class AuthController extends Controller
                 'message' => 'Invalid credentials'
             ], 401);
         }
+
+        // Revoke previous tokens on login to limit token accumulation
+        $user->tokens()->delete();
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

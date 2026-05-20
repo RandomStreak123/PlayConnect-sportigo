@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../core/constants/colors.dart';
-import '../logic/blocs/matches/match_bloc.dart';
-import '../logic/blocs/auth/auth_bloc.dart';
 import '../widgets/match_card.dart';
+import '../logic/blocs/auth/auth_bloc.dart';
+import '../logic/blocs/matches/match_bloc.dart';
 import 'notifications_screen.dart';
 import 'advanced_search_screen.dart';
 import 'create_match_screen.dart';
@@ -17,6 +16,31 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _selectedCategory = 'All';
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    // Fire load-more when within 300px of the bottom
+    if (currentScroll >= maxScroll - 300) {
+      context.read<MatchBloc>().add(const MatchFetchedMore());
+    }
+  }
 
   void _onCategorySelected(String category) {
     setState(() {
@@ -28,17 +52,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
             context.read<MatchBloc>().add(const MatchFetched());
           },
           child: CustomScrollView(
+            controller: _scrollController,
             slivers: [
               SliverAppBar(
                 floating: true,
-                backgroundColor: AppColors.background,
+                toolbarHeight: 72,
+                backgroundColor: Theme.of(context).colorScheme.surface,
                 elevation: 0,
                 title: Row(
                   children: [
@@ -50,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             : const AssetImage('assets/images/player_profile.png') as ImageProvider;
                         return CircleAvatar(
                           radius: 20,
-                          backgroundColor: AppColors.surfaceDim,
+                          backgroundColor: Theme.of(context).colorScheme.surfaceDim,
                           backgroundImage: imageProvider,
                           onBackgroundImageError: (exception, stackTrace) {
                             // Avoid broken image crashes
@@ -66,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             'Good morning,',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.onSurfaceVariant,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                           BlocBuilder<AuthBloc, AuthState>(
@@ -85,9 +111,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 actions: [
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.notifications_outlined,
-                      color: AppColors.onSurface,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     onPressed: () {
                       Navigator.push(
@@ -122,20 +148,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             vertical: 12,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surface.withValues(alpha: 0.5),
+                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: AppColors.outlineVariant.withValues(alpha: 0.5),
+                              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                             ),
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
-                              Icon(Icons.search, color: AppColors.outline),
-                              SizedBox(width: 12),
+                              Icon(Icons.search, color: Theme.of(context).colorScheme.outline),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   'Find matches or players...',
-                                  style: TextStyle(color: AppColors.onSurfaceVariant),
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -173,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Text(
                               'See All',
                               style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(color: AppColors.primaryContainer),
+                                  ?.copyWith(color: Theme.of(context).colorScheme.primaryContainer),
                             ),
                           ),
                         ],
@@ -185,7 +211,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               BlocBuilder<MatchBloc, MatchState>(
                 builder: (context, state) {
-                  if (state.status == MatchStatus.initial) {
+                  if (state.status == MatchStatus.initial ||
+                      (state.status == MatchStatus.loading && state.matches.isEmpty)) {
                     return const SliverFillRemaining(
                       child: Center(child: CircularProgressIndicator()),
                     );
@@ -222,6 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           final match = upcomingMatches[index];
                           return SizedBox(
                             width: 312,
+                            height: 364,
                             child: MatchCard(
                               match: match,
                               isHorizontal: true,
@@ -243,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    'Trending Tonight',
+                    'Trending Matches',
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                 ),
@@ -263,10 +291,38 @@ class _HomeScreenState extends State<HomeScreen> {
                     return SliverList(
                       delegate: SliverChildBuilderDelegate((context, index) {
                         final match = upcomingMatches[index % upcomingMatches.length];
-                        return MatchCard(
-                          match: match,
-                        );
+                        return MatchCard(match: match);
                       }, childCount: upcomingMatches.length),
+                    );
+                  }
+                  return const SliverToBoxAdapter(child: SizedBox.shrink());
+                },
+              ),
+              // ── Infinite-scroll footer ─────────────────────────────────
+              BlocBuilder<MatchBloc, MatchState>(
+                builder: (context, state) {
+                  if (state.status == MatchStatus.loadingMore) {
+                    return const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    );
+                  }
+                  if (!state.hasMore && state.matches.isNotEmpty) {
+                    return SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(
+                            '✓  All caught up',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
                     );
                   }
                   return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -284,7 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(builder: (context) => const CreateMatchScreen()),
           );
         },
-        backgroundColor: AppColors.primary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text(
@@ -303,22 +359,21 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryContainer : AppColors.surface,
+          color: isSelected ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected
-                ? AppColors.primaryContainer
-                : AppColors.outlineVariant.withValues(alpha: 0.5),
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
           ),
         ),
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: isSelected ? Colors.white : AppColors.onSurfaceVariant,
+            color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ),
     );
   }
 }
-

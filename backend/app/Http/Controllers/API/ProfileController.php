@@ -41,4 +41,40 @@ class ProfileController extends Controller
             'user' => $user
         ]);
     }
+
+    public function updateProfile(Request $request)
+    {
+        /** @var User $user */
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'phone_number' => 'nullable|string|max:20|unique:users,phone_number,' . $user->id,
+            'hide_phone' => 'nullable|boolean',
+        ]);
+
+        if (array_key_exists('name', $validated)) {
+            $user->name = $validated['name'];
+        }
+        if (array_key_exists('phone_number', $validated)) {
+            $user->phone_number = $validated['phone_number'];
+        }
+        if (array_key_exists('hide_phone', $validated)) {
+            $user->hide_phone = $validated['hide_phone'];
+        }
+
+        // Gender is set once at registration and cannot be changed afterward.
+        if ($request->has('gender')) {
+            return response()->json([
+                'message' => 'Gender can only be set during registration.',
+            ], 422);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => $user
+        ]);
+    }
 }

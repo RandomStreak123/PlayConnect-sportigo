@@ -7,12 +7,12 @@ class NotificationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -28,7 +28,7 @@ class NotificationsScreen extends StatelessWidget {
           _buildNotificationItem(
             context,
             icon: Icons.calendar_today_rounded,
-            iconColor: AppColors.primaryContainer,
+            iconColor: Theme.of(context).colorScheme.primaryContainer,
             title: 'Match Reminder',
             message: 'Your Padel match at Downtown Courts starts tonight at 19:00.',
             time: '2h ago',
@@ -37,7 +37,7 @@ class NotificationsScreen extends StatelessWidget {
           _buildNotificationItem(
             context,
             icon: Icons.person_add_rounded,
-            iconColor: AppColors.secondary,
+            iconColor: Theme.of(context).colorScheme.secondary,
             title: 'New Request',
             message: 'Alex D. wants to join your 3v3 Pickup Game.',
             time: '5h ago',
@@ -74,7 +74,7 @@ class NotificationsScreen extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: AppColors.outline,
+          color: Theme.of(context).colorScheme.outline,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -95,13 +95,13 @@ class NotificationsScreen extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isUnread 
-            ? AppColors.primaryContainer.withValues(alpha: 0.05)
-            : AppColors.surface,
+            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.05)
+            : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isUnread 
-              ? AppColors.primaryContainer.withValues(alpha: 0.1)
-              : AppColors.outlineVariant.withValues(alpha: 0.3),
+              ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1)
+              : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -132,7 +132,7 @@ class NotificationsScreen extends StatelessWidget {
                     Text(
                       time,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.outline,
+                        color: Theme.of(context).colorScheme.outline,
                       ),
                     ),
                   ],
@@ -141,7 +141,7 @@ class NotificationsScreen extends StatelessWidget {
                 Text(
                   message,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceVariant,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     height: 1.4,
                   ),
                 ),
@@ -153,8 +153,8 @@ class NotificationsScreen extends StatelessWidget {
             Container(
               width: 8,
               height: 8,
-              decoration: const BoxDecoration(
-                color: AppColors.primaryContainer,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
                 shape: BoxShape.circle,
               ),
             ),

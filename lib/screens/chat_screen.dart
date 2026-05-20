@@ -7,17 +7,17 @@ class ChatScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text(
           'Messages',
           style: Theme.of(context).textTheme.headlineMedium,
         ),
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_square, color: AppColors.onSurface),
+            icon: Icon(Icons.edit_square, color: Theme.of(context).colorScheme.onSurface),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -137,8 +137,8 @@ class ChatScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isStory
-                          ? AppColors.outlineVariant
-                          : AppColors.primaryContainer,
+                          ? Theme.of(context).colorScheme.outlineVariant
+                          : Theme.of(context).colorScheme.primaryContainer,
                       width: 2,
                     ),
                   ),
@@ -148,9 +148,9 @@ class ChatScreen extends StatelessWidget {
                       backgroundImage: isStory
                           ? null
                           : const AssetImage('assets/images/player_profile.png'),
-                      backgroundColor: AppColors.surfaceDim,
+                      backgroundColor: Theme.of(context).colorScheme.surfaceDim,
                       child: isStory
-                          ? const Icon(Icons.add, color: AppColors.outline)
+                          ? Icon(Icons.add, color: Theme.of(context).colorScheme.outline)
                           : null,
                     ),
                   ),
@@ -165,7 +165,7 @@ class ChatScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.sportsGreen,
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.background, width: 2),
+                        border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
                       ),
                     ),
                   ),
@@ -176,7 +176,7 @@ class ChatScreen extends StatelessWidget {
               name,
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+              ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
@@ -204,9 +204,9 @@ class ChatScreen extends StatelessWidget {
             backgroundImage: isGroup
                 ? null
                 : const AssetImage('assets/images/player_profile.png'),
-            backgroundColor: AppColors.surfaceDim,
+            backgroundColor: Theme.of(context).colorScheme.surfaceDim,
             child: isGroup
-                ? const Icon(Icons.group, color: AppColors.outline)
+                ? Icon(Icons.group, color: Theme.of(context).colorScheme.outline)
                 : null,
           ),
           if (unreadCount > 0)
@@ -215,8 +215,8 @@ class ChatScreen extends StatelessWidget {
               top: 0,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryContainer,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   shape: BoxShape.circle,
                 ),
                 child: Text(
@@ -243,8 +243,8 @@ class ChatScreen extends StatelessWidget {
           message,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: unreadCount > 0
-                ? AppColors.onSurface
-                : AppColors.onSurfaceVariant,
+                ? Theme.of(context).colorScheme.onSurface
+                : Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
           ),
           maxLines: 1,
@@ -255,8 +255,8 @@ class ChatScreen extends StatelessWidget {
         time,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           color: unreadCount > 0
-              ? AppColors.primaryContainer
-              : AppColors.onSurfaceVariant,
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Theme.of(context).colorScheme.onSurfaceVariant,
           fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
         ),
       ),

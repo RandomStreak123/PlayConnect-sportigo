@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../core/constants/colors.dart';
 import '../widgets/match_card.dart';
 import '../widgets/player_reveal_card.dart';
 
@@ -12,13 +11,13 @@ class ExploreScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text(
           'Explore',
           style: Theme.of(context).textTheme.headlineMedium,
         ),
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -49,7 +48,7 @@ class ExploreScreen extends StatelessWidget {
                     child: Text(
                       'See All',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.primaryContainer,
+                        color: Theme.of(context).colorScheme.primaryContainer,
                       ),
                     ),
                   ),
@@ -155,7 +154,10 @@ class ExploreScreen extends StatelessWidget {
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
-          builder: (context) => const PlayerRevealCard(),
+          builder: (context) => PlayerRevealCard(
+            playerName: name,
+            sportType: sport,
+          ),
         );
       },
       child: Container(
@@ -163,9 +165,9 @@ class ExploreScreen extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.5)),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.02),
@@ -179,8 +181,8 @@ class ExploreScreen extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: AppColors.primaryContainer.withValues(alpha: 0.1),
-              child: const Icon(Icons.person, color: AppColors.primaryContainer),
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
+              child: Icon(Icons.person, color: Theme.of(context).colorScheme.primaryContainer),
             ),
             const SizedBox(height: 12),
             Text(
@@ -195,7 +197,7 @@ class ExploreScreen extends StatelessWidget {
             Text(
               sport.toUpperCase(),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.primaryContainer,
+                color: Theme.of(context).colorScheme.primaryContainer,
                 letterSpacing: 0.5,
               ),
               maxLines: 1,
@@ -206,7 +208,7 @@ class ExploreScreen extends StatelessWidget {
               distance,
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+              ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

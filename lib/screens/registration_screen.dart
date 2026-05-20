@@ -14,6 +14,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _selectedGender;
   bool _isLoading = false;
   bool _isPasswordVisible = false;
 
@@ -33,6 +34,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             name: _nameController.text,
             username: _usernameController.text,
             password: _passwordController.text,
+            gender: _selectedGender,
           );
 
       if (mounted) {
@@ -58,12 +60,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -81,10 +83,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               Text(
                 'Join the Sportigo community',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 36),
               _buildTextField(
                 label: 'Full Name',
                 controller: _nameController,
@@ -112,6 +114,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   });
                 },
               ),
+              const SizedBox(height: 24),
+              _buildGenderSelector(),
               const SizedBox(height: 40),
               SizedBox(
                 width: double.infinity,
@@ -121,7 +125,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   onPressed: _isLoading ? null : _handleSignUp,
 
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -140,6 +144,83 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenderSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Gender Identity (Optional)',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _buildGenderCard('male', 'Male', Icons.male, Colors.blue),
+            const SizedBox(width: 12),
+            _buildGenderCard('female', 'Female', Icons.female, Colors.pink),
+            const SizedBox(width: 12),
+            _buildGenderCard('other', 'Other', Icons.transgender, Colors.purple),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenderCard(String value, String label, IconData icon, Color activeColor) {
+    final isSelected = _selectedGender == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedGender = value;
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: isSelected 
+                ? activeColor.withValues(alpha: 0.15) 
+                : Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? activeColor : Colors.transparent,
+              width: 2,
+            ),
+            boxShadow: isSelected ? [
+              BoxShadow(
+                color: activeColor.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              )
+            ] : [],
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? activeColor : Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 28,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? activeColor : Theme.of(context).colorScheme.onSurface,
+                  fontSize: 14,
+                ),
+              ),
             ],
           ),
         ),
@@ -176,27 +257,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hintText,
-            prefixIcon: Icon(icon, color: AppColors.outline),
+            prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.outline),
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
                       isPasswordVisible
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
-                      color: AppColors.outline,
+                      color: Theme.of(context).colorScheme.outline,
                     ),
                     onPressed: onToggleVisibility,
                   )
                 : null,
             filled: true,
-            fillColor: AppColors.surfaceDim.withValues(alpha: 0.3),
+            fillColor: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
             ),
           ),
         ),

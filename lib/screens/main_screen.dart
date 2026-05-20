@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../core/constants/colors.dart';
 import 'home_screen.dart';
 import 'explore_screen.dart';
 import 'matches_screen.dart';
@@ -30,7 +29,7 @@ class _MainScreenState extends State<MainScreen> {
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.9),
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -75,7 +74,7 @@ class _MainScreenState extends State<MainScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primaryContainer.withValues(alpha: 0.1)
+              ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
@@ -85,15 +84,15 @@ class _MainScreenState extends State<MainScreen> {
             Icon(
               icon,
               color: isSelected
-                  ? AppColors.primaryContainer
-                  : AppColors.outline,
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : Theme.of(context).colorScheme.outline,
             ),
             if (isSelected) ...[
               const SizedBox(height: 4),
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.primaryContainer,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                 ),
               ),
             ],

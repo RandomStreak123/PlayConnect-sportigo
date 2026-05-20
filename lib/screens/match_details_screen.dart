@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
 import '../data/models/match_model.dart';
+import '../logic/blocs/auth/auth_bloc.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/player_reveal_card.dart';
 import '../core/utils/sport_image_helper.dart';
 
-class MatchDetailsScreen extends StatelessWidget {
+import '../core/utils/avatar_image_helper.dart';
+
+class MatchDetailsScreen extends StatefulWidget {
   final MatchModel match;
 
   const MatchDetailsScreen({
@@ -15,9 +18,59 @@ class MatchDetailsScreen extends StatelessWidget {
   });
 
   @override
+  State<MatchDetailsScreen> createState() => _MatchDetailsScreenState();
+}
+
+class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
+  late MatchModel _match;
+  bool _isSubmitting = false;
+  String? _pendingAction;
+
+  @override
+  void initState() {
+    super.initState();
+    _match = widget.match;
+  }
+
+  MatchModel? _findUpdatedMatch(MatchState state) {
+    for (final m in [...state.matches, ...state.myMatches]) {
+      if (m.id == _match.id) return m;
+    }
+    return null;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return BlocListener<MatchBloc, MatchState>(
+      listenWhen: (previous, current) =>
+          current.message != null && current.message != previous.message,
+      listener: (context, state) {
+        if (!_isSubmitting || _pendingAction == null) return;
+
+        final updated = _findUpdatedMatch(state);
+        if (updated != null) {
+          setState(() => _match = updated);
+        }
+
+        if (state.isActionSuccess) {
+          setState(() {
+            _isSubmitting = false;
+            _pendingAction = null;
+          });
+        } else {
+          setState(() {
+            _isSubmitting = false;
+            _pendingAction = null;
+          });
+        }
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -27,11 +80,11 @@ class MatchDetailsScreen extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(SportImageHelper.getImageForSport(match.sportType), fit: BoxFit.cover),
+                  Image.asset(SportImageHelper.getImageForSport(_match.sportType), fit: BoxFit.cover),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.transparent, AppColors.background],
+                        colors: [Colors.transparent, Theme.of(context).colorScheme.surface],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
@@ -45,9 +98,9 @@ class MatchDetailsScreen extends StatelessWidget {
               child: CircleAvatar(
                 backgroundColor: Colors.white.withValues(alpha: 0.5),
                 child: IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_back,
-                    color: AppColors.onSurface,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   onPressed: () => Navigator.pop(context),
                 ),
@@ -59,7 +112,7 @@ class MatchDetailsScreen extends StatelessWidget {
                 child: CircleAvatar(
                   backgroundColor: Colors.white.withValues(alpha: 0.5),
                   child: IconButton(
-                    icon: const Icon(Icons.share, color: AppColors.onSurface),
+                    icon: Icon(Icons.share, color: Theme.of(context).colorScheme.onSurface),
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -87,14 +140,14 @@ class MatchDetailsScreen extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryContainer.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          match.sportType.toUpperCase(),
+                          _match.sportType.toUpperCase(),
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
-                                color: AppColors.primaryContainer,
+                                color: Theme.of(context).colorScheme.primaryContainer,
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
@@ -106,19 +159,102 @@ class MatchDetailsScreen extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceDim,
+                          color: Theme.of(context).colorScheme.surfaceDim,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          match.skillLevel,
+                          _match.skillLevel,
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                       ),
+                      if (_match.womenOnly) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF4D8D), Color(0xFF7B61FF)],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF4D8D).withValues(alpha: 0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('🌸', style: TextStyle(fontSize: 12)),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Women Only',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
+                  // Women-Only safety notice
+                  if (_match.womenOnly)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFFFF4D8D).withValues(alpha: 0.08),
+                              const Color(0xFF7B61FF).withValues(alpha: 0.05),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFFF4D8D).withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF4D8D).withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.shield_outlined,
+                                color: Color(0xFFFF4D8D),
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'This is a safe, women-only match. Only verified female players can join.',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: const Color(0xFFFF4D8D),
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 16),
                   Text(
-                    match.title,
+                    _match.title,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -127,15 +263,15 @@ class MatchDetailsScreen extends StatelessWidget {
                   _buildDetailRow(
                     context,
                     Icons.calendar_today,
-                    match.dateTime,
-                    '90 mins',
+                    _match.dateTime,
+                    _match.skillLevel,
                   ),
                   const SizedBox(height: 16),
                   _buildDetailRow(
                     context,
                     Icons.location_on,
-                    match.location,
-                    '123 Sports Avenue, Downtown',
+                    _match.location,
+                    '${_match.slotsLeft} spots open',
                   ),
                   const SizedBox(height: 32),
                   Text(
@@ -144,82 +280,59 @@ class MatchDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Join us for an intense evening of competitive Padel! We are looking for intermediate to advanced players to round out a doubles tournament prep match. New balls provided. Please arrive 10 minutes early to warm up. Post-match drinks at the club bar are highly encouraged!',
+                    'Join fellow players for a ${_match.sportType} session at ${_match.location}. '
+                    'Skill level: ${_match.skillLevel}. Arrive a few minutes early to warm up.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       height: 1.5,
                     ),
                   ),
                   const SizedBox(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                       Text(
-                        'Players (${match.avatars.length}/${match.availableSlots})',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Showing all players...'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'See All',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: AppColors.primaryContainer,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'Players (${_match.joinedCount}/${_match.maxSlots})',
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),
-                  _buildPlayerRow(
-                    context,
-                    'Alex Rivera',
-                    'Level 4.5 • Right Handed',
-                    true,
-                  ),
-                  _buildPlayerRow(
-                    context,
-                    'Sam Chen',
-                    'Level 4.0 • Left Handed',
-                    false,
-                  ),
-                  _buildPlayerRow(
-                    context,
-                    'Jordan Davis',
-                    'Level 3.5 • Right Handed',
-                    false,
-                  ),
+                  if (_match.participants.isEmpty)
+                    Text(
+                      'No players listed yet.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  else
+                    ..._match.participants.map(
+                      (p) => _buildPlayerRow(
+                        context,
+                        p,
+                        p.id == _match.creatorId,
+                      ),
+                    ),
                   const SizedBox(height: 16),
-                  if (match.slotsLeft > 0)
+                  if (_match.slotsLeft > 0 && _match.joinedCount < _match.maxSlots)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryContainer.withValues(alpha: 0.05),
+                        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: AppColors.primaryContainer.withValues(alpha: 0.2),
+                          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2),
                           style: BorderStyle.solid,
                         ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.person_add,
-                            color: AppColors.primaryContainer,
+                            color: Theme.of(context).colorScheme.primaryContainer,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'This spot is waiting for you!',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
-                                  color: AppColors.primaryContainer,
+                                  color: Theme.of(context).colorScheme.primaryContainer,
                                   fontWeight: FontWeight.bold,
                                 ),
                           ),
@@ -236,7 +349,7 @@ class MatchDetailsScreen extends StatelessWidget {
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -245,31 +358,73 @@ class MatchDetailsScreen extends StatelessWidget {
             ),
           ],
         ),
-        child: match.slotsLeft > 0
-            ? ElevatedButton(
+        child: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, authState) {
+            final userId = authState.user?.id;
+            final userGender = authState.user?.gender;
+            final isRestricted = _match.womenOnly && userGender != 'female';
+            final isJoined = _match.isJoinedBy(userId);
+            final isCreator = _match.creatorId != null && _match.creatorId == userId;
+            final isFull = _match.joinedCount >= _match.maxSlots;
+
+            if (_isSubmitting) {
+              return const SizedBox(
+                height: 52,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (isJoined && !isCreator) {
+              return OutlinedButton(
                 onPressed: () {
-                  context.read<MatchBloc>().add(MatchJoined(match.id));
-                  Navigator.pop(context);
+                  setState(() {
+                    _isSubmitting = true;
+                    _pendingAction = 'leave';
+                  });
+                  context.read<MatchBloc>().add(MatchLeft(_match.id));
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryContainer,
-                  foregroundColor: Colors.white,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                  side: BorderSide(color: Theme.of(context).colorScheme.error),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  elevation: 0,
                 ),
                 child: const Text(
-                  'Join Match - \$15',
+                  'Leave Match',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-              )
-            : Container(
+              );
+            }
+
+            if (isJoined || isCreator) {
+              return Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.outlineVariant.withValues(alpha: 0.2),
+                  color: AppColors.sportsGreen.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Text(
+                    isCreator ? 'You created this match' : 'You joined this match',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppColors.sportsGreen,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            if (isFull) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
@@ -278,11 +433,71 @@ class MatchDetailsScreen extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: AppColors.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
+              );
+            }
+
+            if (isRestricted) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFFFF4D8D).withValues(alpha: 0.1),
+                      const Color(0xFF7B61FF).withValues(alpha: 0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFFFF4D8D).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.lock_outline, color: Color(0xFFFF4D8D), size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      '🌸 Women-Only Match',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: const Color(0xFFFF4D8D),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _isSubmitting = true;
+                  _pendingAction = 'join';
+                });
+                context.read<MatchBloc>().add(MatchJoined(_match.id));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
               ),
+              child: Text(
+                'Join Match (${_match.slotsLeft} spots left)',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -298,10 +513,10 @@ class MatchDetailsScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.surfaceDim,
+            color: Theme.of(context).colorScheme.surfaceDim,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: AppColors.primaryContainer),
+          child: Icon(icon, color: Theme.of(context).colorScheme.primaryContainer),
         ),
         const SizedBox(width: 16),
         Column(
@@ -316,7 +531,7 @@ class MatchDetailsScreen extends StatelessWidget {
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.onSurfaceVariant,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -327,8 +542,7 @@ class MatchDetailsScreen extends StatelessWidget {
 
   Widget _buildPlayerRow(
     BuildContext context,
-    String name,
-    String subtitle,
+    MatchParticipant participant,
     bool isOrganizer,
   ) {
     return Padding(
@@ -339,17 +553,18 @@ class MatchDetailsScreen extends StatelessWidget {
             context: context,
             isScrollControlled: true,
             backgroundColor: Colors.transparent,
-            builder: (context) => const PlayerRevealCard(),
+            builder: (context) => PlayerRevealCard(
+              playerName: participant.name,
+              sportType: _match.sportType,
+            ),
           );
         },
         child: Row(
           children: [
-            const CircleAvatar(
+            AvatarImageHelper.circleAvatar(
+              path: participant.profilePicture,
               radius: 24,
-              backgroundImage: AssetImage(
-                'assets/images/player_profile.png',
-              ),
-              backgroundColor: AppColors.surfaceDim,
+              backgroundColor: Theme.of(context).colorScheme.surfaceDim,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -359,7 +574,7 @@ class MatchDetailsScreen extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        name,
+                        participant.name,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -388,9 +603,9 @@ class MatchDetailsScreen extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    subtitle,
+                    _match.skillLevel,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],

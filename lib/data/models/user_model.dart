@@ -1,9 +1,13 @@
+import '../../core/constants/api_constants.dart';
+
 class UserModel {
   final int id;
   final String name;
   final String? username;
   final String? phoneNumber;
   final String? profilePicture;
+  final String? gender;
+  final bool hidePhone;
 
   UserModel({
     required this.id,
@@ -11,7 +15,29 @@ class UserModel {
     this.username,
     this.phoneNumber,
     this.profilePicture,
+    this.gender,
+    this.hidePhone = false,
   });
+
+  UserModel copyWith({
+    int? id,
+    String? name,
+    String? username,
+    String? phoneNumber,
+    String? profilePicture,
+    String? gender,
+    bool? hidePhone,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      username: username ?? this.username,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      profilePicture: profilePicture ?? this.profilePicture,
+      gender: gender ?? this.gender,
+      hidePhone: hidePhone ?? this.hidePhone,
+    );
+  }
 
   String? get profilePhotoUrl {
     if (profilePicture == null || profilePicture!.isEmpty) return null;
@@ -19,9 +45,10 @@ class UserModel {
       return null;
     }
     if (profilePicture!.startsWith('http://') || profilePicture!.startsWith('https://')) {
-      return profilePicture!.replaceAll('localhost', '10.0.2.2');
+      final baseHost = Uri.parse(ApiConstants.assetBaseUrl).host;
+      return profilePicture!.replaceAll('localhost', baseHost);
     }
-    return 'http://10.0.2.2:8000/storage/$profilePicture';
+    return '${ApiConstants.assetBaseUrl}/storage/$profilePicture';
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +58,8 @@ class UserModel {
       username: json['username'],
       phoneNumber: json['phone_number'],
       profilePicture: json['profile_picture'],
+      gender: json['gender'],
+      hidePhone: json['hide_phone'] == 1 || json['hide_phone'] == true,
     );
   }
 
@@ -41,6 +70,8 @@ class UserModel {
       'username': username,
       'phone_number': phoneNumber,
       'profile_picture': profilePicture,
+      'gender': gender,
+      'hide_phone': hidePhone ? 1 : 0,
     };
   }
 }
