@@ -24,4 +24,7 @@ class ApiConstants {
   static const String myMatches = '/matches/mine';
   static String joinMatch(String id) => '/matches/$id/join';
   static String leaveMatch(String id) => '/matches/$id/leave';
+
+  // Activity endpoints
+  static const String activities = '/activities';
 }

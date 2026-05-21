@@ -6,6 +6,8 @@ use App\Models\SportMatch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Services\ActivityService;
 
 /**
  * Single source of truth for match capacity (slots).
@@ -48,20 +50,39 @@ class MatchSlotService
             $match->users()->attach($user->id);
             $match->syncAvailableSlots();
 
+            try {
+                ActivityService::create(
+                    $user->id,
+                    'match_created',
+                    "{$user->name} created a {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
+                    [
+                        'match_id' => $match->id,
+                        'sport_type' => $match->sport_type,
+                        'title' => $match->title,
+                        'location' => $match->location,
+                    ]
+                );
+            } catch (\Exception $e) {
+                Log::error('Activity feed failed: ' . $e->getMessage());
+            }
+
             return $match->load('users:id,name,profile_picture');
         });
     }
 
     public function updateOpenSlots(SportMatch $match, int $openSlots): SportMatch
     {
-        $joined = $match->users()->count();
-        $match->update([
-            'available_slots' => $openSlots,
-            'max_slots' => $joined + $openSlots,
-        ]);
-        $match->syncAvailableSlots();
+        return DB::transaction(function () use ($match, $openSlots) {
+            $match = SportMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
+            $joined = $match->users()->count();
+            $match->update([
+                'available_slots' => $openSlots,
+                'max_slots' => $joined + $openSlots,
+            ]);
+            $match->syncAvailableSlots();
 
-        return $match->load('users:id,name,profile_picture');
+            return $match->load('users:id,name,profile_picture');
+        });
     }
 
     /**
@@ -82,6 +103,22 @@ class MatchSlotService
 
             $match->users()->attach($user->id);
             $match->syncAvailableSlots();
+
+            try {
+                ActivityService::create(
+                    $user->id,
+                    'match_joined',
+                    "{$user->name} joined the {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
+                    [
+                        'match_id' => $match->id,
+                        'sport_type' => $match->sport_type,
+                        'title' => $match->title,
+                        'location' => $match->location,
+                    ]
+                );
+            } catch (\Exception $e) {
+                Log::error('Activity feed failed: ' . $e->getMessage());
+            }
 
             return ['match' => $match->load('users:id,name,profile_picture')];
         });
@@ -107,6 +144,22 @@ class MatchSlotService
             $match = SportMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
             $match->users()->detach($user->id);
             $match->syncAvailableSlots();
+
+            try {
+                ActivityService::create(
+                    $user->id,
+                    'match_left',
+                    "{$user->name} left the {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
+                    [
+                        'match_id' => $match->id,
+                        'sport_type' => $match->sport_type,
+                        'title' => $match->title,
+                        'location' => $match->location,
+                    ]
+                );
+            } catch (\Exception $e) {
+                Log::error('Activity feed failed: ' . $e->getMessage());
+            }
 
             return ['match' => $match->load('users:id,name,profile_picture')];
         });

@@ -5,9 +5,21 @@ import '../core/constants/colors.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../data/repositories/auth_repository.dart';
 import '../theme/theme_manager.dart';
+import '../core/utils/avatar_image_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final bool isCurrentUser;
+  final String? playerName;
+  final String? profilePicture;
+  final int? userId;
+
+  const ProfileScreen({
+    super.key,
+    this.isCurrentUser = true,
+    this.playerName,
+    this.profilePicture,
+    this.userId,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -228,10 +240,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   _buildActivitySection(context, sportColor),
                   
                   // Privacy & Personalization Section
-                  _buildPrivacySection(context, sportColor),
+                  if (widget.isCurrentUser) _buildPrivacySection(context, sportColor),
                   
                   // Menu Settings Panel
-                  _buildSettingsPanel(context, sportColor),
+                  if (widget.isCurrentUser) _buildSettingsPanel(context, sportColor),
                   
                   const SizedBox(height: 100), // Padding for elegant floating bottom navigation
                 ],
@@ -249,32 +261,39 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Player Profile',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.5,
-              color: Theme.of(context).colorScheme.onSurface,
+          if (!widget.isCurrentUser) const BackButton(),
+          Expanded(
+            child: Text(
+              'Player Profile',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              textAlign: widget.isCurrentUser ? TextAlign.start : TextAlign.center,
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-              shape: BoxShape.circle,
-              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.settings_outlined, color: Theme.of(context).colorScheme.onSurface),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Settings feature coming soon!'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-          ),
+          if (widget.isCurrentUser)
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                shape: BoxShape.circle,
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
+              ),
+              child: IconButton(
+                icon: Icon(Icons.settings_outlined, color: Theme.of(context).colorScheme.onSurface),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Settings feature coming soon!'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+            )
+          else
+            const SizedBox(width: 48), // Balance for BackButton
         ],
       ),
     );
@@ -315,10 +334,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 Center(
                   child: BlocBuilder<AuthBloc, AuthState>(
                     builder: (context, state) {
-                      final photoUrl = state.user?.profilePhotoUrl;
-                      final ImageProvider imageProvider = (photoUrl != null && photoUrl.isNotEmpty)
-                          ? NetworkImage(photoUrl)
-                          : const AssetImage('assets/images/player_profile.png') as ImageProvider;
+                      final photoUrl = widget.isCurrentUser 
+                          ? state.user?.profilePhotoUrl 
+                          : widget.profilePicture;
+                      final ImageProvider imageProvider = AvatarImageHelper.provider(photoUrl);
 
                       return Stack(
                         alignment: Alignment.center,
@@ -360,7 +379,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           
                           // Image container
                           GestureDetector(
-                            onTap: _isUploading ? null : () => _pickAndUploadImage(context),
+                            onTap: (widget.isCurrentUser && !_isUploading) ? () => _pickAndUploadImage(context) : null,
                             child: Hero(
                               tag: 'profile_avatar_hero',
                               child: Container(
@@ -374,6 +393,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                     onError: (exception, stackTrace) {},
                                   ),
                                 ),
+                                child: AvatarImageHelper.resolveUrl(photoUrl) == null
+                                    ? const Icon(Icons.person, size: 60, color: Colors.white70)
+                                    : null,
                               ),
                             ),
                           ),
@@ -401,7 +423,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           ),
 
                           // Floating Edit Photo Button
-                          Positioned(
+                          if (widget.isCurrentUser) Positioned(
                             bottom: 0,
                             right: 4,
                             child: GestureDetector(
@@ -456,7 +478,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 // Name, verified check, and country flag
                 BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, state) {
-                    final userName = state.user?.name ?? 'Sportigo Champ';
+                    final userName = widget.isCurrentUser 
+                        ? (state.user?.name ?? 'Sportigo Champ')
+                        : (widget.playerName ?? 'Player');
                     return Column(
                       children: [
                         Row(

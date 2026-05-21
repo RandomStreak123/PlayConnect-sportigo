@@ -34,7 +34,9 @@ class MatchController extends Controller
         }
 
         if ($request->filled('search')) {
-            $searchTerm = '%'.$request->input('search').'%';
+            // Prefix search only — allows index usage on title/location.
+            // For full substring search, consider MySQL FULLTEXT index or Meilisearch.
+            $searchTerm = $request->input('search').'%';
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('title', 'like', $searchTerm)
                     ->orWhere('location', 'like', $searchTerm);

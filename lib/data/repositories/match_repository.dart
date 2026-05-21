@@ -187,4 +187,27 @@ class MatchRepository {
       throw Exception(_extractErrorMessage(response, 'Failed to leave match'));
     }
   }
+
+  Future<MatchModel> getMatch(String id) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('Unauthorized');
+
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.matches}/$id'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      try {
+        return MatchModel.fromJson(jsonDecode(response.body));
+      } catch (_) {
+        throw Exception('Invalid server response');
+      }
+    } else {
+      throw Exception(_extractErrorMessage(response, 'Failed to load match details'));
+    }
+  }
 }

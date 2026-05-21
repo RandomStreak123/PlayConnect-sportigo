@@ -18,6 +18,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     Route::post('/profile/photo', [\App\Http\Controllers\API\ProfileController::class, 'uploadProfilePhoto']);
     Route::put('/profile',        [\App\Http\Controllers\API\ProfileController::class, 'updateProfile']);
+    Route::get('/activities',     [\App\Http\Controllers\API\ActivityController::class, 'index']);
 
     // Match reads (covered by the outer throttle:api — 60/min)
     Route::get('/matches/mine',        [MatchController::class, 'mine']);

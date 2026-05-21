@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'explore_screen.dart';
 import 'matches_screen.dart';
-import 'chat_screen.dart';
+import 'activity_feed_screen.dart';
 import 'profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ class _MainScreenState extends State<MainScreen> {
     HomeScreen(),
     ExploreScreen(),
     MatchesScreen(),
-    ChatScreen(),
+    ActivityFeedScreen(),
     ProfileScreen(),
   ];
 
@@ -50,7 +50,7 @@ class _MainScreenState extends State<MainScreen> {
                 _buildNavItem(0, Icons.home_rounded, 'Home'),
                 _buildNavItem(1, Icons.explore_rounded, 'Explore'),
                 _buildNavItem(2, Icons.sports_soccer_rounded, 'Matches'),
-                _buildNavItem(3, Icons.chat_bubble_rounded, 'Chat'),
+                _buildNavItem(3, Icons.dynamic_feed_rounded, 'Activity'),
                 _buildNavItem(4, Icons.person_rounded, 'Profile'),
               ],
             ),

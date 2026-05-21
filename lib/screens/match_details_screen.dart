@@ -556,6 +556,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
             builder: (context) => PlayerRevealCard(
               playerName: participant.name,
               sportType: _match.sportType,
+              profilePicture: participant.profilePicture,
             ),
           );
         },

@@ -7,8 +7,10 @@ import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/match_repository.dart';
+import 'data/repositories/activity_repository.dart';
 import 'logic/blocs/auth/auth_bloc.dart';
 import 'logic/blocs/matches/match_bloc.dart';
+import 'logic/blocs/activity/activity_bloc.dart';
 import 'core/constants/colors.dart';
 import 'core/utils/sport_image_helper.dart';
 
@@ -28,6 +30,7 @@ class PlayConnectApp extends StatefulWidget {
 class _PlayConnectAppState extends State<PlayConnectApp> {
   late final AuthRepository _authRepository;
   late final MatchRepository _matchRepository;
+  late final ActivityRepository _activityRepository;
   late final ThemeManager _themeManager;
 
   @override
@@ -35,6 +38,7 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
     super.initState();
     _authRepository = AuthRepository();
     _matchRepository = MatchRepository();
+    _activityRepository = ActivityRepository();
     _themeManager = ThemeManager();
   }
 
@@ -51,6 +55,7 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
       providers: [
         RepositoryProvider.value(value: _authRepository),
         RepositoryProvider.value(value: _matchRepository),
+        RepositoryProvider.value(value: _activityRepository),
       ],
       child: ChangeNotifierProvider.value(
         value: _themeManager,
@@ -62,6 +67,9 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
             ),
             BlocProvider(
               create: (_) => MatchBloc(matchRepository: _matchRepository),
+            ),
+            BlocProvider(
+              create: (_) => ActivityBloc(activityRepository: _activityRepository),
             ),
           ],
           child: const AppView(),
@@ -116,6 +124,7 @@ class AppView extends StatelessWidget {
                   themeManager.updateGender(state.user!.gender);
                   context.read<MatchBloc>().add(const MatchFetched());
                   context.read<MatchBloc>().add(const MyMatchesFetched());
+                  context.read<ActivityBloc>().add(const ActivityFetched());
                 } else if (state.status == AuthStatus.unauthenticated) {
                   themeManager.updateGender(null);
                 }
