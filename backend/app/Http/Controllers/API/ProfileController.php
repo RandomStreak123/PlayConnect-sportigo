@@ -51,6 +51,7 @@ class ProfileController extends Controller
             'name' => 'nullable|string|max:255',
             'phone_number' => 'nullable|string|max:20|unique:users,phone_number,' . $user->id,
             'hide_phone' => 'nullable|boolean',
+            'theme_preference' => 'nullable|string|in:system,activeSteelBlue,elegantLavender',
         ]);
 
         if (array_key_exists('name', $validated)) {
@@ -61,6 +62,9 @@ class ProfileController extends Controller
         }
         if (array_key_exists('hide_phone', $validated)) {
             $user->hide_phone = $validated['hide_phone'];
+        }
+        if (array_key_exists('theme_preference', $validated)) {
+            $user->theme_preference = $validated['theme_preference'];
         }
 
         // Gender is set once at registration and cannot be changed afterward.

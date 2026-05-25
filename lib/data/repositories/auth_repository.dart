@@ -209,9 +209,16 @@ class AuthRepository {
     String? name,
     String? phoneNumber,
     bool? hidePhone,
+    String? themePreference,
   }) async {
     final token = await _getToken();
     if (token == null) throw Exception('User not authenticated');
+
+    final body = <String, dynamic>{};
+    if (name != null) body['name'] = name;
+    if (phoneNumber != null) body['phone_number'] = phoneNumber;
+    if (hidePhone != null) body['hide_phone'] = hidePhone;
+    if (themePreference != null) body['theme_preference'] = themePreference;
 
     final response = await http.put(
       Uri.parse('${ApiConstants.baseUrl}/profile'),
@@ -220,11 +227,7 @@ class AuthRepository {
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode({
-        'name': ?name,
-        'phone_number': ?phoneNumber,
-        'hide_phone': ?hidePhone,
-      }),
+      body: jsonEncode(body),
     );
 
     if (response.statusCode == 200) {

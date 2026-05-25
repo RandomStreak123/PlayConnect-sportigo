@@ -1425,12 +1425,34 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         ),
                         value: isLavender,
                         activeThumbColor: const Color(0xFFFF4D8D),
-                        onChanged: (val) {
-                          themeManager.setThemePreference(
-                            val
-                                ? ThemePreference.elegantLavender
-                                : ThemePreference.activeSteelBlue,
-                          );
+                        onChanged: (val) async {
+                          final newPref = val
+                              ? ThemePreference.elegantLavender
+                              : ThemePreference.activeSteelBlue;
+                          
+                          // Optimistic UI update
+                          themeManager.setThemePreference(newPref);
+                          
+                          try {
+                            final authRepo = context.read<AuthRepository>();
+                            final authBloc = context.read<AuthBloc>();
+                            
+                            final updatedUser = await authRepo.updateProfile(
+                              themePreference: val ? 'elegantLavender' : 'activeSteelBlue',
+                            );
+                            
+                            authBloc.add(AuthUserUpdated(updatedUser));
+                          } catch (e) {
+                            // Silently fail or show snackbar if needed
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Failed to save theme preference to server'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
                         },
                       ),
                     );

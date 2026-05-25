@@ -8,6 +8,7 @@ class UserModel {
   final String? profilePicture;
   final String? gender;
   final bool hidePhone;
+  final String? themePreference;
 
   UserModel({
     required this.id,
@@ -17,6 +18,7 @@ class UserModel {
     this.profilePicture,
     this.gender,
     this.hidePhone = false,
+    this.themePreference = 'system',
   });
 
   UserModel copyWith({
@@ -27,6 +29,7 @@ class UserModel {
     String? profilePicture,
     String? gender,
     bool? hidePhone,
+    String? themePreference,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -36,6 +39,7 @@ class UserModel {
       profilePicture: profilePicture ?? this.profilePicture,
       gender: gender ?? this.gender,
       hidePhone: hidePhone ?? this.hidePhone,
+      themePreference: themePreference ?? this.themePreference,
     );
   }
 
@@ -60,6 +64,7 @@ class UserModel {
       profilePicture: json['profile_picture'],
       gender: json['gender'],
       hidePhone: json['hide_phone'] == 1 || json['hide_phone'] == true,
+      themePreference: json['theme_preference'] ?? 'system',
     );
   }
 
@@ -72,6 +77,7 @@ class UserModel {
       'profile_picture': profilePicture,
       'gender': gender,
       'hide_phone': hidePhone ? 1 : 0,
+      'theme_preference': themePreference,
     };
   }
 }

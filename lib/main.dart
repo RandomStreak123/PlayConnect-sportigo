@@ -121,12 +121,12 @@ class AppView extends StatelessWidget {
                 final themeManager = context.read<ThemeManager>();
                 if (state.status == AuthStatus.authenticated &&
                     state.user != null) {
-                  themeManager.updateGender(state.user!.gender);
+                  themeManager.updateUser(state.user!.gender, state.user!.themePreference);
                   context.read<MatchBloc>().add(const MatchFetched());
                   context.read<MatchBloc>().add(const MyMatchesFetched());
                   context.read<ActivityBloc>().add(const ActivityFetched());
                 } else if (state.status == AuthStatus.unauthenticated) {
-                  themeManager.updateGender(null);
+                  themeManager.updateUser(null, null);
                 }
               },
             ),

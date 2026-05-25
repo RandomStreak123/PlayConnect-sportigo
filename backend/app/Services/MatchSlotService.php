@@ -35,8 +35,8 @@ class MatchSlotService
      */
     public function createMatch(array $validated, User $user, bool $womenOnly): SportMatch
     {
-        $openSlots = (int) $validated['available_slots'];
-        $maxSlots = $openSlots + 1;
+        $maxSlots = (int) $validated['available_slots'];
+        $openSlots = max(0, $maxSlots - 1);
 
         return DB::transaction(function () use ($validated, $womenOnly, $maxSlots, $user, $openSlots) {
             $match = SportMatch::create([
@@ -70,14 +70,16 @@ class MatchSlotService
         });
     }
 
-    public function updateOpenSlots(SportMatch $match, int $openSlots): SportMatch
+    public function updateOpenSlots(SportMatch $match, int $totalSlots): SportMatch
     {
-        return DB::transaction(function () use ($match, $openSlots) {
+        return DB::transaction(function () use ($match, $totalSlots) {
             $match = SportMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
             $joined = $match->users()->count();
+            $openSlots = max(0, $totalSlots - $joined);
+            
             $match->update([
                 'available_slots' => $openSlots,
-                'max_slots' => $joined + $openSlots,
+                'max_slots' => max($joined, $totalSlots),
             ]);
             $match->syncAvailableSlots();
 

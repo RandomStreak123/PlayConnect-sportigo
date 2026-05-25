@@ -4,8 +4,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MatchController;
+use App\Http\Controllers\SlotController;
 
 // Public routes – throttled at 10/min per IP (brute-force protection)
+Route::put('/slots/update', [SlotController::class, 'update']);
+
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:auth');
 
