@@ -216,8 +216,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: Column(
+                    children: [
                   // App Bar / Title Header
                   _buildCustomAppBar(context),
                   
@@ -250,7 +253,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
             ),
           ),
-        ],
+        ),
+      ),
+    ],
       ),
     );
   }

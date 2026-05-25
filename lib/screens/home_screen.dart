@@ -6,6 +6,7 @@ import '../logic/blocs/matches/match_bloc.dart';
 import 'notifications_screen.dart';
 import 'advanced_search_screen.dart';
 import 'create_match_screen.dart';
+import '../core/utils/responsive_util.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -288,12 +289,34 @@ class _HomeScreenState extends State<HomeScreen> {
                   upcomingMatches.sort((a, b) => a.parsedDateTime.compareTo(b.parsedDateTime));
 
                   if (upcomingMatches.isNotEmpty) {
-                    return SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        final match = upcomingMatches[index % upcomingMatches.length];
-                        return MatchCard(match: match);
-                      }, childCount: upcomingMatches.length),
-                    );
+                    final isDesktop = ResponsiveUtil.isDesktop(context);
+                    final isTablet = ResponsiveUtil.isTablet(context);
+                    final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+                    
+                    if (crossAxisCount == 1) {
+                      return SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final match = upcomingMatches[index % upcomingMatches.length];
+                          return MatchCard(match: match);
+                        }, childCount: upcomingMatches.length),
+                      );
+                    } else {
+                      return SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverGrid(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            childAspectRatio: 0.85,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                          delegate: SliverChildBuilderDelegate((context, index) {
+                            final match = upcomingMatches[index % upcomingMatches.length];
+                            return MatchCard(match: match);
+                          }, childCount: upcomingMatches.length),
+                        ),
+                      );
+                    }
                   }
                   return const SliverToBoxAdapter(child: SizedBox.shrink());
                 },

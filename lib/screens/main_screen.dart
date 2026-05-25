@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/utils/responsive_util.dart';
 import 'home_screen.dart';
 import 'explore_screen.dart';
 import 'matches_screen.dart';
@@ -25,38 +26,94 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+    final isMobile = ResponsiveUtil.isMobile(context);
+
+    if (isMobile) {
+      return Scaffold(
+        body: IndexedStack(index: _currentIndex, children: _screens),
+        bottomNavigationBar: _buildBottomNav(),
+      );
+    } else {
+      return Scaffold(
+        body: Row(
+          children: [
+            _buildNavigationRail(context),
+            Expanded(
+              child: IndexedStack(index: _currentIndex, children: _screens),
             ),
           ],
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildNavItem(0, Icons.home_rounded, 'Home'),
-                _buildNavItem(1, Icons.explore_rounded, 'Explore'),
-                _buildNavItem(2, Icons.sports_soccer_rounded, 'Matches'),
-                _buildNavItem(3, Icons.dynamic_feed_rounded, 'Activity'),
-                _buildNavItem(4, Icons.person_rounded, 'Profile'),
-              ],
-            ),
+      );
+    }
+  }
+
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16.0,
+            vertical: 8.0,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildNavItem(0, Icons.home_rounded, 'Home'),
+              _buildNavItem(1, Icons.explore_rounded, 'Explore'),
+              _buildNavItem(2, Icons.sports_soccer_rounded, 'Matches'),
+              _buildNavItem(3, Icons.dynamic_feed_rounded, 'Activity'),
+              _buildNavItem(4, Icons.person_rounded, 'Profile'),
+            ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildNavigationRail(BuildContext context) {
+    final isDesktop = ResponsiveUtil.isDesktop(context);
+    return NavigationRail(
+      selectedIndex: _currentIndex,
+      onDestinationSelected: (int index) {
+        setState(() {
+          _currentIndex = index;
+        });
+      },
+      labelType: isDesktop ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+      extended: isDesktop,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      destinations: const [
+        NavigationRailDestination(
+          icon: Icon(Icons.home_rounded),
+          label: Text('Home'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.explore_rounded),
+          label: Text('Explore'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.sports_soccer_rounded),
+          label: Text('Matches'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.dynamic_feed_rounded),
+          label: Text('Activity'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.person_rounded),
+          label: Text('Profile'),
+        ),
+      ],
     );
   }
 

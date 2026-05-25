@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/match_card.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import 'create_match_screen.dart';
-
+import '../core/utils/responsive_util.dart';
 
 class MatchesScreen extends StatefulWidget {
   const MatchesScreen({super.key});
@@ -151,12 +151,37 @@ class _MatchesScreenState extends State<MatchesScreen> {
           },
           child: filteredMatches.isEmpty
               ? _buildEmptyState(isUpcoming)
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: filteredMatches.length,
-                  itemBuilder: (context, index) {
-                    return MatchCard(match: filteredMatches[index]);
+              : Builder(
+                  builder: (context) {
+                    final isDesktop = ResponsiveUtil.isDesktop(context);
+                    final isTablet = ResponsiveUtil.isTablet(context);
+                    final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+                    
+                    if (crossAxisCount == 1) {
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: filteredMatches.length,
+                        itemBuilder: (context, index) {
+                          return MatchCard(match: filteredMatches[index]);
+                        },
+                      );
+                    } else {
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          childAspectRatio: 0.85,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: filteredMatches.length,
+                        itemBuilder: (context, index) {
+                          return MatchCard(match: filteredMatches[index]);
+                        },
+                      );
+                    }
                   },
                 ),
         );
