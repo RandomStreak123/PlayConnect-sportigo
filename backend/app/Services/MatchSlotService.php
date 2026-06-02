@@ -16,16 +16,19 @@ use App\Services\ActivityService;
  */
 class MatchSlotService
 {
-    public function syncMatch(SportMatch $match): SportMatch
+    public function syncMatch(SportMatch $match, bool $save = false): SportMatch
     {
-        $match->syncAvailableSlots();
+        $match->syncAvailableSlots($save);
 
-        return $match->fresh(['users:id,name,profile_picture']);
+        if ($save) {
+            return $match->fresh(['users:id,name,profile_picture']);
+        }
+        return $match;
     }
 
-    public function syncCollection(Collection $matches): Collection
+    public function syncCollection(Collection $matches, bool $save = false): Collection
     {
-        $matches->each(fn (SportMatch $match) => $match->syncAvailableSlots());
+        $matches->each(fn (SportMatch $match) => $match->syncAvailableSlots($save));
 
         return $matches;
     }

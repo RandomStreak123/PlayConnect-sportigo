@@ -30,6 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   String _selectedSport = 'Football';
   int _activeActivityTab = 0; // 0: Activity, 1: Achievements, 2: Streaks
   late AnimationController _animationController;
+  late ScrollController _scrollController;
   
   // Implicit animation trigger states
   bool _isEditButtonHovered = false;
@@ -51,11 +52,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..forward();
+    _scrollController = ScrollController();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -215,6 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           
           SafeArea(
             child: SingleChildScrollView(
+              controller: _scrollController,
               physics: const BouncingScrollPhysics(),
               child: Center(
                 child: ConstrainedBox(
@@ -288,12 +292,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               child: IconButton(
                 icon: Icon(Icons.settings_outlined, color: Theme.of(context).colorScheme.onSurface),
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Settings feature coming soon!'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      _scrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeInOut,
+                    );
+                  }
                 },
               ),
             )

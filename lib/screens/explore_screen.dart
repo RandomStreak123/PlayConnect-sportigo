@@ -2,11 +2,51 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/match_card.dart';
 import '../widgets/player_reveal_card.dart';
-
 import '../logic/blocs/matches/match_bloc.dart';
+import '../data/repositories/auth_repository.dart';
+import '../data/models/user_model.dart';
+import '../core/utils/avatar_image_helper.dart';
 
-class ExploreScreen extends StatelessWidget {
+class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
+
+  @override
+  State<ExploreScreen> createState() => _ExploreScreenState();
+}
+
+class _ExploreScreenState extends State<ExploreScreen> {
+  List<UserModel> _players = [];
+  bool _isLoadingPlayers = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlayers();
+  }
+
+  Future<void> _loadPlayers() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingPlayers = true;
+    });
+
+    try {
+      final authRepository = context.read<AuthRepository>();
+      final fetchedPlayers = await authRepository.getPlayers();
+      if (mounted) {
+        setState(() {
+          _players = fetchedPlayers;
+          _isLoadingPlayers = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingPlayers = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +59,12 @@ class ExploreScreen extends StatelessWidget {
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _isLoadingPlayers ? null : _loadPlayers,
+          )
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -37,16 +83,9 @@ class ExploreScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   TextButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Showing all nearby players...'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
+                    onPressed: _loadPlayers,
                     child: Text(
-                      'See All',
+                      'Refresh list',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Theme.of(context).colorScheme.primaryContainer,
                       ),
@@ -57,26 +96,30 @@ class ExploreScreen extends StatelessWidget {
             ),
             SizedBox(
               height: 160,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                children: [
-                  _buildPlayerCard(context, 'Alex R.', 'Tennis', '1.2 mi away'),
-                  _buildPlayerCard(
-                    context,
-                    'Marcus V.',
-                    'Running',
-                    '0.5 mi away',
-                  ),
-                  _buildPlayerCard(context, 'Sarah L.', 'Yoga', '2.0 mi away'),
-                  _buildPlayerCard(
-                    context,
-                    'John D.',
-                    'Basketball',
-                    '3.1 mi away',
-                  ),
-                ],
-              ),
+              child: _isLoadingPlayers
+                  ? const Center(child: CircularProgressIndicator())
+                  : _players.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No players registered yet',
+                            style: TextStyle(fontStyle: FontStyle.italic),
+                          ),
+                        )
+                      : ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          itemCount: _players.length,
+                          itemBuilder: (context, index) {
+                            final player = _players[index];
+                            return _buildPlayerCard(
+                              context,
+                              player.name,
+                              player.gender?.toUpperCase() ?? 'PLAYER',
+                              'Proximity Enabled',
+                              player.profilePhotoUrl,
+                            );
+                          },
+                        ),
             ),
             const SizedBox(height: 24),
             Padding(
@@ -147,7 +190,10 @@ class ExploreScreen extends StatelessWidget {
     String name,
     String sport,
     String distance,
+    String? photoUrl,
   ) {
+    final ImageProvider imageProvider = AvatarImageHelper.provider(photoUrl);
+
     return GestureDetector(
       onTap: () {
         showModalBottomSheet(
@@ -182,7 +228,10 @@ class ExploreScreen extends StatelessWidget {
             CircleAvatar(
               radius: 24,
               backgroundColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
-              child: Icon(Icons.person, color: Theme.of(context).colorScheme.primaryContainer),
+              backgroundImage: imageProvider,
+              child: AvatarImageHelper.resolveUrl(photoUrl) == null
+                  ? Icon(Icons.person, color: Theme.of(context).colorScheme.primaryContainer)
+                  : null,
             ),
             const SizedBox(height: 12),
             Text(

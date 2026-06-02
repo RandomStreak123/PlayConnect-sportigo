@@ -7,13 +7,13 @@ use App\Http\Controllers\MatchController;
 use App\Http\Controllers\SlotController;
 
 // Public routes – throttled at 10/min per IP (brute-force protection)
-Route::put('/slots/update', [SlotController::class, 'update']);
-
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:auth');
 
 // Protected routes
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    Route::get('/slots', [SlotController::class, 'index']);
+    Route::put('/slots/update', [SlotController::class, 'update']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
         return $request->user();
@@ -21,6 +21,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     Route::post('/profile/photo', [\App\Http\Controllers\API\ProfileController::class, 'uploadProfilePhoto']);
     Route::put('/profile',        [\App\Http\Controllers\API\ProfileController::class, 'updateProfile']);
+    Route::get('/players',        [\App\Http\Controllers\API\ProfileController::class, 'players']);
     Route::get('/activities',     [\App\Http\Controllers\API\ActivityController::class, 'index']);
 
     // Match reads (covered by the outer throttle:api — 60/min)

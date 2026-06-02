@@ -105,6 +105,8 @@ class AuthRepository {
     required String username,
     required String password,
   }) async {
+
+
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.login}'),
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
@@ -238,6 +240,28 @@ class AuthRepository {
       return user;
     } else {
       throw Exception(_extractErrorMessage(response, 'Failed to update profile'));
+    }
+  }
+
+  Future<List<UserModel>> getPlayers() async {
+    final token = await _getToken();
+    if (token == null) throw Exception('User not authenticated');
+
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/players'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = _decodeJsonBody(response.body);
+      if (data == null) throw Exception('Invalid server response');
+      final List<dynamic> playersJson = data['data'];
+      return playersJson.map((json) => UserModel.fromJson(json)).toList();
+    } else {
+      throw Exception(_extractErrorMessage(response, 'Failed to fetch players'));
     }
   }
 

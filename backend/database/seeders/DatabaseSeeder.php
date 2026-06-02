@@ -54,7 +54,6 @@ class DatabaseSeeder extends Seeder
                 'skill_level' => 'Beginner',
             ],
         ];
-
         foreach ($matches as $matchData) {
             $openSlots = $matchData['available_slots'];
             $match = \App\Models\SportMatch::create([
@@ -66,5 +65,10 @@ class DatabaseSeeder extends Seeder
             $match->users()->attach($user->id);
             $match->syncAvailableSlots();
         }
+
+        // Seed slots for dynamic booking screen
+        \App\Models\Slot::create(['time' => '10:00 AM', 'status' => 'available']);
+        \App\Models\Slot::create(['time' => '11:00 AM', 'status' => 'available']);
+        \App\Models\Slot::create(['time' => '12:00 PM', 'status' => 'available']);
     }
 }

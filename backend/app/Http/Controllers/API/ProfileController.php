@@ -67,11 +67,18 @@ class ProfileController extends Controller
             $user->theme_preference = $validated['theme_preference'];
         }
 
-        // Gender is set once at registration and cannot be changed afterward.
+        // Gender is set once at registration and cannot be changed afterward if already set.
         if ($request->has('gender')) {
-            return response()->json([
-                'message' => 'Gender can only be set during registration.',
-            ], 422);
+            if ($user->gender !== null) {
+                return response()->json([
+                    'message' => 'Gender can only be set during registration or initial profile setup.',
+                ], 422);
+            }
+
+            $validatedGender = $request->validate([
+                'gender' => 'required|string|in:male,female,other',
+            ]);
+            $user->gender = $validatedGender['gender'];
         }
 
         $user->save();
@@ -79,6 +86,21 @@ class ProfileController extends Controller
         return response()->json([
             'message' => 'Profile updated successfully',
             'user' => $user
+        ]);
+    }
+
+    public function players(Request $request)
+    {
+        $currentUser = $request->user();
+        
+        $players = User::where('id', '!=', $currentUser->id)
+            ->latest()
+            ->take(15)
+            ->get();
+            
+        return response()->json([
+            'success' => true,
+            'data' => $players
         ]);
     }
 }

@@ -63,7 +63,7 @@ class SportMatch extends Model
         return $this->belongsToMany(User::class, 'sport_match_user');
     }
 
-    public function syncAvailableSlots(): void
+    public function syncAvailableSlots(bool $save = true): void
     {
         $joined = $this->relationLoaded('users')
             ? $this->users->count()
@@ -78,7 +78,7 @@ class SportMatch extends Model
 
         $this->available_slots = max(0, $this->max_slots - $joined);
 
-        if ($this->max_slots !== $originalMax || $this->available_slots !== $originalAvailable || $this->isDirty()) {
+        if ($save && ($this->max_slots !== $originalMax || $this->available_slots !== $originalAvailable || $this->isDirty())) {
             $this->saveQuietly();
         }
     }
