@@ -40,18 +40,40 @@ class User extends Authenticatable
 
     public function getProfilePhotoUrlAttribute()
     {
-        $photo = $this->profile_photo ?? $this->profile_picture;
-        if (!$photo) {
-            return null;
+        $photo = $this->attributes['avatar'] ?? ($this->attributes['profile_picture'] ?? ($this->attributes['profile_photo'] ?? null));
+        if ($photo) {
+            if (str_starts_with($photo, 'http://') || str_starts_with($photo, 'https://')) {
+                return $photo;
+            }
+            return asset('storage/' . $photo);
         }
-        if (filter_var($photo, FILTER_VALIDATE_URL)) {
-            return $photo;
+        return null;
+    }
+
+    public function getProfilePictureAttribute()
+    {
+        $picture = $this->attributes['avatar'] ?? ($this->attributes['profile_picture'] ?? ($this->attributes['profile_photo'] ?? null));
+        if ($picture) {
+            if (str_starts_with($picture, 'http://') || str_starts_with($picture, 'https://')) {
+                return $picture;
+            }
+            return asset('storage/' . $picture);
         }
-        // If it starts with assets/, it is a frontend local asset path, return as is or return null
-        if (str_starts_with($photo, 'assets/')) {
-            return null; // The frontend will fallback to default avatar or use local assets directly
-        }
-        return asset('storage/' . $photo);
+        return null;
+    }
+
+    // Mutators for writing using legacy field names
+    public function setPhoneAttribute($value)
+    {
+        $this->attributes['phone_number'] = $value;
+        $this->attributes['phone'] = $value;
+    }
+
+    public function setAvatarAttribute($value)
+    {
+        $this->attributes['profile_picture'] = $value;
+        $this->attributes['avatar'] = $value;
+        $this->attributes['profile_photo'] = $value;
     }
 
     public function sportMatches()

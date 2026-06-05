@@ -19,7 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return null;
+            }
+            return '/';
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
 
@@ -37,7 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // 401 – Unauthenticated
         $exceptions->render(function (AuthenticationException $e, Request $request) {
-            if ($request->expectsJson()) {
+            if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'message' => 'Unauthenticated.',
                 ], Response::HTTP_UNAUTHORIZED);
