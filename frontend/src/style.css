@@ -427,3 +427,14 @@ button, input, select, textarea {
 .floating-fab:active {
   transform: translateY(0);
 }
+
+/* Custom styling for native date-time pickers */
+input[type="datetime-local"] {
+  accent-color: #000000;
+  color-scheme: light;
+}
+
+.theme-women input[type="datetime-local"] {
+  accent-color: #FF4D8D;
+  color-scheme: light;
+}
