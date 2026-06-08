@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { store } from '../store'
+import { t } from '../utils/i18n'
 
 const props = defineProps({
   show: {
@@ -43,7 +44,7 @@ const handleApply = () => {
       <!-- Header -->
       <div class="modal-header">
         <button class="back-btn" @click="emit('close')">✕</button>
-        <h2 class="modal-title">Advanced Search</h2>
+        <h2 class="modal-title">{{ t('advancedSearch') }}</h2>
         <div style="width: 20px"></div> <!-- alignment helper -->
       </div>
 
@@ -55,17 +56,17 @@ const handleApply = () => {
           <input 
             v-model="searchQuery"
             type="text" 
-            placeholder="Search matches, players, or clubs..." 
+            :placeholder="t('searchPlaceholder')" 
             class="search-input"
             @keyup.enter="handleApply"
           />
         </div>
 
-        <h3 class="filter-title">Filters</h3>
+        <h3 class="filter-title">{{ t('filters') }}</h3>
 
         <!-- Sport pills -->
         <div class="filter-section">
-          <label class="section-label">Sport Type</label>
+          <label class="section-label">{{ t('sportType') }}</label>
           <div class="pills-grid">
             <button 
               v-for="sport in sports" 
@@ -75,14 +76,14 @@ const handleApply = () => {
               :class="{ active: selectedSport === sport }"
               @click="selectedSport = sport"
             >
-              {{ sport }}
+              {{ t('sport_' + sport) }}
             </button>
           </div>
         </div>
 
         <!-- Skill pills -->
         <div class="filter-section">
-          <label class="section-label">Skill Level</label>
+          <label class="section-label">{{ t('skillLevel') }}</label>
           <div class="pills-grid">
             <button 
               v-for="skill in skills" 
@@ -92,7 +93,7 @@ const handleApply = () => {
               :class="{ active: selectedSkill === skill }"
               @click="selectedSkill = skill"
             >
-              {{ skill }}
+              {{ t('skill_' + skill) }}
             </button>
           </div>
         </div>
@@ -100,7 +101,7 @@ const handleApply = () => {
         <!-- Distance slider -->
         <div class="filter-section">
           <div class="slider-header">
-            <label class="section-label">Distance</label>
+            <label class="section-label">{{ t('distance') }}</label>
             <span class="slider-val">{{ distanceRange }} km</span>
           </div>
           <input 
@@ -114,7 +115,7 @@ const handleApply = () => {
 
         <!-- Recommended list -->
         <div class="recommended-block">
-          <h3 class="filter-title">Recommended Matches</h3>
+          <h3 class="filter-title">{{ t('recommendedMatches') }}</h3>
           
           <div class="rec-card">
             <div class="rec-icon">🎾</div>
@@ -124,7 +125,7 @@ const handleApply = () => {
             </div>
             <div class="rec-time">
               <span class="time-val">18:30</span>
-              <span class="time-day">Today</span>
+              <span class="time-day">{{ t('today') }}</span>
             </div>
           </div>
 
@@ -136,7 +137,7 @@ const handleApply = () => {
             </div>
             <div class="rec-time">
               <span class="time-val">08:00</span>
-              <span class="time-day">Today</span>
+              <span class="time-day">{{ t('today') }}</span>
             </div>
           </div>
         </div>
@@ -144,8 +145,8 @@ const handleApply = () => {
 
       <!-- Action Footer -->
       <div class="modal-footer">
-        <button class="footer-btn reset-btn" @click="handleReset">Reset</button>
-        <button class="footer-btn apply-btn" @click="handleApply">Apply Filters</button>
+        <button class="footer-btn reset-btn" @click="handleReset">{{ t('reset') }}</button>
+        <button class="footer-btn apply-btn" @click="handleApply">{{ t('applyFilters') }}</button>
       </div>
     </div>
   </div>

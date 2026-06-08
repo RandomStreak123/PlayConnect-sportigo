@@ -494,14 +494,14 @@ const onFileSelected = async (event) => {
       <div v-if="showEditModal" class="modal-backdrop" :class="{ 'theme-women': store.isWomenMode.value }" @click="showEditModal = false">
         <div class="modal-sheet animate-slide-up" @click.stop>
           <div class="modal-header">
-            <h2 class="modal-title">Edit Profile</h2>
+            <h2 class="modal-title">{{ t('editProfile') }}</h2>
             <button class="close-btn" @click="showEditModal = false">✕</button>
           </div>
 
           <div class="modal-body scrollable-y">
             <!-- Name -->
             <div class="input-group">
-              <label class="input-label">Display Name</label>
+              <label class="input-label">{{ t('displayName') }}</label>
               <input 
                 v-model="editName"
                 type="text" 
@@ -512,10 +512,10 @@ const onFileSelected = async (event) => {
 
             <!-- Bio -->
             <div class="input-group">
-              <label class="input-label">Bio (Tell others about yourself)</label>
+              <label class="input-label">{{ t('bioLabel') }}</label>
               <textarea 
                 v-model="editBio"
-                placeholder="e.g. Football enthusiast. Always down for a friendly match."
+                :placeholder="t('bioPlaceholder')"
                 class="form-textarea"
                 rows="3"
                 maxlength="500"
@@ -524,7 +524,7 @@ const onFileSelected = async (event) => {
 
             <!-- Primary Sport -->
             <div class="input-group">
-              <label class="input-label">Primary Sport</label>
+              <label class="input-label">{{ t('primarySport') }}</label>
               <div class="sport-select-grid">
                 <button 
                   v-for="sport in sportsList" 
@@ -535,7 +535,7 @@ const onFileSelected = async (event) => {
                   :style="editSport === sport.name ? { backgroundColor: getSportColor(sport.name), borderColor: getSportColor(sport.name), color: '#ffffff' } : {}"
                   @click="editSport = sport.name"
                 >
-                  <span class="chip-emoji">{{ sport.icon }}</span> {{ sport.name }}
+                  <span class="chip-emoji">{{ sport.icon }}</span> {{ t('sport_' + sport.name) }}
                 </button>
               </div>
             </div>
@@ -543,19 +543,19 @@ const onFileSelected = async (event) => {
             <!-- Gender & Skill Level in a row -->
             <div class="form-row">
               <div class="input-group half">
-                <label class="input-label">Gender</label>
+                <label class="input-label">{{ t('gender') }}</label>
                 <select v-model="editGender" class="form-select">
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
+                  <option value="male">{{ t('genderMale') }}</option>
+                  <option value="female">{{ t('genderFemale') }}</option>
                 </select>
               </div>
               <div class="input-group half">
-                <label class="input-label">Skill Tier</label>
+                <label class="input-label">{{ t('skillTier') }}</label>
                 <select v-model="editSkill" class="form-select">
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                  <option value="Professional">Professional</option>
+                  <option value="Beginner">{{ t('skill_Beginner') }}</option>
+                  <option value="Intermediate">{{ t('skill_Intermediate') }}</option>
+                  <option value="Advanced">{{ t('skill_Advanced') }}</option>
+                  <option value="Professional">{{ t('skill_Professional') }}</option>
                 </select>
               </div>
             </div>
@@ -563,7 +563,7 @@ const onFileSelected = async (event) => {
             <!-- Submit Button -->
             <button class="submit-btn" :disabled="isSavingProfile" @click="saveProfileDetails">
               <span v-if="isSavingProfile" class="loader"></span>
-              <span v-else>Save Changes</span>
+              <span v-else>{{ t('saveChanges') }}</span>
             </button>
           </div>
         </div>

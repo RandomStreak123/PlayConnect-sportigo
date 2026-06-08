@@ -91,7 +91,59 @@ const translations = {
     noUpcomingMatches: 'No Upcoming Matches',
     noMatchHistory: 'No Match History',
     noUpcomingDesc: 'You have no scheduled matches. Join an existing game or create your own to start playing!',
-    noPastDesc: 'You haven\'t played any matches yet. Once you complete a match, it will be saved here.'
+    noPastDesc: 'You haven\'t played any matches yet. Once you complete a match, it will be saved here.',
+    
+    // Advanced Search
+    advancedSearch: 'Advanced Search',
+    searchPlaceholder: 'Search matches, players, or clubs...',
+    filters: 'Filters',
+    distance: 'Distance',
+    recommendedMatches: 'Recommended Matches',
+    today: 'Today',
+    reset: 'Reset',
+    applyFilters: 'Apply Filters',
+    
+    // Sports & Skills (UI representation)
+    sport_All: 'All',
+    skill_All: 'All',
+    sport_Football: 'Football',
+    sport_Basketball: 'Basketball',
+    sport_Tennis: 'Tennis',
+    sport_Padel: 'Padel',
+    sport_Badminton: 'Badminton',
+    sport_Cricket: 'Cricket',
+    skill_Beginner: 'Beginner',
+    skill_Intermediate: 'Intermediate',
+    skill_Advanced: 'Advanced',
+    skill_Professional: 'Professional',
+    
+    // Edit Profile Modal
+    displayName: 'Display Name',
+    bioLabel: 'Bio (Tell others about yourself)',
+    bioPlaceholder: 'e.g. Football enthusiast. Always down for a friendly match.',
+    primarySport: 'Primary Sport',
+    gender: 'Gender',
+    genderMale: 'Male',
+    genderFemale: 'Female',
+    saveChanges: 'Save Changes',
+    
+    // Match Details Modal
+    womenSafetyNotice: 'This is a safe, women-only match. Only verified female players can join.',
+    aboutMatch: 'About this Match',
+    matchDescText: 'Join fellow players for a',
+    sessionAt: 'session at',
+    arriveEarly: 'Arrive a few minutes early to warm up.',
+    players: 'Players',
+    organizer: 'Organizer',
+    waitingSpotText: 'This spot is waiting for you!',
+    leaveMatch: 'Leave Match',
+    createdMatchStatus: 'You created this match',
+    joinedMatchStatus: 'You joined this match',
+    womenOnlyMatchRestricted: '🔒 🌸 Women-Only Match',
+    matchFullStatus: 'MATCH FULL',
+    joinMatchSpots: 'Join Match',
+    spotsLeftSuffix: 'spots left',
+    slotsOpenSuffix: 'slots open'
   },
   hi: {
     // Nav / General
@@ -183,7 +235,59 @@ const translations = {
     noUpcomingMatches: 'कोई आगामी मैच नहीं',
     noMatchHistory: 'कोई मैच इतिहास नहीं',
     noUpcomingDesc: 'आपके पास कोई निर्धारित मैच नहीं है। खेलना शुरू करने के लिए किसी मौजूदा गेम में शामिल हों या अपना खुद का बनाएं!',
-    noPastDesc: 'आपने अभी तक कोई मैच नहीं खेला है। एक बार जब आप एक मैच पूरा कर लेते हैं, तो इसे यहाँ सहेजा जाएगा।'
+    noPastDesc: 'आपने अभी तक कोई मैच नहीं खेला है। एक बार जब आप एक मैच पूरा कर लेते हैं, तो इसे यहाँ सहेजा जाएगा।',
+    
+    // Advanced Search
+    advancedSearch: 'उन्नत खोज',
+    searchPlaceholder: 'मैच, खिलाड़ी या क्लब खोजें...',
+    filters: 'फ़िल्टर',
+    distance: 'दूरी',
+    recommendedMatches: 'अनुशंसित मैच',
+    today: 'आज',
+    reset: 'रीसेट',
+    applyFilters: 'फ़िल्टर लागू करें',
+    
+    // Sports & Skills (UI representation)
+    sport_All: 'सभी',
+    skill_All: 'सभी',
+    sport_Football: 'फ़ुटबॉल',
+    sport_Basketball: 'बास्केटबॉल',
+    sport_Tennis: 'टेनिस',
+    sport_Padel: 'पैडल',
+    sport_Badminton: 'बैडमिंटन',
+    sport_Cricket: 'क्रिकेट',
+    skill_Beginner: 'शुरुआती',
+    skill_Intermediate: 'मध्यम',
+    skill_Advanced: 'उन्नत',
+    skill_Professional: 'पेशेवर',
+    
+    // Edit Profile Modal
+    displayName: 'प्रदर्शन नाम',
+    bioLabel: 'बायो (अपने बारे में बताएं)',
+    bioPlaceholder: 'जैसे: फ़ुटबॉल प्रेमी। हमेशा एक दोस्ताना मैच के लिए तैयार।',
+    primarySport: 'प्राथमिक खेल',
+    gender: 'लिंग',
+    genderMale: 'पुरुष',
+    genderFemale: 'महिला',
+    saveChanges: 'बदलाव सहेजें',
+    
+    // Match Details Modal
+    womenSafetyNotice: 'यह एक सुरक्षित, केवल महिलाओं का मैच है। केवल सत्यापित महिला खिलाड़ी ही शामिल हो सकती हैं।',
+    aboutMatch: 'इस मैच के बारे में',
+    matchDescText: 'खेल के लिए साथी खिलाड़ियों के साथ शामिल हों',
+    sessionAt: 'सत्र में',
+    arriveEarly: 'वार्म अप करने के लिए कुछ मिनट पहले पहुंचें।',
+    players: 'खिलाड़ी',
+    organizer: 'आयोजक',
+    waitingSpotText: 'यह स्थान आपका इंतजार कर रहा है!',
+    leaveMatch: 'मैच छोड़ें',
+    createdMatchStatus: 'आपने यह मैच बनाया है',
+    joinedMatchStatus: 'आप इस मैच में शामिल हो चुके हैं',
+    womenOnlyMatchRestricted: '🔒 🌸 केवल महिला मैच',
+    matchFullStatus: 'मैच पूर्ण',
+    joinMatchSpots: 'मैच में शामिल हों',
+    spotsLeftSuffix: 'स्थान शेष',
+    slotsOpenSuffix: 'खुले स्थान'
   }
 }
 

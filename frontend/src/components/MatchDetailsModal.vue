@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { getSportImage, getPlayerAvatar } from '../utils/sportImageHelper'
 import { store } from '../store'
+import { t } from '../utils/i18n'
 
 const props = defineProps({
   match: {
@@ -94,9 +95,9 @@ const handleShare = () => {
         <div class="header-section">
           <!-- Badges -->
           <div class="badge-row">
-            <span class="badge sport-badge">{{ match.sportType.toUpperCase() }}</span>
-            <span class="badge skill-badge">{{ match.skillLevel }}</span>
-            <span v-if="match.womenOnly" class="badge women-badge">🌸 Women Only</span>
+            <span class="badge sport-badge">{{ t('sport_' + match.sportType).toUpperCase() }}</span>
+            <span class="badge skill-badge">{{ t('skill_' + match.skillLevel) }}</span>
+            <span v-if="match.womenOnly" class="badge women-badge">🌸 {{ t('womenOnly') }}</span>
           </div>
 
           <!-- Women-Only Shield Notice -->
@@ -105,7 +106,7 @@ const handleShare = () => {
               <svg class="safety-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </span>
             <p class="safety-text">
-              This is a safe, women-only match. Only verified female players can join.
+              {{ t('womenSafetyNotice') }}
             </p>
           </div>
 
@@ -120,7 +121,7 @@ const handleShare = () => {
             </span>
             <div class="tile-info">
               <span class="tile-title">{{ match.dateTime }}</span>
-              <span class="tile-desc">{{ match.skillLevel }} Level</span>
+              <span class="tile-desc">{{ t('skill_' + match.skillLevel) }} {{ t('skillLevel') }}</span>
             </div>
           </div>
           <div class="info-tile">
@@ -129,23 +130,23 @@ const handleShare = () => {
             </span>
             <div class="tile-info">
               <span class="tile-title">{{ match.location }}</span>
-              <span class="tile-desc">{{ slotsLeft }} slots open</span>
+              <span class="tile-desc">{{ slotsLeft }} {{ t('slotsOpenSuffix') }}</span>
             </div>
           </div>
         </div>
 
         <!-- Description -->
         <div class="section-block">
-          <h3 class="section-title">About this Match</h3>
+          <h3 class="section-title">{{ t('aboutMatch') }}</h3>
           <p class="section-text">
-            Join fellow players for a {{ match.sportType }} session at {{ match.location }}.
-            Skill level: {{ match.skillLevel }}. Arrive a few minutes early to warm up.
+            {{ t('matchDescText') }} {{ t('sport_' + match.sportType) }} {{ t('sessionAt') }} {{ match.location }}.
+            {{ t('skillLevel') }}: {{ t('skill_' + match.skillLevel) }}. {{ t('arriveEarly') }}
           </p>
         </div>
 
         <!-- Players List -->
         <div class="section-block">
-          <h3 class="section-title">Players ({{ match.joinedCount }}/{{ match.maxSlots }})</h3>
+          <h3 class="section-title">{{ t('players') }} ({{ match.joinedCount }}/{{ match.maxSlots }})</h3>
           <div class="players-list">
             <div 
               v-for="p in match.participants" 
@@ -157,9 +158,9 @@ const handleShare = () => {
               <div class="player-info">
                 <span class="player-name">
                   {{ p.name }}
-                  <span v-if="p.id === match.creatorId" class="org-tag">Organizer</span>
+                  <span v-if="p.id === match.creatorId" class="org-tag">{{ t('organizer') }}</span>
                 </span>
-                <span class="player-level">{{ match.skillLevel }}</span>
+                <span class="player-level">{{ t('skill_' + match.skillLevel) }}</span>
               </div>
             </div>
             
@@ -167,7 +168,7 @@ const handleShare = () => {
               <span class="waiting-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="waiting-svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </span>
-              <span class="waiting-text">This spot is waiting for you!</span>
+              <span class="waiting-text">{{ t('waitingSpotText') }}</span>
             </div>
           </div>
         </div>
@@ -187,27 +188,27 @@ const handleShare = () => {
             class="action-btn leave-btn"
             @click="handleLeave"
           >
-            Leave Match
+            {{ t('leaveMatch') }}
           </button>
           
           <!-- Creator indicator -->
           <div v-else-if="isCreator" class="status-indicator-box">
-            You created this match
+            {{ t('createdMatchStatus') }}
           </div>
           
           <!-- Joined normal user indicator -->
           <div v-else-if="isJoined" class="status-indicator-box">
-            You joined this match
+            {{ t('joinedMatchStatus') }}
           </div>
 
           <!-- Restricted to gender -->
           <div v-else-if="isRestricted" class="restricted-box">
-            🔒 🌸 Women-Only Match
+            {{ t('womenOnlyMatchRestricted') }}
           </div>
 
           <!-- Full match -->
           <div v-else-if="slotsLeft === 0" class="full-box">
-            MATCH FULL
+            {{ t('matchFullStatus') }}
           </div>
 
           <!-- Available: Join button -->
@@ -216,7 +217,7 @@ const handleShare = () => {
             class="action-btn join-btn"
             @click="handleJoin"
           >
-            Join Match ({{ slotsLeft }} spots left)
+            {{ t('joinMatchSpots') }} ({{ slotsLeft }} {{ t('spotsLeftSuffix') }})
           </button>
         </div>
       </div>
