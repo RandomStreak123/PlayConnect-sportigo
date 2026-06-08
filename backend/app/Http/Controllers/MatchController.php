@@ -250,4 +250,23 @@ class MatchController extends Controller
 
         return response()->json($allMatches);
     }
+
+    public function destroy(SportsMatch $match)
+    {
+        $user = auth()->user();
+        if ($match->creator_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized to delete this match.'], 403);
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($match) {
+            $match->participants()->detach();
+            $match->delete();
+
+            // Clean up related activities
+            Activity::where('meta->match_id', $match->id)->delete();
+            Activity::where('message', 'like', "%{$match->title}%")->delete();
+        });
+
+        return response()->json(['message' => 'Match deleted successfully!']);
+    }
 }

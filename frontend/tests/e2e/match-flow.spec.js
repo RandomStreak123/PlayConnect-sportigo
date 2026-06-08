@@ -7,81 +7,105 @@ test.describe('PlayConnect E2E Match Flow', () => {
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
     page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
 
-    // 1. Visit the home page
-    await page.goto('/');
+    let matchId = null;
 
-    // Verify brand title is shown
-    await expect(page.locator('.brand-title')).toHaveText('PlayConnect');
+    try {
+      // 1. Visit the home page
+      await page.goto('/');
 
-    // 2. Perform Login
-    await page.locator('input[placeholder="Enter your username"]').fill('Ajith');
-    await page.locator('input[placeholder="Enter your password"]').fill('24681000');
-    
-    // Click Sign In button
-    await page.locator('button.submit-btn:has-text("Sign In")').click();
+      // Verify brand title is shown
+      await expect(page.locator('.brand-title')).toHaveText('PlayConnect');
 
-    // Verify login is successful
-    await expect(page.locator('.user-name')).toHaveText('Ajith', { timeout: 10000 });
-    
-    // 3. Open Create Match Modal
-    await page.locator('button.category-create-btn:has-text("Create Match")').click();
+      // 2. Perform Login
+      await page.locator('input[placeholder="Enter your username"]').fill('Ajith');
+      await page.locator('input[placeholder="Enter your password"]').fill('24681000');
+      
+      // Click Sign In button
+      await page.locator('button.submit-btn:has-text("Sign In")').click();
 
-    // Verify modal is open by checking header title
-    await expect(page.locator('.modal-title')).toHaveText('Create New Match');
+      // Verify login is successful
+      await expect(page.locator('.user-name')).toHaveText('Ajith', { timeout: 10000 });
+      
+      // 3. Open Create Match Modal
+      await page.locator('button.category-create-btn:has-text("Create Match")').click();
 
-    // 4. Fill in Match Details
-    await page.locator('button.sport-chip:has-text("Football")').click();
+      // Verify modal is open by checking header title
+      await expect(page.locator('.modal-title')).toHaveText('Create New Match');
 
-    const testTitle = `E2E Playwright Football Match ${Date.now()}`;
-    await page.locator('input[placeholder="e.g. Friday Evening 5v5"]').fill(testTitle);
+      // 4. Fill in Match Details
+      await page.locator('button.sport-chip:has-text("Football")').click();
 
-    // Set Date & Time (using standard ISO format)
-    const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days in the future
-    const year = futureDate.getFullYear();
-    const month = String(futureDate.getMonth() + 1).padStart(2, '0');
-    const day = String(futureDate.getDate()).padStart(2, '0');
-    const hours = String(futureDate.getHours()).padStart(2, '0');
-    const minutes = String(futureDate.getMinutes()).padStart(2, '0');
-    const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`;
-    await page.locator('input[type="datetime-local"]').fill(formattedDate);
+      const testTitle = `E2E Playwright Football Match ${Date.now()}`;
+      await page.locator('input[placeholder="e.g. Friday Evening 5v5"]').fill(testTitle);
 
-    // Enter Location
-    await page.locator('input[placeholder="e.g. Central Park Court 2"]').fill('HotFut Turf, Gachibowli');
+      // Set Date & Time (using standard ISO format)
+      const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days in the future
+      const year = futureDate.getFullYear();
+      const month = String(futureDate.getMonth() + 1).padStart(2, '0');
+      const day = String(futureDate.getDate()).padStart(2, '0');
+      const hours = String(futureDate.getHours()).padStart(2, '0');
+      const minutes = String(futureDate.getMinutes()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`;
+      await page.locator('input[type="datetime-local"]').fill(formattedDate);
 
-    // Enter Slots
-    await page.locator('input[placeholder="e.g. 10"]').fill('8');
+      // Enter Location
+      await page.locator('input[placeholder="e.g. Central Park Court 2"]').fill('HotFut Turf, Gachibowli');
 
-    // Wait for the POST response to /api/matches
-    const responsePromise = page.waitForResponse(response => 
-      response.url().includes('/api/matches') && response.request().method() === 'POST'
-    );
+      // Enter Slots
+      await page.locator('input[placeholder="e.g. 10"]').fill('8');
 
-    // Submit Match Creation
-    await page.locator('button.submit-btn:has-text("Create Match")').click();
+      // Wait for the POST response to /api/matches
+      const responsePromise = page.waitForResponse(response => 
+        response.url().includes('/api/matches') && response.request().method() === 'POST'
+      );
 
-    const response = await responsePromise;
-    console.log('API RESPONSE STATUS:', response.status());
-    console.log('API RESPONSE BODY:', await response.text());
+      // Submit Match Creation
+      await page.locator('button.submit-btn:has-text("Create Match")').click();
 
-    // 5. Verify Successful Creation
-    await expect(page.locator('.modal-title')).not.toBeVisible({ timeout: 10000 });
-    
-    const matchCard = page.locator(`.match-card:has-text("${testTitle}")`).first();
-    await expect(matchCard).toBeVisible({ timeout: 15000 });
+      const response = await responsePromise;
+      console.log('API RESPONSE STATUS:', response.status());
+      const responseText = await response.text();
+      console.log('API RESPONSE BODY:', responseText);
 
-    // 6. Open Match Details Modal
-    await matchCard.click();
+      if (response.status() === 201) {
+        const responseJson = JSON.parse(responseText);
+        matchId = responseJson.id;
+      }
 
-    // Verify Match Details Modal is open
-    await expect(page.locator('.modal-sheet .match-title')).toHaveText(testTitle, { timeout: 10000 });
+      // 5. Verify Successful Creation
+      await expect(page.locator('.modal-title')).not.toBeVisible({ timeout: 10000 });
+      
+      const matchCard = page.locator(`.match-card:has-text("${testTitle}")`).first();
+      await expect(matchCard).toBeVisible({ timeout: 15000 });
 
-    // Verify that "This spot is waiting for you!" is NOT visible to the creator/host
-    await expect(page.locator('.waiting-spot')).not.toBeVisible();
-    await expect(page.locator('text="This spot is waiting for you!"')).not.toBeVisible();
+      // 6. Open Match Details Modal
+      await matchCard.click();
 
-    // Verify that "Match Chat" section/text is NOT visible to any user
-    await expect(page.locator('.chat-section')).not.toBeVisible();
-    await expect(page.locator('text="Match Chat"')).not.toBeVisible();
+      // Verify Match Details Modal is open
+      await expect(page.locator('.modal-sheet .match-title')).toHaveText(testTitle, { timeout: 10000 });
+
+      // Verify that "This spot is waiting for you!" is NOT visible to the creator/host
+      await expect(page.locator('.waiting-spot')).not.toBeVisible();
+      await expect(page.locator('text="This spot is waiting for you!"')).not.toBeVisible();
+
+      // Verify that "Match Chat" section/text is NOT visible to any user
+      await expect(page.locator('.chat-section')).not.toBeVisible();
+      await expect(page.locator('text="Match Chat"')).not.toBeVisible();
+    } finally {
+      // Clean up/Delete the created match
+      if (matchId) {
+        const token = await page.evaluate(() => localStorage.getItem('sportigo_token'));
+        if (token) {
+          const deleteResponse = await page.request.delete(`/api/matches/${matchId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json',
+            }
+          });
+          console.log(`E2E CLEANUP: Deleted match ${matchId} with status ${deleteResponse.status()}`);
+        }
+      }
+    }
   });
 
 });

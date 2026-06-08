@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/matches/{match}', [MatchController::class, 'show']);
     Route::post('/matches', [MatchController::class, 'store']);
     Route::put('/matches/{match}', [MatchController::class, 'update']);
+    Route::delete('/matches/{match}', [MatchController::class, 'destroy']);
     Route::post('/matches/{match}/join', [MatchController::class, 'join']);
     Route::post('/matches/{match}/leave', [MatchController::class, 'leave']);
     
