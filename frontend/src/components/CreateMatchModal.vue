@@ -39,6 +39,179 @@ const minDateTime = computed(() => {
   return new Date(date - tzOffset).toISOString().slice(0, 16)
 })
 
+// Custom Date-Time Picker States
+const showCustomPicker = ref(false)
+const tempYear = ref(new Date().getFullYear())
+const tempMonth = ref(new Date().getMonth())
+
+const selectedDay = ref(new Date().getDate())
+const selectedMonth = ref(new Date().getMonth())
+const selectedYear = ref(new Date().getFullYear())
+
+const selectedHour = ref(5)
+const selectedMinute = ref(2)
+const selectedPeriod = ref('PM')
+
+// Format helper to display selected datetime on the main input trigger
+const formatDisplayDateTime = (dtStr) => {
+  if (!dtStr) return t('chooseDateAndTime')
+  try {
+    const dt = new Date(dtStr.replace('T', ' '))
+    if (isNaN(dt.getTime())) return dtStr
+    
+    const day = String(dt.getDate()).padStart(2, '0')
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const month = monthNames[dt.getMonth()]
+    const year = dt.getFullYear()
+    
+    let hours = dt.getHours()
+    const minutes = String(dt.getMinutes()).padStart(2, '0')
+    const ampm = hours >= 12 ? 'PM' : 'AM'
+    hours = hours % 12
+    hours = hours ? hours : 12
+    const hrStr = String(hours).padStart(2, '0')
+    
+    return `${day} ${month} ${year}, ${hrStr}:${minutes} ${ampm}`
+  } catch (e) {
+    return dtStr
+  }
+}
+
+// Open custom date-time picker
+const openCustomPicker = () => {
+  try {
+    if (dateTime.value) {
+      const currentVal = new Date(dateTime.value.replace('T', ' '))
+      if (!isNaN(currentVal.getTime())) {
+        selectedDay.value = currentVal.getDate()
+        selectedMonth.value = currentVal.getMonth()
+        selectedYear.value = currentVal.getFullYear()
+        
+        tempMonth.value = currentVal.getMonth()
+        tempYear.value = currentVal.getFullYear()
+        
+        let hrs = currentVal.getHours()
+        selectedPeriod.value = hrs >= 12 ? 'PM' : 'AM'
+        hrs = hrs % 12
+        selectedHour.value = hrs ? hrs : 12
+        selectedMinute.value = currentVal.getMinutes()
+      }
+    }
+  } catch (e) { /* fallback to now */ }
+  showCustomPicker.value = true
+}
+
+const prevMonth = () => {
+  if (tempMonth.value === 0) {
+    tempMonth.value = 11
+    tempYear.value--
+  } else {
+    tempMonth.value--
+  }
+}
+
+const nextMonth = () => {
+  if (tempMonth.value === 11) {
+    tempMonth.value = 0
+    tempYear.value++
+  } else {
+    tempMonth.value++
+  }
+}
+
+const selectDate = (dayItem) => {
+  if (dayItem.day && !dayItem.isPast) {
+    selectedDay.value = dayItem.day
+    selectedMonth.value = tempMonth.value
+    selectedYear.value = tempYear.value
+  }
+}
+
+const selectPeriod = (p) => {
+  selectedPeriod.value = p
+}
+
+const sanitizeMinutes = () => {
+  let val = parseInt(selectedMinute.value)
+  if (isNaN(val) || val < 0) val = 0
+  if (val > 59) val = 59
+  selectedMinute.value = val
+}
+
+const saveCustomDateTime = () => {
+  sanitizeMinutes()
+  let hr = selectedHour.value
+  if (selectedPeriod.value === 'PM' && hr < 12) hr += 12
+  if (selectedPeriod.value === 'AM' && hr === 12) hr = 0
+  
+  const monthStr = String(selectedMonth.value + 1).padStart(2, '0')
+  const dayStr = String(selectedDay.value).padStart(2, '0')
+  const hrStr = String(hr).padStart(2, '0')
+  const minStr = String(selectedMinute.value).padStart(2, '0')
+  
+  dateTime.value = `${selectedYear.value}-${monthStr}-${dayStr}T${hrStr}:${minStr}`
+  showCustomPicker.value = false
+}
+
+const getMonthYearLabel = computed(() => {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  return `${months[tempMonth.value]}, ${tempYear.value}`
+})
+
+const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+
+const calendarDays = computed(() => {
+  const year = tempYear.value
+  const month = tempMonth.value
+  
+  const firstDayOfWeek = new Date(year, month, 1).getDay()
+  const totalDays = new Date(year, month + 1, 0).getDate()
+  
+  const days = []
+  
+  // Padding
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    days.push({ day: null, isPast: true })
+  }
+  
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  for (let d = 1; d <= totalDays; d++) {
+    const dateObj = new Date(year, month, d)
+    dateObj.setHours(0, 0, 0, 0)
+    const isPast = dateObj < today
+    const isSelected = d === selectedDay.value && month === selectedMonth.value && year === selectedYear.value
+    
+    days.push({
+      day: d,
+      isPast,
+      isSelected
+    })
+  }
+  
+  return days
+})
+
+const getClockNumberStyle = (h) => {
+  const angle = (h * 30 - 90) * (Math.PI / 180)
+  const radius = 72
+  const x = Math.round(90 + radius * Math.cos(angle) - 13)
+  const y = Math.round(90 + radius * Math.sin(angle) - 13)
+  return {
+    left: `${x}px`,
+    top: `${y}px`
+  }
+}
+
+const clockHandStyle = computed(() => {
+  const angle = selectedHour.value * 30
+  return {
+    transform: `rotate(${angle}deg)`
+  }
+})
+
+
 // Autocomplete Location suggestions logic (Dynamically loaded from database matches + fallbacks)
 const locationSuggestions = computed(() => {
   const fallbacks = [
@@ -230,14 +403,18 @@ const closeModal = () => {
           />
         </div>
 
-        <!-- Date & Time -->
+        <!-- Date & Time Trigger -->
         <div class="input-group">
           <label class="input-label">{{ t('dateAndTime') }}</label>
+          <div class="custom-datetime-trigger" @click="openCustomPicker">
+            <span>📅 {{ formatDisplayDateTime(dateTime) }}</span>
+          </div>
+          <!-- Hidden fallback input for standard E2E compatibility -->
           <input 
             v-model="dateTime"
             type="datetime-local" 
             :min="minDateTime"
-            class="form-input"
+            style="opacity: 0; position: absolute; z-index: -1; width: 0; height: 0; pointer-events: none;"
           />
         </div>
 
@@ -308,6 +485,107 @@ const closeModal = () => {
       </div>
     </div>
   </div>
+
+  <!-- Custom Date Time Picker Modal -->
+  <Teleport to="body">
+    <div v-if="showCustomPicker" class="custom-picker-backdrop" @click="showCustomPicker = false">
+      <div class="custom-picker-dialog animate-scale-up" @click.stop>
+        <div class="picker-header-title">Select Date & Time</div>
+        
+        <!-- Selected Time Header Visual Display (Matches mockup) -->
+        <div class="time-header-row">
+          <div class="time-box hour-box active-picker-bg">
+            {{ String(selectedHour).padStart(2, '0') }}
+          </div>
+          <div class="time-separator">:</div>
+          <div class="time-box minute-box">
+            <input 
+              type="number" 
+              v-model="selectedMinute" 
+              min="0" 
+              max="59" 
+              class="time-header-input"
+              @blur="sanitizeMinutes"
+            />
+          </div>
+          <div class="ampm-vertical-stack">
+            <button 
+              class="ampm-btn" 
+              :class="{ active: selectedPeriod === 'AM' }"
+              @click="selectPeriod('AM')"
+            >
+              AM
+            </button>
+            <button 
+              class="ampm-btn" 
+              :class="{ active: selectedPeriod === 'PM' }"
+              @click="selectPeriod('PM')"
+            >
+              PM
+            </button>
+          </div>
+        </div>
+        
+        <!-- Picker Body content split -->
+        <div class="picker-split-body">
+          <!-- Calendar part -->
+          <div class="picker-calendar-pane">
+            <div class="calendar-month-nav">
+              <button class="nav-arrow" @click="prevMonth">◀</button>
+              <span class="month-lbl">{{ getMonthYearLabel }}</span>
+              <button class="nav-arrow" @click="nextMonth">▶</button>
+            </div>
+            
+            <div class="calendar-weekdays">
+              <span v-for="day in daysOfWeek" :key="day" class="weekday-item">{{ day }}</span>
+            </div>
+            
+            <div class="calendar-days-grid">
+              <div 
+                v-for="(dayItem, idx) in calendarDays" 
+                :key="idx"
+                class="day-grid-cell"
+                :class="{ 
+                  empty: !dayItem.day, 
+                  past: dayItem.isPast, 
+                  selected: dayItem.isSelected 
+                }"
+                @click="selectDate(dayItem)"
+              >
+                <span v-if="dayItem.day" class="day-number">{{ dayItem.day }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Clock part -->
+          <div class="picker-clock-pane">
+            <div class="clock-title">Select Hour</div>
+            <div class="clock-face">
+              <div class="clock-center-dot"></div>
+              <div class="clock-hand" :style="clockHandStyle"></div>
+              
+              <div 
+                v-for="h in 12" 
+                :key="h" 
+                class="clock-number"
+                :class="{ active: selectedHour === h }"
+                :style="getClockNumberStyle(h)"
+                @click="selectedHour = h"
+              >
+                {{ h }}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Dialog Footer Actions -->
+        <div class="picker-footer-actions">
+          <button class="picker-action-btn cancel" @click="showCustomPicker = false">Cancel</button>
+          <button class="picker-action-btn ok" @click="saveCustomDateTime">OK</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -620,5 +898,361 @@ input:checked + .toggle-slider:before {
 .suggestion-item:hover {
   background-color: var(--surface-dim);
   color: var(--primary);
+}
+
+/* Custom Date-Time Picker Layout */
+.custom-datetime-trigger {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  color: var(--on-surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: border-color 0.2s ease;
+}
+
+.custom-datetime-trigger:hover {
+  border-color: var(--primary);
+}
+
+.custom-picker-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-picker-dialog {
+  width: 95%;
+  max-width: 520px;
+  background-color: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.picker-header-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* Time Selection Header (matches mockup) */
+.time-header-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.time-box {
+  width: 72px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-dim);
+  border: 1px solid var(--outline-variant);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.time-box.hour-box.active-picker-bg {
+  background-color: var(--picker-accent);
+  border-color: var(--picker-accent);
+  color: #ffffff;
+}
+
+.time-separator {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+}
+
+.time-header-input {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  text-align: center;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  outline: none;
+}
+
+/* Remove spin arrows from number input */
+.time-header-input::-webkit-outer-spin-button,
+.time-header-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.time-header-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.ampm-vertical-stack {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.ampm-btn {
+  border: none;
+  background: var(--surface-dim);
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ampm-btn:first-child {
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.ampm-btn.active {
+  background-color: var(--picker-accent);
+  color: #ffffff;
+}
+
+/* Split Pane: Left Calendar, Right Clock */
+.picker-split-body {
+  display: flex;
+  gap: 20px;
+  border-top: 1px solid var(--outline-variant);
+  border-bottom: 1px solid var(--outline-variant);
+  padding: 20px 0;
+}
+
+@media (max-width: 480px) {
+  .picker-split-body {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+}
+
+.picker-calendar-pane {
+  flex: 1.2;
+}
+
+.picker-clock-pane {
+  flex: 0.8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--outline-variant);
+  padding-left: 20px;
+}
+
+@media (max-width: 480px) {
+  .picker-clock-pane {
+    border-left: none;
+    border-top: 1px solid var(--outline-variant);
+    padding-left: 0;
+    padding-top: 16px;
+    width: 100%;
+  }
+}
+
+.calendar-month-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.nav-arrow {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--picker-accent);
+  font-size: 0.9rem;
+  padding: 4px 8px;
+}
+
+.month-lbl {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--on-surface);
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.weekday-item {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--outline);
+}
+
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day-grid-cell {
+  aspect-ratio: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  transition: all 0.2s;
+}
+
+.day-grid-cell:hover:not(.empty):not(.past) {
+  background-color: var(--surface-dim);
+}
+
+.day-grid-cell.past {
+  color: var(--outline-variant);
+  cursor: not-allowed;
+}
+
+.day-grid-cell.empty {
+  cursor: default;
+}
+
+.day-grid-cell.selected {
+  background-color: var(--picker-accent) !important;
+  color: #ffffff !important;
+}
+
+/* Clock styling */
+.clock-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--outline);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.clock-face {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background-color: var(--surface-dim);
+  position: relative;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.clock-center-dot {
+  position: absolute;
+  top: calc(50% - 4px);
+  left: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--picker-accent);
+}
+
+.clock-hand {
+  position: absolute;
+  width: 2px;
+  background-color: var(--picker-accent);
+  bottom: 50%;
+  left: calc(50% - 1px);
+  transform-origin: bottom center;
+  height: 72px;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.clock-hand::after {
+  content: '';
+  position: absolute;
+  top: -13px;
+  left: -13px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--picker-accent);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.clock-number {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  border-radius: 50%;
+  user-select: none;
+  z-index: 10;
+  transition: color 0.15s;
+}
+
+.clock-number.active {
+  color: #ffffff;
+}
+
+.picker-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.picker-action-btn {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--picker-accent);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s;
+}
+
+.picker-action-btn:hover {
+  background-color: var(--surface-dim);
 }
 </style>

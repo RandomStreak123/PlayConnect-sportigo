@@ -20,6 +20,7 @@
   --on-surface-variant: #64748b; /* medium slate sub-text */
   --outline: #94a3b8;
   --outline-variant: #e2e8f0;
+  --picker-accent: #000000;
   
   /* Missing text and color variables */
   --text-dark: #0f172a;
@@ -77,6 +78,7 @@
   --on-surface-variant: #7c6273;
   --outline: #bca8b6;
   --outline-variant: #ebdbe5;
+  --picker-accent: #FF4D8D;
 
   /* Missing text and color variables for women's theme */
   --text-dark: #1e0b17;
