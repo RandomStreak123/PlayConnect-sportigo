@@ -227,53 +227,62 @@ const handleShare = () => {
 
 <style scoped>
 .modal-backdrop {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(8px);
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--scaffold-bg);
   z-index: 1000;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
 }
 
 @media (min-width: 768px) {
   .modal-backdrop {
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: stretch;
   }
 }
 
 .modal-sheet {
   width: 100%;
-  height: 90%;
+  height: 100%;
   background-color: var(--scaffold-bg);
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
+  border-radius: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-y: auto;
+  box-shadow: none;
+  border: none;
 }
 
 @media (min-width: 768px) {
   .modal-sheet {
     width: 100%;
-    max-width: 650px;
-    height: 80vh;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    max-width: none;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 
 .cover-banner {
+  width: 100%;
   height: 200px;
   background-size: cover;
   background-position: center;
   position: relative;
+}
+
+@media (min-width: 768px) {
+  .cover-banner {
+    height: 300px;
+    max-width: 800px;
+    margin: 0 auto;
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+  }
 }
 
 /* Fallback colors for sport categories if image not loading */
@@ -346,6 +355,15 @@ const handleShare = () => {
 .details-content {
   flex: 1;
   padding: 16px 20px;
+}
+
+@media (min-width: 768px) {
+  .details-content {
+    max-width: 800px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 24px 0;
+  }
 }
 
 .header-section {
@@ -688,6 +706,17 @@ const handleShare = () => {
   padding: 16px 20px 24px;
   background-color: var(--surface);
   border-top: 1px solid var(--outline-variant);
+}
+
+@media (min-width: 768px) {
+  .details-footer {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: transparent;
+    border-top: none;
+    padding: 16px 0 32px;
+  }
 }
 
 .loader-wrap {
