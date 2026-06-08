@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { store } from '../store'
+import { t } from '../utils/i18n'
 
 const props = defineProps({
   show: {
@@ -31,6 +32,12 @@ const womenOnly = ref(false)
 
 const formError = ref('')
 const isSubmitting = ref(false)
+
+const minDateTime = computed(() => {
+  const date = new Date()
+  const tzOffset = date.getTimezoneOffset() * 60000
+  return new Date(date - tzOffset).toISOString().slice(0, 16)
+})
 
 // Autocomplete Location suggestions logic (Dynamically loaded from database matches + fallbacks)
 const locationSuggestions = computed(() => {
@@ -115,20 +122,27 @@ const showWomenOnlyToggle = computed(() => {
 
 const submitForm = async () => {
   if (!title.value.trim()) {
-    formError.value = 'Please enter a match title'
+    formError.value = t('enterMatchTitle')
     return
   }
   if (!dateTime.value) {
-    formError.value = 'Please choose a date and time'
+    formError.value = t('chooseDateAndTime')
     return
   }
+  
+  const selectedDate = new Date(dateTime.value.replace('T', ' '))
+  if (selectedDate < new Date()) {
+    formError.value = t('futureDateError')
+    return
+  }
+
   if (!location.value.trim()) {
-    formError.value = 'Please enter court location'
+    formError.value = t('enterCourtLocation')
     return
   }
   const slotsNum = parseInt(slots.value)
   if (isNaN(slotsNum) || slotsNum <= 0) {
-    formError.value = 'Please specify valid available slots'
+    formError.value = t('specifyValidSlots')
     return
   }
   
@@ -153,7 +167,7 @@ const submitForm = async () => {
       emit('match-created', `Created match "${created.title}" successfully! ⚽`)
       closeModal()
     } else {
-      formError.value = 'Failed to create match. Make sure the date and time is in the future.'
+      formError.value = t('failedCreateMatch')
     }
   } catch (e) {
     formError.value = e.message || 'Failed to create match'
@@ -180,7 +194,7 @@ const closeModal = () => {
     <div class="modal-sheet animate-slide-up" @click.stop>
       <!-- Sheet header -->
       <div class="modal-header">
-        <h2 class="modal-title">Create New Match</h2>
+        <h2 class="modal-title">{{ t('createNewMatch') }}</h2>
         <button class="close-btn" @click="closeModal">✕</button>
       </div>
 
@@ -190,7 +204,7 @@ const closeModal = () => {
 
         <!-- Sport selection -->
         <div class="input-group">
-          <label class="input-label">Sport Type</label>
+          <label class="input-label">{{ t('sportType') }}</label>
           <div class="sport-select-grid">
             <button 
               v-for="sport in sports" 
@@ -207,7 +221,7 @@ const closeModal = () => {
 
         <!-- Title -->
         <div class="input-group">
-          <label class="input-label">Match Title</label>
+          <label class="input-label">{{ t('matchTitle') }}</label>
           <input 
             v-model="title"
             type="text" 
@@ -218,17 +232,18 @@ const closeModal = () => {
 
         <!-- Date & Time -->
         <div class="input-group">
-          <label class="input-label">Date & Time</label>
+          <label class="input-label">{{ t('dateAndTime') }}</label>
           <input 
             v-model="dateTime"
             type="datetime-local" 
+            :min="minDateTime"
             class="form-input"
           />
         </div>
 
         <!-- Location -->
         <div class="input-group location-group">
-          <label class="input-label">Location</label>
+          <label class="input-label">{{ t('location') }}</label>
           <input 
             v-model="location"
             type="text" 
@@ -253,7 +268,7 @@ const closeModal = () => {
         <!-- Row slots and skill -->
         <div class="form-row">
           <div class="input-group half">
-            <label class="input-label">Available Slots</label>
+            <label class="input-label">{{ t('availableSlots') }}</label>
             <input 
               v-model="slots"
               type="number" 
@@ -262,7 +277,7 @@ const closeModal = () => {
             />
           </div>
           <div class="input-group half">
-            <label class="input-label">Skill Level</label>
+            <label class="input-label">{{ t('skillLevel') }}</label>
             <select v-model="selectedSkill" class="form-select">
               <option v-for="skill in skills" :key="skill" :value="skill">
                 {{ skill }}
@@ -274,9 +289,9 @@ const closeModal = () => {
         <!-- Women-Only Switch -->
         <div v-if="showWomenOnlyToggle" class="switch-tile" :class="{ active: womenOnly }">
           <div class="switch-info">
-            <span class="switch-title">🌸 Women-Only Match</span>
+            <span class="switch-title">🌸 {{ t('womenOnlyMatch') }}</span>
             <span class="switch-desc">
-              {{ womenOnly ? 'Only female players can join this match' : 'Enable to restrict to women players' }}
+              {{ womenOnly ? t('onlyFemaleCanJoin') : t('enableRestrictWomen') }}
             </span>
           </div>
           <label class="toggle-control">
@@ -288,7 +303,7 @@ const closeModal = () => {
         <!-- Submit btn -->
         <button class="submit-btn" :disabled="isSubmitting" @click="submitForm">
           <span v-if="isSubmitting" class="loader"></span>
-          <span v-else>Create Match</span>
+          <span v-else>{{ t('createMatch') }}</span>
         </button>
       </div>
     </div>

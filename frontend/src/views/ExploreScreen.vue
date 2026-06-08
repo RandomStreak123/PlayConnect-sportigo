@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { getPlayerAvatar } from '../utils/sportImageHelper'
 import { store } from '../store'
 import MatchCard from '../components/MatchCard.vue'
+import { t } from '../utils/i18n'
 
 const emit = defineEmits(['open-details', 'open-player'])
 
@@ -92,7 +93,7 @@ const handleDragEnd = (e) => {
   <div class="explore-container scrollable-y animate-fade-in">
     <!-- Header -->
     <div class="explore-header">
-      <h2 class="title">Explore</h2>
+      <h2 class="title">{{ t('explore') }}</h2>
       <button class="refresh-btn" :disabled="isLoadingPlayers" @click="loadPlayers">
         <svg v-if="isLoadingPlayers" class="spinner-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
         <svg v-else class="refresh-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
@@ -101,8 +102,8 @@ const handleDragEnd = (e) => {
 
     <!-- Nearby Players -->
     <div class="section-row">
-      <h3 class="section-title">Nearby Players</h3>
-      <button class="refresh-txt-btn" @click="loadPlayers">Refresh list</button>
+      <h3 class="section-title">{{ t('nearbyPlayers') }}</h3>
+      <button class="refresh-txt-btn" @click="loadPlayers">{{ t('refreshList') }}</button>
     </div>
 
     <div 
@@ -117,7 +118,7 @@ const handleDragEnd = (e) => {
         <span class="loader"></span>
       </div>
       <div v-else-if="players.length === 0" class="empty-state">
-        No players registered yet
+        {{ t('noPlayersRegistered') }}
       </div>
       <div 
         v-else
@@ -135,12 +136,12 @@ const handleDragEnd = (e) => {
 
     <!-- Trending matches -->
     <div class="section-row trending-header">
-      <h3 class="section-title">Trending Matches</h3>
+      <h3 class="section-title">{{ t('trendingMatches') }}</h3>
     </div>
 
     <div class="matches-list">
       <div v-if="upcomingMatches.length === 0" class="empty-matches">
-        No upcoming matches found
+        {{ t('noMatchesFound') }}
       </div>
       <MatchCard 
         v-for="match in upcomingMatches" 
@@ -218,9 +219,10 @@ const handleDragEnd = (e) => {
 
 .section-title {
   font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 800;
   color: var(--on-surface);
+  letter-spacing: -0.2px;
 }
 
 .refresh-txt-btn {
@@ -347,8 +349,21 @@ const handleDragEnd = (e) => {
 }
 
 .matches-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 640px) {
+  .matches-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .matches-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .empty-matches, .empty-state {

@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { store } from '../store'
 import { getPlayerAvatar } from '../utils/sportImageHelper'
 import MatchCard from '../components/MatchCard.vue'
+import { t } from '../utils/i18n'
 
 const emit = defineEmits(['open-details', 'open-player', 'open-search', 'open-notifications', 'open-create'])
 
@@ -20,9 +21,9 @@ const avatarUrl = computed(() => {
 // Dynamic greeting based on time
 const greeting = computed(() => {
   const hour = new Date().getHours()
-  if (hour < 12) return 'Good morning,'
-  if (hour < 17) return 'Good afternoon,'
-  return 'Good evening,'
+  if (hour < 12) return t('goodMorning')
+  if (hour < 17) return t('goodAfternoon')
+  return t('goodEvening')
 })
 
 // Hero banner carousel
@@ -253,7 +254,7 @@ const handleDragEnd = (e) => {
           <h2 class="hero-slide-title">{{ slide.title }}</h2>
           <p class="hero-slide-subtitle">{{ slide.subtitle }}</p>
           <button class="hero-slide-btn" @click="handleJoinMatchClick(slide.sport)">
-            <span>Join a Match</span>
+            <span>{{ t('joinAMatch') }}</span>
             <svg class="btn-arrow" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
           </button>
         </div>
@@ -275,7 +276,7 @@ const handleDragEnd = (e) => {
       <span class="search-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="search-svg"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       </span>
-      <span class="placeholder-text">Find matches or players...</span>
+      <span class="placeholder-text">{{ t('findPlaceholder') }}</span>
     </div>
 
     <!-- Category Pills horizontal scroll -->
@@ -301,15 +302,15 @@ const handleDragEnd = (e) => {
       <div class="category-create-btn-wrap">
         <button class="category-create-btn" @click="emit('open-create')" title="Create Match">
           <span class="plus-icon">+</span>
-          Create Match
+          {{ t('createMatch') }}
         </button>
       </div>
     </div>
 
     <!-- Nearby Matches -->
     <div class="section-row">
-      <h3 class="section-title">Nearby Matches</h3>
-      <button class="see-all-btn">See All</button>
+      <h3 class="section-title">{{ t('nearbyMatches') }}</h3>
+      <button class="see-all-btn">{{ t('seeAll') }}</button>
     </div>
 
     <!-- Loading skeletons for matches -->
@@ -327,7 +328,7 @@ const handleDragEnd = (e) => {
     >
       <div v-if="nearbyMatches.length === 0" class="empty-matches">
         <span class="empty-icon">🏃</span>
-        <span>No upcoming matches found.<br/>Be the first to create one!</span>
+        <span>{{ t('noMatchesFound') }}<br/>{{ t('beFirstToCreate') }}</span>
       </div>
       <MatchCard 
         v-for="match in nearbyMatches" 
@@ -341,8 +342,8 @@ const handleDragEnd = (e) => {
 
     <!-- Trending Matches -->
     <div class="section-row trending-row">
-      <h3 class="section-title">Trending Matches</h3>
-      <button class="see-all-btn">See All</button>
+      <h3 class="section-title">{{ t('trendingMatches') }}</h3>
+      <button class="see-all-btn">{{ t('seeAll') }}</button>
     </div>
 
     <div v-if="store.state.isLoading" class="nearby-slider">
@@ -359,7 +360,7 @@ const handleDragEnd = (e) => {
     >
       <div v-if="trendingMatches.length === 0" class="empty-matches">
         <span class="empty-icon">🔥</span>
-        <span>No trending matches yet</span>
+        <span>{{ t('noTrendingMatches') }}</span>
       </div>
       <MatchCard 
         v-for="match in trendingMatches" 

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { store } from '../store'
 import { getPlayerAvatar } from '../utils/sportImageHelper'
+import { t } from '../utils/i18n'
 
 const emit = defineEmits(['open-match-details', 'open-player'])
 
@@ -58,13 +59,13 @@ const handleComment = (e, act) => {
   <div class="activity-feed-container scrollable-y animate-fade-in">
     <!-- Header -->
     <div class="feed-header">
-      <h2 class="title">Activity</h2>
+      <h2 class="title">{{ t('activity') }}</h2>
     </div>
 
     <!-- Feed list -->
     <div class="feed-list">
       <div v-if="activities.length === 0" class="empty-state">
-        No activity updates yet
+        {{ t('noActivityUpdates') }}
       </div>
       
       <div 

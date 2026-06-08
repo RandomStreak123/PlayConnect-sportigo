@@ -3,6 +3,7 @@ import { reactive, computed } from 'vue'
 const state = reactive({
   currentUser: JSON.parse(localStorage.getItem('sportigo_user')) || null,
   themePreference: localStorage.getItem('sportigo_theme_pref') || 'system',
+  language: localStorage.getItem('sportigo_language') || 'en',
   matches: [],
   activities: [],
   notifications: [],
@@ -159,6 +160,11 @@ const setThemePreference = (pref) => {
   localStorage.setItem('sportigo_theme_pref', pref)
 }
 
+const setLanguage = (lang) => {
+  state.language = lang
+  localStorage.setItem('sportigo_language', lang)
+}
+
 const joinMatch = async (matchId) => {
   if (!state.currentUser) return
   const data = await safeFetch(`${API_URL}/matches/${matchId}/join`, {
@@ -274,6 +280,7 @@ export const store = {
   logout,
   updateProfile,
   setThemePreference,
+  setLanguage,
   joinMatch,
   leaveMatch,
   createMatch,

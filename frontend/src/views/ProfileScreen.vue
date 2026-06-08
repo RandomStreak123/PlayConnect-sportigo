@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { store } from '../store'
 import { getPlayerAvatar } from '../utils/sportImageHelper'
 import { supabase } from '../utils/supabase'
+import { t } from '../utils/i18n'
 
 const emit = defineEmits(['auth-logout', 'toast-message'])
 
@@ -65,31 +66,31 @@ const isLavenderTheme = computed(() => {
 
 const getSportColor = (sport) => {
   switch (sport) {
-    case 'Football': return '#2E7D32'
-    case 'Cricket': return '#1E88E5'
-    case 'Basketball': return '#FF9100'
-    case 'Tennis': return '#AFB42B'
-    case 'Padel': return '#008080'
-    case 'Badminton': return '#8E24AA'
+    case 'Football': return '#10b981'
+    case 'Cricket': return '#3b82f6'
+    case 'Basketball': return '#f97316'
+    case 'Tennis': return '#06b6d4'
+    case 'Padel': return '#2563eb'
+    case 'Badminton': return '#8b5cf6'
     default: return '#1a237e'
+  }
+}
+
+const getSportGradient = (sport) => {
+  switch (sport) {
+    case 'Football': return 'linear-gradient(135deg, #059669 0%, #10b981 100%)'
+    case 'Cricket': return 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)'
+    case 'Basketball': return 'linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #f97316 100%)'
+    case 'Tennis': return 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)'
+    case 'Padel': return 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)'
+    case 'Badminton': return 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%)'
+    default: return 'linear-gradient(135deg, #1a237e 0%, #303f9f 50%, #7986cb 100%)'
   }
 }
 
 const currentSportColor = computed(() => {
   return getSportColor(selectedSport.value)
 })
-
-const getSportGradient = (sport) => {
-  switch (sport) {
-    case 'Football': return 'linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #52b788 100%)'
-    case 'Cricket': return 'linear-gradient(135deg, #0d47a1 0%, #1976d2 50%, #64b5f6 100%)'
-    case 'Basketball': return 'linear-gradient(135deg, #e65100 0%, #f57c00 50%, #ffb74d 100%)'
-    case 'Tennis': return 'linear-gradient(135deg, #33691e 0%, #558b2f 50%, #9ccc65 100%)'
-    case 'Padel': return 'linear-gradient(135deg, #004d40 0%, #00796b 50%, #4db6ac 100%)'
-    case 'Badminton': return 'linear-gradient(135deg, #4a148c 0%, #7b1fa2 50%, #ba68c8 100%)'
-    default: return 'linear-gradient(135deg, #1a237e 0%, #303f9f 50%, #7986cb 100%)'
-  }
-}
 
 const currentSportGradient = computed(() => {
   return getSportGradient(currentUser.value.primary_sport || selectedSport.value)
@@ -240,11 +241,11 @@ const onFileSelected = async (event) => {
 <template>
   <div 
     class="profile-container scrollable-y animate-fade-in"
-    :style="{ background: `linear-gradient(180deg, ${currentSportColor}26 0%, var(--scaffold-bg) 40%, var(--scaffold-bg) 100%)` }"
+    :style="{ background: `linear-gradient(180deg, ${currentSportColor}1A 0%, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)` }"
   >
     <!-- Custom Header -->
     <div class="profile-header">
-      <h2 class="title">Player Profile</h2>
+      <h2 class="title">{{ t('playerProfile') }}</h2>
       <button v-if="isCurrentUser" class="settings-nav-btn" @click="handleSettingsInfo('Navigating to Settings panel... ⚙️')">
         ⚙️
       </button>
@@ -269,9 +270,9 @@ const onFileSelected = async (event) => {
       </div>
 
       <h3 class="card-name">{{ currentUser.name }}</h3>
-      <span class="card-level" :style="{ color: currentSportColor }">LEVEL 18</span>
+      <span class="card-level" :style="{ color: currentSportColor }">{{ t('level') }} 18</span>
 
-      <p class="card-bio">{{ currentUser.bio || 'No bio written yet. Tap Edit Profile to add one!' }}</p>
+      <p class="card-bio">{{ currentUser.bio || t('noBioYet') }}</p>
 
       <div class="profile-badges" v-if="currentUser.primary_sport || currentUser.skill_tier">
         <span class="profile-badge sport" v-if="currentUser.primary_sport" :style="{ backgroundColor: getSportColor(currentUser.primary_sport) + '20', color: getSportColor(currentUser.primary_sport) }">
@@ -285,10 +286,10 @@ const onFileSelected = async (event) => {
       <!-- Action tags -->
       <div class="action-badges-row">
         <button class="badge-btn" @click="handleShareProfile">
-          📤 Share Profile
+          📤 {{ t('shareProfile') }}
         </button>
         <button v-if="isCurrentUser" class="badge-btn edit" @click="openEditModal">
-          ✏️ Edit Profile
+          ✏️ {{ t('editProfile') }}
         </button>
       </div>
     </div>
@@ -296,7 +297,7 @@ const onFileSelected = async (event) => {
     <!-- XP system -->
     <div class="xp-container">
       <div class="xp-row">
-        <span class="xp-lbl">Level Progression</span>
+        <span class="xp-lbl">{{ t('levelProgression') }}</span>
         <span class="xp-val">4,250 / 5,000 XP</span>
       </div>
       <div class="progress-track">
@@ -309,19 +310,19 @@ const onFileSelected = async (event) => {
     <div class="stats-grid">
       <div class="stat-box">
         <span class="stat-val">142</span>
-        <span class="stat-lbl">Matches</span>
+        <span class="stat-lbl">{{ t('matches') }}</span>
       </div>
       <div class="stat-box">
         <span class="stat-val">98%</span>
-        <span class="stat-lbl">Reliability</span>
+        <span class="stat-lbl">{{ t('reliability') }}</span>
       </div>
       <div class="stat-box">
         <span class="stat-val">4.8</span>
-        <span class="stat-lbl">Rating</span>
+        <span class="stat-lbl">{{ t('rating') }}</span>
       </div>
       <div class="stat-box">
         <span class="stat-val">7 🔥</span>
-        <span class="stat-lbl">Streak</span>
+        <span class="stat-lbl">{{ t('streak') }}</span>
       </div>
     </div>
 
@@ -332,21 +333,21 @@ const onFileSelected = async (event) => {
         :class="{ active: activeSegmentTab === 0 }"
         @click="activeSegmentTab = 0"
       >
-        Activity
+        {{ t('activity') }}
       </button>
       <button 
         class="segment-btn" 
         :class="{ active: activeSegmentTab === 1 }"
         @click="activeSegmentTab = 1"
       >
-        Achievements
+        {{ t('achievements') }}
       </button>
       <button 
         class="segment-btn" 
         :class="{ active: activeSegmentTab === 2 }"
         @click="activeSegmentTab = 2"
       >
-        Streaks
+        {{ t('streaks') }}
       </button>
     </div>
 
@@ -381,14 +382,14 @@ const onFileSelected = async (event) => {
       <div v-else class="panel-content streaks animate-fade-in">
         <div class="streak-details">
           <span class="streak-large">7</span>
-          <span class="streak-label">Consecutive Weekly Matches Played</span>
+          <span class="streak-label">{{ t('consecutiveWeekly') }}</span>
         </div>
       </div>
     </div>
 
     <!-- Sports ratings selection -->
     <div class="sports-rating-section">
-      <h4 class="section-sub-title">Sports Skill Profile</h4>
+      <h4 class="section-sub-title">{{ t('sportsSkillProfile') }}</h4>
       
       <div class="chips-slider">
         <button 
@@ -406,7 +407,7 @@ const onFileSelected = async (event) => {
 
       <!-- Rating stars display -->
       <div class="stars-card">
-        <span class="stars-title">Rate Skill in {{ selectedSport }}</span>
+        <span class="stars-title">{{ t('rateSkillIn') }} {{ selectedSport }}</span>
         <div class="stars-row">
           <span 
             v-for="star in 5" 
@@ -418,21 +419,37 @@ const onFileSelected = async (event) => {
           </span>
         </div>
         <span class="stars-helper-text">
-          {{ isCurrentUser ? 'Tap stars to rate your self-assessment skill level' : 'Self-assessment profile rating' }}
+          {{ isCurrentUser ? t('tapStarsToRate') : t('selfAssessment') }}
         </span>
       </div>
     </div>
 
     <!-- Settings options -->
     <div v-if="isCurrentUser" class="privacy-section">
-      <h4 class="section-sub-title">Personalization</h4>
+      <h4 class="section-sub-title">{{ t('personalization') }}</h4>
       
+      <!-- Language Selector -->
+      <div class="setting-switch-tile">
+        <div class="setting-switch-info">
+          <span class="tile-title">🌐 {{ t('selectLanguage') }}</span>
+          <span class="tile-desc">Choose interface language</span>
+        </div>
+        <select 
+          :value="store.state.language" 
+          class="language-select-dropdown" 
+          @change="(e) => store.setLanguage(e.target.value)"
+        >
+          <option value="en">English / अंग्रेज़ी</option>
+          <option value="hi">Hindi / हिंदी</option>
+        </select>
+      </div>
+
       <!-- Theme Switch -->
       <div class="setting-switch-tile">
         <div class="setting-switch-info">
-          <span class="tile-title">🌸 Elegant Lavender Theme</span>
+          <span class="tile-title">🌸 {{ t('elegantLavender') }}</span>
           <span class="tile-desc">
-            {{ isLavenderTheme ? 'Lavender palette mode active' : 'Switch to elegant lavender palette' }}
+            {{ isLavenderTheme ? t('lavenderActive') : t('switchLavender') }}
           </span>
         </div>
         <label class="toggle-control">
@@ -447,8 +464,8 @@ const onFileSelected = async (event) => {
       <div class="menu-tile" @click="handleSettingsInfo('Sportigo platform game guide coming soon! 📑')">
         <span class="menu-icon">🛡️</span>
         <div class="menu-info">
-          <span class="menu-title">Dynamic Game Rules</span>
-          <span class="menu-subtitle">Read platform game guide</span>
+          <span class="menu-title">{{ t('gameRules') }}</span>
+          <span class="menu-subtitle">{{ t('gameRulesSub') }}</span>
         </div>
         <span class="chevron">➔</span>
       </div>
@@ -456,8 +473,8 @@ const onFileSelected = async (event) => {
       <div class="menu-tile" @click="handleSettingsInfo('Tournament logs coming soon! 🏆')">
         <span class="menu-icon">📊</span>
         <div class="menu-info">
-          <span class="menu-title">Platform Stats History</span>
-          <span class="menu-subtitle">Full tournament logs</span>
+          <span class="menu-title">{{ t('statsHistory') }}</span>
+          <span class="menu-subtitle">{{ t('statsHistorySub') }}</span>
         </div>
         <span class="chevron">➔</span>
       </div>
@@ -465,8 +482,8 @@ const onFileSelected = async (event) => {
       <div class="menu-tile destructive" @click="handleLogout">
         <span class="menu-icon">🚪</span>
         <div class="menu-info">
-          <span class="menu-title">Sign Out</span>
-          <span class="menu-subtitle">Exit application cleanly</span>
+          <span class="menu-title">{{ t('signOut') }}</span>
+          <span class="menu-subtitle">{{ t('signOutSub') }}</span>
         </div>
         <span class="chevron">➔</span>
       </div>
@@ -598,12 +615,42 @@ const onFileSelected = async (event) => {
 
 .card-banner {
   width: 100%;
-  height: 96px;
+  height: 120px;
   margin-left: -16px;
   margin-right: -16px;
   width: calc(100% + 32px);
   margin-bottom: 16px;
   transition: background 0.6s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.18) 0%, transparent 60%),
+                    linear-gradient(rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.2) 100%);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.language-select-dropdown {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--outline-variant);
+  background-color: var(--surface);
+  color: var(--on-surface);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.language-select-dropdown:focus {
+  border-color: var(--primary);
 }
 
 .avatar-wrap {

@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { store } from '../store'
 import MatchCard from '../components/MatchCard.vue'
+import { t } from '../utils/i18n'
 
 const emit = defineEmits(['open-details', 'open-player', 'open-create'])
 
@@ -42,7 +43,7 @@ const filteredMatches = computed(() => {
   <div class="my-matches-container scrollable-y animate-fade-in">
     <!-- Header with Background Gradient -->
     <div class="matches-header">
-      <h2 class="title">Matches</h2>
+      <h2 class="title">{{ t('matches') }}</h2>
       
       <!-- Custom tabs bar -->
       <div class="sub-tabs-bar">
@@ -51,14 +52,14 @@ const filteredMatches = computed(() => {
           :class="{ active: activeSubTab === 'upcoming' }"
           @click="activeSubTab = 'upcoming'"
         >
-          📅 Upcoming
+          📅 {{ t('upcoming') }}
         </button>
         <button 
           class="sub-tab-btn" 
           :class="{ active: activeSubTab === 'past' }"
           @click="activeSubTab = 'past'"
         >
-          ⏳ Past Matches
+          ⏳ {{ t('pastMatches') }}
         </button>
       </div>
     </div>
@@ -70,13 +71,10 @@ const filteredMatches = computed(() => {
           {{ activeSubTab === 'upcoming' ? '⚽' : '👟' }}
         </div>
         <h4 class="empty-title">
-          {{ activeSubTab === 'upcoming' ? 'No Upcoming Matches' : 'No Match History' }}
+          {{ activeSubTab === 'upcoming' ? t('noUpcomingMatches') : t('noMatchHistory') }}
         </h4>
         <p class="empty-desc">
-          {{ activeSubTab === 'upcoming' 
-              ? 'You have no scheduled matches. Join an existing game or create your own to start playing!' 
-              : 'You haven\'t played any matches yet. Once you complete a match, it will be saved here.' 
-          }}
+          {{ activeSubTab === 'upcoming' ? t('noUpcomingDesc') : t('noPastDesc') }}
         </p>
         
         <button 
@@ -84,7 +82,7 @@ const filteredMatches = computed(() => {
           class="create-match-btn"
           @click="emit('open-create')"
         >
-          Create New Match
+          {{ t('createNewMatch') }}
         </button>
       </div>
 
@@ -103,38 +101,42 @@ const filteredMatches = computed(() => {
 
 <style scoped>
 .my-matches-container {
+  padding: 56px 20px 80px;
   background-color: var(--scaffold-bg);
 }
 
 .matches-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%);
-  padding: 56px 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  margin-bottom: 24px;
 }
 
 .title {
   font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--on-surface);
 }
 
 .sub-tabs-bar {
   display: flex;
-  background-color: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: var(--surface-dim);
+  border: 1px solid var(--outline-variant);
   border-radius: var(--radius-md);
   padding: 4px;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
 }
 
 .sub-tab-btn {
   flex: 1;
   border: none;
   background: none;
+  outline: none;
   padding: 10px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--on-surface-variant);
   font-weight: 700;
   font-size: 0.85rem;
   border-radius: 12px;
@@ -143,16 +145,17 @@ const filteredMatches = computed(() => {
   justify-content: center;
   align-items: center;
   gap: 6px;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sub-tab-btn.active {
-  background-color: #ffffff;
+  background-color: var(--surface);
   color: var(--primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .matches-list-panel {
-  padding: 20px;
+  padding: 0;
 }
 
 .empty-state {
@@ -207,8 +210,21 @@ const filteredMatches = computed(() => {
 }
 
 .list-wrap {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
   padding-bottom: 60px;
+}
+
+@media (min-width: 640px) {
+  .list-wrap {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .list-wrap {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 </style>
