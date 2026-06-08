@@ -491,7 +491,7 @@ const onFileSelected = async (event) => {
 
     <!-- Edit Profile Modal -->
     <Teleport to="body">
-      <div v-if="showEditModal" class="modal-backdrop" @click="showEditModal = false">
+      <div v-if="showEditModal" class="modal-backdrop" :class="{ 'theme-women': store.isWomenMode.value }" @click="showEditModal = false">
         <div class="modal-sheet animate-slide-up" @click.stop>
           <div class="modal-header">
             <h2 class="modal-title">Edit Profile</h2>

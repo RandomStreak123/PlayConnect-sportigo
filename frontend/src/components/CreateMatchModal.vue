@@ -488,7 +488,7 @@ const closeModal = () => {
 
   <!-- Custom Date Time Picker Modal -->
   <Teleport to="body">
-    <div v-if="showCustomPicker" class="custom-picker-backdrop" @click="showCustomPicker = false">
+    <div v-if="showCustomPicker" class="custom-picker-backdrop" :class="{ 'theme-women': store.isWomenMode.value }" @click="showCustomPicker = false">
       <div class="custom-picker-dialog animate-scale-up" @click.stop>
         <div class="picker-header-title">Select Date & Time</div>
         
