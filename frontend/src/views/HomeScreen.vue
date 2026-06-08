@@ -342,12 +342,21 @@ const handleDragEnd = (e) => {
     <!-- Trending Matches -->
     <div class="section-row trending-row">
       <h3 class="section-title">Trending Matches</h3>
+      <button class="see-all-btn">See All</button>
     </div>
 
-    <div v-if="store.state.isLoading" class="trending-grid">
-      <div v-for="n in 3" :key="n" class="skeleton-card-vertical"></div>
+    <div v-if="store.state.isLoading" class="nearby-slider">
+      <div v-for="n in 3" :key="n" class="skeleton-card"></div>
     </div>
-    <div v-else class="trending-grid">
+    <div 
+      v-else 
+      class="nearby-slider"
+      @wheel.prevent="handleCardWheelScroll"
+      @mousedown="handleDragStart"
+      @mousemove="handleDragMove"
+      @mouseup="handleDragEnd"
+      @mouseleave="handleDragEnd"
+    >
       <div v-if="trendingMatches.length === 0" class="empty-matches">
         <span class="empty-icon">🔥</span>
         <span>No trending matches yet</span>
@@ -356,7 +365,7 @@ const handleDragEnd = (e) => {
         v-for="match in trendingMatches" 
         :key="match.id"
         :match="match"
-        :is-horizontal="false"
+        :is-horizontal="true"
         @open-details="emit('open-details', match)"
         @open-player="(p, s) => emit('open-player', p, s)"
       />
@@ -532,6 +541,67 @@ const handleDragEnd = (e) => {
   background: #fff;
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
 }
+
+/* Responsive Hero Banner queries */
+@media (max-width: 768px) {
+  .hero-banner {
+    height: 200px;
+  }
+  .hero-slide-content {
+    padding: 24px;
+    max-width: 80%;
+    gap: 6px;
+  }
+  .hero-slide-title {
+    font-size: 1.5rem;
+  }
+  .hero-slide-subtitle {
+    font-size: 0.8rem;
+  }
+  .hero-slide-btn {
+    padding: 8px 16px;
+    font-size: 0.75rem;
+  }
+  .hero-dots {
+    right: 16px;
+    bottom: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-banner {
+    height: 180px;
+    margin-bottom: 20px;
+  }
+  .hero-slide-content {
+    padding: 16px 20px;
+    max-width: 90%;
+    gap: 4px;
+  }
+  .hero-slide-title {
+    font-size: 1.3rem;
+  }
+  .hero-slide-subtitle {
+    font-size: 0.75rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .hero-slide-badge {
+    padding: 2px 8px;
+    margin-bottom: 0px;
+  }
+  .hero-slide-badge-text {
+    font-size: 0.58rem;
+  }
+  .hero-slide-btn {
+    padding: 6px 12px;
+    font-size: 0.7rem;
+    gap: 6px;
+  }
+}
+
 
 /* ── SKELETON LOADING ── */
 @keyframes shimmer {
@@ -739,7 +809,7 @@ const handleDragEnd = (e) => {
 
 .category-create-btn-wrap {
   position: absolute;
-  right: 0;
+  right: 20px;
   top: 0;
   bottom: 0;
   width: 170px;
@@ -946,13 +1016,24 @@ const handleDragEnd = (e) => {
   width: 100%;
 }
 
-.trending-row {
-  margin-top: 12px;
-}
+
 
 .trending-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 640px) {
+  .trending-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .trending-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .plus-icon {
