@@ -132,7 +132,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   DropdownButtonFormField<Map<String, dynamic>>(
-                    initialValue: _selectedSlot,
+                    value: _selectedSlot,
                     hint: const Text("Select Slot"),
                     decoration: InputDecoration(
                       border: OutlineInputBorder(

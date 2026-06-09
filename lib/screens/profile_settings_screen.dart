@@ -38,18 +38,18 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         child: Stack(
           children: [
             Scaffold(
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               appBar: AppBar(
                 title: Text(
                   'Settings & Privacy',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                 ),
-                backgroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.surface,
                 elevation: 0,
-                iconTheme: const IconThemeData(color: Colors.black),
+                iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
                 leading: _isLoggingOut ? const SizedBox.shrink() : const BackButton(),
               ),
               body: SafeArea(
@@ -75,7 +75,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
@@ -96,7 +96,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                             'Signing out...',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   decoration: TextDecoration.none,
                                 ),
                           ),
@@ -147,9 +147,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   ),
                   child: Icon(Icons.person_outline, color: genderColor, size: AppIconSize.sm),
                 ),
-                title: const Text(
+                title: Text(
                   'Gender Identity',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
                 ),
                 subtitle: Text(
                   genderLabel,
@@ -177,9 +177,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   ),
                   child: const Icon(Icons.phone_disabled_outlined, color: Colors.teal, size: AppIconSize.sm),
                 ),
-                title: const Text(
+                title: Text(
                   'Hide Phone Number',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
                 ),
                 subtitle: Text(
                   user.hidePhone ? 'Phone hidden from other players' : 'Phone visible to match organizers',
@@ -252,9 +252,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                         ),
                         title: Row(
                           children: [
-                            const Text(
+                            Text(
                               'Elegant Lavender Theme',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
                             ),
                             const SizedBox(width: AppSpacing.xxs + 2),
                             if (isLavender)
@@ -493,7 +493,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         title,
         style: TextStyle(
           fontWeight: FontWeight.bold,
-          color: isDestructive ? Colors.red : Colors.black,
+          color: isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface,
           fontSize: 14,
         ),
       ),

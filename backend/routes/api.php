@@ -43,15 +43,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Public User Profile
     Route::get('/users/{id}', [UserController::class, 'publicProfile']);
 
-    Route::get('/matches', [MatchController::class, 'index']);
-    Route::get('/matches/{match}', [MatchController::class, 'show']);
-    Route::post('/matches', [MatchController::class, 'store']);
-    Route::put('/matches/{match}', [MatchController::class, 'update']);
-    Route::delete('/matches/{match}', [MatchController::class, 'destroy']);
-    Route::post('/matches/{match}/join', [MatchController::class, 'join']);
-    Route::post('/matches/{match}/leave', [MatchController::class, 'leave']);
-    Route::post('/matches/{match}/result', [MatchController::class, 'recordResults']);
-    
     Route::get('/tournaments', [TournamentController::class, 'index']);
     Route::post('/tournaments', [TournamentController::class, 'store']);
     Route::put('/tournaments/{id}', [TournamentController::class, 'update']);
@@ -66,5 +57,28 @@ Route::middleware('auth:sanctum')->group(function () {
     // Storage Synchronizer
     Route::post('/storage/sync-get', [\App\Http\Controllers\StorageSyncController::class, 'get']);
     Route::post('/storage/sync-set', [\App\Http\Controllers\StorageSyncController::class, 'set']);
+
+    Route::post('/profile/photo', [\App\Http\Controllers\API\ProfileController::class, 'uploadProfilePhoto']);
+    Route::put('/profile',        [\App\Http\Controllers\API\ProfileController::class, 'updateProfile']);
+    Route::get('/players',        [\App\Http\Controllers\API\ProfileController::class, 'players']);
+    Route::get('/activities',     [\App\Http\Controllers\API\ActivityController::class, 'index']);
+    Route::get('/notifications',  [\App\Http\Controllers\API\NotificationController::class, 'index']);
+    Route::put('/notifications/read-all', [\App\Http\Controllers\API\NotificationController::class, 'markAllAsRead']);
+    Route::put('/notifications/{notification}/read', [\App\Http\Controllers\API\NotificationController::class, 'markAsRead']);
+
+    // Match reads (covered by the outer throttle:api — 60/min)
+    Route::get('/matches/mine',        [MatchController::class, 'mine']);
+    Route::get('/matches',             [MatchController::class, 'index']);
+    Route::get('/matches/{match}',     [MatchController::class, 'show']);
+
+    // Match write actions — stricter throttle: 20/min per user
+    Route::middleware('throttle:match-actions')->group(function () {
+        Route::post('/matches',                   [MatchController::class, 'store']);
+        Route::put('/matches/{match}',            [MatchController::class, 'update']);
+        Route::delete('/matches/{match}',         [MatchController::class, 'destroy']);
+        Route::post('/matches/{match}/join',      [MatchController::class, 'join']);
+        Route::post('/matches/{match}/leave',     [MatchController::class, 'leave']);
+        Route::post('/matches/{match}/result',    [MatchController::class, 'recordResults']);
+    });
 });
 

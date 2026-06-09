@@ -12,7 +12,7 @@ class ActivityController extends Controller
     {
         $activities = Activity::with('user:id,name,profile_picture,profile_photo,gender')
             ->latest()
-            ->paginate(20);
+            ->cursorPaginate(20);
 
         return response()->json($activities);
     }

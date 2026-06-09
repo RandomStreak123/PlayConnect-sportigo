@@ -8,9 +8,12 @@ import 'screens/login_screen.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/match_repository.dart';
 import 'data/repositories/activity_repository.dart';
+import 'data/repositories/notification_repository.dart';
 import 'logic/blocs/auth/auth_bloc.dart';
 import 'logic/blocs/matches/match_bloc.dart';
 import 'logic/blocs/activity/activity_bloc.dart';
+import 'logic/blocs/notification/notification_bloc.dart';
+import 'logic/blocs/notification/notification_event.dart';
 import 'core/constants/colors.dart';
 import 'core/utils/sport_image_helper.dart';
 import 'widgets/app_loading_indicator.dart';
@@ -32,6 +35,7 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
   late final AuthRepository _authRepository;
   late final MatchRepository _matchRepository;
   late final ActivityRepository _activityRepository;
+  late final NotificationRepository _notificationRepository;
   late final ThemeManager _themeManager;
 
   @override
@@ -40,6 +44,7 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
     _authRepository = AuthRepository();
     _matchRepository = MatchRepository();
     _activityRepository = ActivityRepository();
+    _notificationRepository = NotificationRepository();
     _themeManager = ThemeManager();
   }
 
@@ -57,6 +62,7 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
         RepositoryProvider.value(value: _authRepository),
         RepositoryProvider.value(value: _matchRepository),
         RepositoryProvider.value(value: _activityRepository),
+        RepositoryProvider.value(value: _notificationRepository),
       ],
       child: ChangeNotifierProvider.value(
         value: _themeManager,
@@ -71,6 +77,11 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
             ),
             BlocProvider(
               create: (_) => ActivityBloc(activityRepository: _activityRepository),
+            ),
+            BlocProvider(
+              create: (context) => NotificationBloc(
+                notificationRepository: context.read<NotificationRepository>(),
+              ),
             ),
           ],
           child: const AppView(),
@@ -114,7 +125,8 @@ class AppView extends StatelessWidget {
             ),
             BlocListener<AuthBloc, AuthState>(
               listenWhen: (previous, current) {
-                if (previous.user?.gender != current.user?.gender) return true;
+                if (previous.user?.gender != current.user?.gender ||
+                    previous.user?.themePreference != current.user?.themePreference) return true;
                 return previous.status != AuthStatus.authenticated &&
                     current.status == AuthStatus.authenticated;
               },
@@ -126,6 +138,7 @@ class AppView extends StatelessWidget {
                   context.read<MatchBloc>().add(const MatchFetched());
                   context.read<MatchBloc>().add(const MyMatchesFetched());
                   context.read<ActivityBloc>().add(const ActivityFetched());
+                  context.read<NotificationBloc>().add(const NotificationFetched());
                 } else if (state.status == AuthStatus.unauthenticated) {
                   themeManager.updateUser(null, null);
                 }

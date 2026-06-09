@@ -6,27 +6,30 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $request->validate([
-            'username' => 'required|string|unique:users',
-            'password' => 'required|string|min:6',
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:users|alpha_dash|min:3',
+            'email' => 'nullable|string|email|max:255|unique:users',
+            'password' => ['required', 'string', Password::min(8)],
+            'phone_number' => 'nullable|string|max:20',
+            'gender' => 'nullable|string|in:male,female,other',
             'role' => 'nullable|string|in:athlete,venue',
         ]);
 
-        $username = $request->username;
-        $email = str_contains($username, '@') ? $username : null;
-        $actualUsername = str_contains($username, '@') ? explode('@', $username)[0] : $username;
-
         $user = User::create([
-            'name' => $request->name ?? $actualUsername,
-            'email' => $email,
-            'username' => $actualUsername,
-            'password' => Hash::make($request->password),
-            'role' => $request->role ?? 'athlete',
+            'name' => $validated['name'],
+            'username' => $validated['username'],
+            'email' => $validated['email'] ?? null,
+            'password' => Hash::make($validated['password']),
+            'phone_number' => $validated['phone_number'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+            'role' => $validated['role'] ?? 'athlete',
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -40,13 +43,16 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $loginField = $request->username;
-        $password = $request->password;
+        $validated = $request->validate([
+            'username' => 'required|string',
+            'password' => 'required|string',
+        ]);
 
-        $fieldType = filter_var($loginField, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-        $user = User::where($fieldType, $loginField)->first();
+        $user = User::where('username', $validated['username'])
+            ->orWhere('email', $validated['username'])
+            ->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (!$user || !Hash::check($validated['password'], $user->password)) {
             return response()->json([
                 'message' => 'Invalid login details'
             ], 401);

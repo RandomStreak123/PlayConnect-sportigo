@@ -206,6 +206,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           builder: (context) => PlayerRevealCard(
             playerName: name,
             sportType: sport,
+            profilePicture: photoUrl,
           ),
         );
       },

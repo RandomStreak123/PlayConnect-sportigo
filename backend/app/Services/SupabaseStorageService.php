@@ -10,12 +10,14 @@ class SupabaseStorageService
 {
     protected ?string $url;
     protected ?string $key;
+    protected ?string $serviceKey;
     protected string $bucket;
 
     public function __construct()
     {
         $this->url = rtrim(config('services.supabase.url', env('SUPABASE_URL')), '/');
         $this->key = config('services.supabase.key', env('SUPABASE_ANON_KEY'));
+        $this->serviceKey = config('services.supabase.service_key', env('SUPABASE_SERVICE_ROLE_KEY')) ?: $this->key;
         $this->bucket = config('services.supabase.bucket', env('SUPABASE_BUCKET', 'avatars'));
     }
 
@@ -70,7 +72,7 @@ class SupabaseStorageService
      */
     public function delete(string $publicUrl): bool
     {
-        if (empty($this->url) || empty($this->key)) {
+        if (empty($this->url) || empty($this->serviceKey)) {
             return false;
         }
 
@@ -86,8 +88,8 @@ class SupabaseStorageService
 
         try {
             $response = Http::withHeaders([
-                'Authorization' => "Bearer {$this->key}",
-                'apiKey' => $this->key,
+                'Authorization' => "Bearer {$this->serviceKey}",
+                'apiKey' => $this->serviceKey,
             ])->delete($deleteUrl);
 
             return $response->successful();

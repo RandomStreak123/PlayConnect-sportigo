@@ -6,10 +6,8 @@ use App\Models\Slot;
 
 class SlotService
 {
-    public function updateSlot($data)
+    public function updateSlot(Slot $slot, array $data)
     {
-        $slot = Slot::findOrFail($data['slot_id']);
-
         $slot->time = $data['new_time'];
 
         $slot->save();

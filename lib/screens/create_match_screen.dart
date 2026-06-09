@@ -198,7 +198,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                           controller: _slotsController,
                           hint: 'e.g., 10',
                           keyboardType: TextInputType.number,
-                          fixedHeight: true,
+                          fixedHeight: false,
                           validator: (val) {
                             if (val!.isEmpty) return 'Required';
                             if (int.tryParse(val) == null) return 'Invalid';
