@@ -39,6 +39,10 @@ class SportMatch extends Model
 
     public function getJoinedCountAttribute(): int
     {
+        if (array_key_exists('users_count', $this->attributes)) {
+            return (int) $this->attributes['users_count'];
+        }
+
         if ($this->relationLoaded('users')) {
             return $this->users->count();
         }

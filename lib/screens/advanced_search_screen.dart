@@ -6,6 +6,7 @@ import 'match_details_screen.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_radius.dart';
 import '../core/theme/app_icon_size.dart';
+import '../core/utils/sport_icon_helper.dart';
 
 class AdvancedSearchScreen extends StatefulWidget {
   const AdvancedSearchScreen({super.key});
@@ -19,6 +20,21 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   String _selectedSport = 'All';
   String _selectedSkill = 'All';
   RangeValues _distanceRange = const RangeValues(0, 10);
+
+  @override
+  void initState() {
+    super.initState();
+    final state = context.read<MatchBloc>().state;
+    _searchController.text = state.search ?? '';
+    _selectedSport = state.sportType ?? 'All';
+    _selectedSkill = state.skillLevel ?? 'All';
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,21 +138,29 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
             ),
             const SizedBox(height: AppSpacing.md),
             
-            _buildRecommendedItem(
-              context,
-              'Sunset Doubles Bash',
-              'Tennis',
-              'Central Park Courts',
-              '2.5 km',
-              '18:30',
-            ),
-            _buildRecommendedItem(
-              context,
-              'Morning Padel Drill',
-              'Padel',
-              'Westside Club',
-              '5.1 km',
-              '08:00',
+            BlocBuilder<MatchBloc, MatchState>(
+              builder: (context, state) {
+                final recommended = state.matches.take(2).toList();
+                if (recommended.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    child: Center(
+                      child: Text(
+                        'No matches available right now',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.outline,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return Column(
+                  children: recommended
+                      .map((match) => _buildRecommendedItem(context, match))
+                      .toList(),
+                );
+              },
             ),
             
             const SizedBox(height: AppSpacing.bottomNavClearance),
@@ -249,33 +273,41 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
     );
   }
 
+  String _formatTime(DateTime dt) {
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String _formatDay(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+      return 'Today';
+    }
+    final tomorrow = now.add(const Duration(days: 1));
+    if (dt.year == tomorrow.year && dt.month == tomorrow.month && dt.day == tomorrow.day) {
+      return 'Tomorrow';
+    }
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[dt.month - 1]} ${dt.day}';
+  }
+
   Widget _buildRecommendedItem(
     BuildContext context,
-    String title,
-    String sport,
-    String location,
-    String distance,
-    String time,
+    MatchModel match,
   ) {
+    final dt = match.parsedDateTime;
+    final timeStr = _formatTime(dt);
+    final dayStr = _formatDay(dt);
+    final distanceStr = '${match.distance.toStringAsFixed(1)} km';
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => MatchDetailsScreen(
-              match: MatchModel(
-                id: 'rec_${title.toLowerCase().replaceAll(' ', '_')}',
-                title: title,
-                sportType: sport,
-                location: location,
-                dateTime: DateTime.now().toIso8601String(),
-                skillLevel: 'Intermediate',
-                availableSlots: 2,
-                maxSlots: 4,
-                joinedCount: 2,
-                participants: const [],
-                distance: 2.5,
-              ),
+              match: match,
             ),
           ),
         );
@@ -300,7 +332,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Icon(
-                sport == 'Tennis' ? Icons.sports_tennis : Icons.sports_kabaddi,
+                SportIconHelper.iconForSport(match.sportType),
                 color: Theme.of(context).colorScheme.primaryContainer,
                 size: AppIconSize.md,
               ),
@@ -311,7 +343,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    match.title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -321,10 +353,14 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                     children: [
                       Icon(Icons.location_on, size: AppIconSize.xs - 2, color: Theme.of(context).colorScheme.outline),
                       const SizedBox(width: AppSpacing.xxs),
-                      Text(
-                        '$location · $distance',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.outline,
+                      Expanded(
+                        child: Text(
+                          '${match.location} · $distanceStr',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -332,18 +368,19 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 ],
               ),
             ),
+            const SizedBox(width: AppSpacing.sm),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  time,
+                  timeStr,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     color: Theme.of(context).colorScheme.primaryContainer,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  'Today',
+                  dayStr,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: Theme.of(context).colorScheme.outline,
                   ),

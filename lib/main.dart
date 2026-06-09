@@ -114,7 +114,8 @@ class AppView extends StatelessWidget {
             ),
             BlocListener<AuthBloc, AuthState>(
               listenWhen: (previous, current) {
-                if (previous.user?.gender != current.user?.gender) return true;
+                if (previous.user?.gender != current.user?.gender ||
+                    previous.user?.themePreference != current.user?.themePreference) return true;
                 return previous.status != AuthStatus.authenticated &&
                     current.status == AuthStatus.authenticated;
               },

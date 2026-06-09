@@ -15,6 +15,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'username' => 'required|string|max:255|unique:users|alpha_dash|min:3',
+            'email' => 'nullable|string|email|max:255|unique:users',
             'password' => ['required', 'string', Password::min(8)],
             'phone_number' => 'nullable|string|max:20',
             'gender' => 'nullable|string|in:male,female,other',
@@ -23,6 +24,7 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'username' => $validated['username'],
+            'email' => $validated['email'] ?? null,
             'password' => Hash::make($validated['password']),
             'phone_number' => $validated['phone_number'] ?? null,
             'gender' => $validated['gender'] ?? null,
@@ -44,7 +46,9 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $user = User::where('username', $validated['username'])->first();
+        $user = User::where('username', $validated['username'])
+            ->orWhere('email', $validated['username'])
+            ->first();
 
         if (!$user || !Hash::check($validated['password'], $user->password)) {
             return response()->json([

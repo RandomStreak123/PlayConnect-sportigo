@@ -8,7 +8,7 @@ import '../../core/constants/api_constants.dart';
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
 class AuthRepository {
-  final _controller = StreamController<AuthStatus>();
+  final _controller = StreamController<AuthStatus>.broadcast();
   final _userController = StreamController<UserModel>.broadcast();
 
   AuthRepository();

@@ -38,9 +38,19 @@ class User extends Authenticatable
         'profile_photo_url',
     ];
 
+    public function getAvatarAttribute()
+    {
+        return $this->attributes['profile_picture'] ?? ($this->attributes['profile_photo'] ?? null);
+    }
+
+    public function getPhoneAttribute()
+    {
+        return $this->attributes['phone_number'] ?? null;
+    }
+
     public function getProfilePhotoUrlAttribute()
     {
-        $photo = $this->attributes['avatar'] ?? ($this->attributes['profile_picture'] ?? ($this->attributes['profile_photo'] ?? null));
+        $photo = $this->avatar;
         if ($photo) {
             if (str_starts_with($photo, 'http://') || str_starts_with($photo, 'https://')) {
                 return $photo;
@@ -52,7 +62,7 @@ class User extends Authenticatable
 
     public function getProfilePictureAttribute()
     {
-        $picture = $this->attributes['avatar'] ?? ($this->attributes['profile_picture'] ?? ($this->attributes['profile_photo'] ?? null));
+        $picture = $this->avatar;
         if ($picture) {
             if (str_starts_with($picture, 'http://') || str_starts_with($picture, 'https://')) {
                 return $picture;
@@ -66,13 +76,11 @@ class User extends Authenticatable
     public function setPhoneAttribute($value)
     {
         $this->attributes['phone_number'] = $value;
-        $this->attributes['phone'] = $value;
     }
 
     public function setAvatarAttribute($value)
     {
         $this->attributes['profile_picture'] = $value;
-        $this->attributes['avatar'] = $value;
         $this->attributes['profile_photo'] = $value;
     }
 

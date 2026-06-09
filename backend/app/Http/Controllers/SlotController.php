@@ -37,7 +37,7 @@ class SlotController extends Controller
             ], 403);
         }
 
-        $slot = $this->slotService->updateSlot($validated);
+        $slot = $this->slotService->updateSlot($slot, $validated);
 
         return response()->json([
             'success' => true,
