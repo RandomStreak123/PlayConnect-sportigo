@@ -16,12 +16,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     _authStatusSubscription = _authRepository.status.listen(
       (status) => add(AuthStatusChanged(status)),
     );
+    _userUpdatesSubscription = _authRepository.userUpdates.listen(
+      (user) => add(AuthUserUpdated(user)),
+    );
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthUserUpdated>(_onAuthUserUpdated);
   }
 
   final AuthRepository _authRepository;
   late StreamSubscription<AuthStatus> _authStatusSubscription;
+  late StreamSubscription<UserModel> _userUpdatesSubscription;
 
   Future<void> _onAuthCheckRequested(
     AuthCheckRequested event,
@@ -42,6 +46,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   @override
   Future<void> close() {
     _authStatusSubscription.cancel();
+    _userUpdatesSubscription.cancel();
     return super.close();
   }
 
@@ -68,8 +73,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    await _authRepository.logOut();
-    emit(const AuthState.unauthenticated());
+    try {
+      await _authRepository.logOut();
+    } catch (_) {
+      // Ensure we still proceed to unauthenticated state
+    } finally {
+      emit(const AuthState.unauthenticated());
+    }
   }
 
   void _onAuthUserUpdated(

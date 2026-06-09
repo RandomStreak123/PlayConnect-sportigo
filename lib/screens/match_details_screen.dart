@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../data/models/match_model.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/player_reveal_card.dart';
 import '../core/utils/sport_image_helper.dart';
-
 import '../core/utils/avatar_image_helper.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_icon_size.dart';
+import '../core/theme/app_radius.dart';
 
 class MatchDetailsScreen extends StatefulWidget {
   final MatchModel match;
@@ -42,8 +45,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<MatchBloc, MatchState>(
-      listenWhen: (previous, current) =>
-          current.message != null && current.message != previous.message,
+      listenWhen: (previous, current) => current.message != null,
       listener: (context, state) {
         if (!_isSubmitting || _pendingAction == null) return;
 
@@ -69,6 +71,14 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    final userId = authState.user?.id;
+    final userGender = authState.user?.gender;
+    final isRestricted = _match.womenOnly && userGender != 'female';
+    final isJoined = _match.isJoinedBy(userId);
+    final isCreator = (_match.creatorId != null && _match.creatorId == userId) ||
+        (authState.user != null && _match.organizer == authState.user?.name);
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: CustomScrollView(
@@ -94,7 +104,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
               ),
             ),
             leading: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(AppSpacing.xs),
               child: CircleAvatar(
                 backgroundColor: Colors.white.withValues(alpha: 0.5),
                 child: IconButton(
@@ -108,7 +118,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
             ),
             actions: [
               Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.all(AppSpacing.xs),
                 child: CircleAvatar(
                   backgroundColor: Colors.white.withValues(alpha: 0.5),
                   child: IconButton(
@@ -128,7 +138,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -136,12 +146,12 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xxs + 2,
                         ),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                         ),
                         child: Text(
                           _match.sportType.toUpperCase(),
@@ -152,15 +162,15 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                               ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.xs),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xxs + 2,
                         ),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.surfaceDim,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                         ),
                         child: Text(
                           _match.skillLevel,
@@ -168,17 +178,17 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                         ),
                       ),
                       if (_match.womenOnly) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.xs),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xxs + 2,
                           ),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [Color(0xFFFF4D8D), Color(0xFF7B61FF)],
                             ),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
                             boxShadow: [
                               BoxShadow(
                                 color: const Color(0xFFFF4D8D).withValues(alpha: 0.25),
@@ -191,7 +201,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Text('🌸', style: TextStyle(fontSize: 12)),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: AppSpacing.xxs),
                               Text(
                                 'Women Only',
                                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -208,9 +218,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                   // Women-Only safety notice
                   if (_match.womenOnly)
                     Padding(
-                      padding: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.only(top: AppSpacing.sm),
                       child: Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(AppSpacing.sm),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
@@ -218,7 +228,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                               const Color(0xFF7B61FF).withValues(alpha: 0.05),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
                           border: Border.all(
                             color: const Color(0xFFFF4D8D).withValues(alpha: 0.2),
                           ),
@@ -226,7 +236,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(6),
+                              padding: const EdgeInsets.all(AppSpacing.xxs + 2),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFF4D8D).withValues(alpha: 0.15),
                                 shape: BoxShape.circle,
@@ -234,10 +244,10 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                               child: const Icon(
                                 Icons.shield_outlined,
                                 color: Color(0xFFFF4D8D),
-                                size: 16,
+                                size: AppIconSize.xs,
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
                                 'This is a safe, women-only match. Only verified female players can join.',
@@ -252,33 +262,33 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                         ),
                       ),
                     ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     _match.title,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
                   _buildDetailRow(
                     context,
                     Icons.calendar_today,
                     _match.dateTime,
                     _match.skillLevel,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   _buildDetailRow(
                     context,
                     Icons.location_on,
                     _match.location,
                     '${_match.slotsLeft} spots open',
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppSpacing.xl),
                   Text(
                     'About this Match',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     'Join fellow players for a ${_match.sportType} session at ${_match.location}. '
                     'Skill level: ${_match.skillLevel}. Arrive a few minutes early to warm up.',
@@ -287,12 +297,12 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppSpacing.xl),
                   Text(
                     'Players (${_match.joinedCount}/${_match.maxSlots})',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   if (_match.participants.isEmpty)
                     Text(
                       'No players listed yet.',
@@ -308,13 +318,13 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                         p.id == _match.creatorId,
                       ),
                     ),
-                  const SizedBox(height: 16),
-                  if (_match.slotsLeft > 0 && _match.joinedCount < _match.maxSlots)
+                  const SizedBox(height: AppSpacing.md),
+                  if (!isCreator && !isJoined && !isRestricted && _match.slotsLeft > 0 && _match.joinedCount < _match.maxSlots)
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(
                           color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2),
                           style: BorderStyle.solid,
@@ -327,7 +337,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                             Icons.person_add,
                             color: Theme.of(context).colorScheme.primaryContainer,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.xs),
                           Text(
                             'This spot is waiting for you!',
                             style: Theme.of(context).textTheme.bodyMedium
@@ -339,7 +349,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                         ],
                       ),
                     ),
-                  const SizedBox(height: 100),
+                  const SizedBox(height: AppSpacing.bottomNavClearance),
                 ],
               ),
             ),
@@ -347,7 +357,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
         ],
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           boxShadow: [
@@ -364,13 +374,14 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
             final userGender = authState.user?.gender;
             final isRestricted = _match.womenOnly && userGender != 'female';
             final isJoined = _match.isJoinedBy(userId);
-            final isCreator = _match.creatorId != null && _match.creatorId == userId;
+            final isCreator = (_match.creatorId != null && _match.creatorId == userId) ||
+                (authState.user != null && _match.organizer == authState.user?.name);
             final isFull = _match.joinedCount >= _match.maxSlots;
 
             if (_isSubmitting) {
               return const SizedBox(
                 height: 52,
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: AppLoadingIndicator()),
               );
             }
 
@@ -386,9 +397,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.error,
                   side: BorderSide(color: Theme.of(context).colorScheme.error),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                 ),
                 child: const Text(
@@ -399,20 +410,22 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
             }
 
             if (isJoined || isCreator) {
-              return Container(
+              return SizedBox(
+                height: 52,
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.sportsGreen.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Center(
-                  child: Text(
-                    isCreator ? 'You created this match' : 'You joined this match',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: AppColors.sportsGreen,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.sportsGreen.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Center(
+                    child: Text(
+                      isCreator ? 'You created this match' : 'You joined this match',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppColors.sportsGreen,
+                      ),
                     ),
                   ),
                 ),
@@ -420,20 +433,22 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
             }
 
             if (isFull) {
-              return Container(
+              return SizedBox(
+                height: 52,
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Center(
-                  child: Text(
-                    'MATCH FULL',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'MATCH FULL',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
@@ -443,7 +458,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
             if (isRestricted) {
               return Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm + 2),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -451,7 +466,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                       const Color(0xFF7B61FF).withValues(alpha: 0.05),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(
                     color: const Color(0xFFFF4D8D).withValues(alpha: 0.3),
                   ),
@@ -459,8 +474,8 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.lock_outline, color: Color(0xFFFF4D8D), size: 18),
-                    const SizedBox(width: 8),
+                    const Icon(Icons.lock_outline, color: Color(0xFFFF4D8D), size: AppIconSize.xs + 2),
+                    const SizedBox(width: AppSpacing.xs),
                     Text(
                       '🌸 Women-Only Match',
                       style: TextStyle(
@@ -485,9 +500,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 elevation: 0,
               ),
@@ -511,14 +526,14 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(AppSpacing.xs + 2),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceDim,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           child: Icon(icon, color: Theme.of(context).colorScheme.primaryContainer),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: AppSpacing.md),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -546,7 +561,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
     bool isOrganizer,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: GestureDetector(
         onTap: () {
           showModalBottomSheet(
@@ -567,7 +582,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
               radius: 24,
               backgroundColor: Theme.of(context).colorScheme.surfaceDim,
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -581,15 +596,15 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                         ),
                       ),
                       if (isOrganizer) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.xs),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
+                            horizontal: AppSpacing.xs,
+                            vertical: AppSpacing.xxs / 2,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.warmOrange.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(AppRadius.xxs),
                           ),
                           child: Text(
                             'Organizer',

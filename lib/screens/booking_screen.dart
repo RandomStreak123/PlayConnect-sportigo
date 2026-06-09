@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../services/api_service.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_radius.dart';
 
 class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key});
@@ -113,9 +116,9 @@ class _BookingScreenState extends State<BookingScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoadingIndicator())
           : Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -127,15 +130,15 @@ class _BookingScreenState extends State<BookingScreen> {
                         ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
                   DropdownButtonFormField<Map<String, dynamic>>(
                     initialValue: _selectedSlot,
                     hint: const Text("Select Slot"),
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                     ),
                     items: _slots.map((slot) {
                       final time = slot['time'] as String;
@@ -151,7 +154,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       });
                     },
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppSpacing.xl),
                   SizedBox(
                     height: 52,
                     child: ElevatedButton(
@@ -160,15 +163,11 @@ class _BookingScreenState extends State<BookingScreen> {
                           : _bookSlot,
                       style: ElevatedButton.styleFrom(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
                       ),
                       child: _isUpdating
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? const AppLoadingIndicator()
                           : const Text(
                               "Confirm Booking",
                               style: TextStyle(

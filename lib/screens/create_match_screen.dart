@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../data/models/match_model.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../logic/blocs/matches/match_bloc.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_icon_size.dart';
+import '../core/theme/app_radius.dart';
 
 class CreateMatchScreen extends StatefulWidget {
   const CreateMatchScreen({super.key});
@@ -114,7 +118,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Form(
           key: _formKey,
           child: Column(
@@ -127,7 +131,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                   color: Theme.of(context).colorScheme.primary,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               
               // Sport Type Dropdown
               _buildLabel('Sport Type'),
@@ -152,16 +156,16 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
               GestureDetector(
                 onTap: _selectDateTime,
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                     border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.calendar_today, color: Theme.of(context).colorScheme.primary, size: 20),
-                      const SizedBox(width: 12),
+                      Icon(Icons.calendar_today, color: Theme.of(context).colorScheme.primary, size: AppIconSize.sm),
+                      const SizedBox(width: AppSpacing.sm),
                       Text(
                         DateFormat('MMM dd, yyyy - hh:mm a').format(_selectedDate),
                         style: Theme.of(context).textTheme.bodyLarge,
@@ -204,7 +208,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,7 +245,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                               )
                             : null,
                         color: _womenOnly ? null : Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(
                           color: _womenOnly
                               ? const Color(0xFFFF4D8D).withValues(alpha: 0.4)
@@ -249,14 +253,14 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                         ),
                       ),
                       child: SwitchListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xxs),
                         title: Row(
                           children: [
                             Text(
                               '🌸',
                               style: TextStyle(fontSize: _womenOnly ? 20 : 16),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.xs),
                             const Text(
                               'Women-Only Match',
                               style: TextStyle(
@@ -286,7 +290,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                 },
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: AppSpacing.xxl),
               
               SizedBox(
                 width: double.infinity,
@@ -297,19 +301,12 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     elevation: 0,
                   ),
                   child: _isSubmitting
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
+                      ? const AppLoadingIndicator(color: Colors.white)
                       : const Text(
                     'Create Match',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -326,7 +323,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
 
   Widget _buildLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs, left: AppSpacing.xxs),
       child: Text(
         text,
         style: TextStyle(
@@ -339,7 +336,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
 
   InputBorder _fieldBorder({bool focused = false}) {
     return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.sm),
       borderSide: BorderSide(
         color: focused
             ? Theme.of(context).colorScheme.primary
@@ -370,8 +367,8 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         filled: true,
         fillColor: Theme.of(context).colorScheme.surface,
         contentPadding: EdgeInsets.symmetric(
-          horizontal: icon != null ? 0 : 16,
-          vertical: fixedHeight ? 14 : 16,
+          horizontal: icon != null ? 0 : AppSpacing.md,
+          vertical: fixedHeight ? AppSpacing.md : AppSpacing.md,
         ),
         border: _fieldBorder(),
         enabledBorder: _fieldBorder(),
@@ -391,10 +388,10 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   }) {
     return Container(
       height: _fieldHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       alignment: Alignment.centerLeft,

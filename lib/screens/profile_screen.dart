@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../core/constants/colors.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../data/repositories/auth_repository.dart';
-import '../theme/theme_manager.dart';
 import '../core/utils/avatar_image_helper.dart';
+import 'profile_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isCurrentUser;
@@ -246,12 +247,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   // Responsive Segmented Activity/Streaks Section
                   _buildActivitySection(context, sportColor),
                   
-                  // Privacy & Personalization Section
-                  if (widget.isCurrentUser) _buildPrivacySection(context, sportColor),
-                  
-                  // Menu Settings Panel
-                  if (widget.isCurrentUser) _buildSettingsPanel(context, sportColor),
-                  
                   const SizedBox(height: 100), // Padding for elegant floating bottom navigation
                 ],
               ),
@@ -283,24 +278,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             ),
           ),
           if (widget.isCurrentUser)
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-                shape: BoxShape.circle,
-                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
-              ),
-              child: IconButton(
-                icon: Icon(Icons.settings_outlined, color: Theme.of(context).colorScheme.onSurface),
-                onPressed: () {
-                  if (_scrollController.hasClients) {
-                    _scrollController.animateTo(
-                      _scrollController.position.maxScrollExtent,
-                      duration: const Duration(milliseconds: 600),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                },
-              ),
+            IconButton(
+              icon: Icon(Icons.menu_rounded, color: Theme.of(context).colorScheme.onSurface),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfileSettingsScreen(),
+                  ),
+                );
+              },
             )
           else
             const SizedBox(width: 48), // Balance for BackButton
@@ -347,7 +334,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       final photoUrl = widget.isCurrentUser 
                           ? state.user?.profilePhotoUrl 
                           : widget.profilePicture;
-                      final ImageProvider imageProvider = AvatarImageHelper.provider(photoUrl);
+                      final ImageProvider? imageProvider = AvatarImageHelper.provider(photoUrl);
 
                       return Stack(
                         alignment: Alignment.center,
@@ -397,11 +384,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                 height: 126,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  image: DecorationImage(
-                                    image: imageProvider,
-                                    fit: BoxFit.cover,
-                                    onError: (exception, stackTrace) {},
-                                  ),
+                                  image: imageProvider != null
+                                      ? DecorationImage(
+                                          image: imageProvider,
+                                          fit: BoxFit.cover,
+                                          onError: (exception, stackTrace) {},
+                                        )
+                                      : null,
                                 ),
                                 child: AvatarImageHelper.resolveUrl(photoUrl) == null
                                     ? const Icon(Icons.person, size: 60, color: Colors.white70)
@@ -460,14 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                     ],
                                   ),
                                   child: _isUploading
-                                      ? const SizedBox(
-                                          width: 14,
-                                          height: 14,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                          ),
-                                        )
+                                      ? const AppLoadingIndicator(color: Colors.white)
                                       : const Icon(
                                           Icons.camera_alt_rounded,
                                           color: Colors.white,
@@ -1251,325 +1233,4 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildPrivacySection(BuildContext context, Color sportColor) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, authState) {
-        final user = authState.user;
-        if (user == null) return const SizedBox.shrink();
-
-        final themeManager = context.watch<ThemeManager>();
-        final genderLabel = switch (user.gender) {
-          'female' => '♀ Female',
-          'male' => '♂ Male',
-          'other' => '⚧ Other',
-          _ => '🏷️ Not Set',
-        };
-        final genderColor = switch (user.gender) {
-          'female' => const Color(0xFFFF4D8D),
-          'male' => const Color(0xFF4A90D9),
-          _ => Theme.of(context).colorScheme.onSurfaceVariant,
-        };
-
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Section Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.shield_outlined, color: sportColor, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Privacy & Personalization',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(indent: 20, endIndent: 20, height: 1),
-
-              // Gender Identity
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: genderColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.person_outline, color: genderColor, size: 20),
-                ),
-                title: const Text(
-                  'Gender Identity',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                subtitle: Text(
-                  genderLabel,
-                  style: TextStyle(fontSize: 12, color: genderColor, fontWeight: FontWeight.w600),
-                ),
-                trailing: Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.outlineVariant, size: 20),
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Gender can be updated during registration'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),
-
-              // Hide Phone Number Toggle
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-                secondary: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.teal.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.phone_disabled_outlined, color: Colors.teal, size: 20),
-                ),
-                title: const Text(
-                  'Hide Phone Number',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                subtitle: Text(
-                  user.hidePhone ? 'Phone hidden from other players' : 'Phone visible to match organizers',
-        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
-                value: user.hidePhone,
-                activeThumbColor: Colors.teal,
-                onChanged: (val) async {
-                  try {
-                    final authRepo = context.read<AuthRepository>();
-                    final updatedUser = await authRepo.updateProfile(hidePhone: val);
-                    if (context.mounted) {
-                      context.read<AuthBloc>().add(AuthUserUpdated(updatedUser));
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to update: $e'),
-                          backgroundColor: Theme.of(context).colorScheme.error,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-
-              // Lavender Theme Toggle (only for female users)
-              if (user.gender == 'female')
-                AnimatedBuilder(
-                  animation: themeManager,
-                  builder: (context, _) {
-                    final isLavender = themeManager.isWomenMode;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        gradient: isLavender
-                            ? LinearGradient(
-                                colors: [
-                                  const Color(0xFFFF4D8D).withValues(alpha: 0.06),
-                                  const Color(0xFF7B61FF).withValues(alpha: 0.04),
-                                ],
-                              )
-                            : null,
-                        borderRadius: BorderRadius.circular(16),
-                        border: isLavender
-                            ? Border.all(color: const Color(0xFFFF4D8D).withValues(alpha: 0.2))
-                            : null,
-                      ),
-                      child: SwitchListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        secondary: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            gradient: isLavender
-                                ? const LinearGradient(
-                                    colors: [Color(0xFFFF4D8D), Color(0xFF7B61FF)],
-                                  )
-                                : null,
-                            color: isLavender ? null : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.palette_outlined,
-                            color: isLavender ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
-                            size: 20,
-                          ),
-                        ),
-                        title: Row(
-                          children: [
-                            const Text(
-                              'Elegant Lavender Theme',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            const SizedBox(width: 6),
-                            if (isLavender)
-                              const Text('🌸', style: TextStyle(fontSize: 14)),
-                          ],
-                        ),
-                        subtitle: Text(
-                          isLavender
-                              ? 'Soft pink & lavender experience active'
-                              : 'Switch to elegant lavender palette',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isLavender ? const Color(0xFFFF4D8D) : Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        value: isLavender,
-                        activeThumbColor: const Color(0xFFFF4D8D),
-                        onChanged: (val) async {
-                          final newPref = val
-                              ? ThemePreference.elegantLavender
-                              : ThemePreference.activeSteelBlue;
-                          
-                          // Optimistic UI update
-                          themeManager.setThemePreference(newPref);
-                          
-                          try {
-                            final authRepo = context.read<AuthRepository>();
-                            final authBloc = context.read<AuthBloc>();
-                            
-                            final updatedUser = await authRepo.updateProfile(
-                              themePreference: val ? 'elegantLavender' : 'activeSteelBlue',
-                            );
-                            
-                            authBloc.add(AuthUserUpdated(updatedUser));
-                          } catch (e) {
-                            // Silently fail or show snackbar if needed
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Failed to save theme preference to server'),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    );
-                  },
-                ),
-
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSettingsPanel(BuildContext context, Color sportColor) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        children: [
-          _buildMenuTile(
-            context,
-            Icons.military_tech_outlined,
-            'Dynamic Game Rules',
-            'Read platform game guide',
-            sportColor,
-            () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Sportigo platform game guide coming soon!'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
-          _buildMenuTile(
-            context,
-            Icons.history_toggle_off,
-            'Platform Stats History',
-            'Full tournament logs',
-            sportColor,
-            () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Tournament logs coming soon!'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
-          _buildMenuTile(
-            context,
-            Icons.logout_rounded,
-            'Sign Out',
-            'Exit application cleanly',
-            Colors.redAccent,
-            () {
-              context.read<AuthBloc>().add(const AuthLogoutRequested());
-            },
-            isDestructive: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuTile(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String subtitle,
-    Color color,
-    VoidCallback onTap, {
-    bool isDestructive = false,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      leading: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: color, size: 20),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface,
-          fontSize: 14,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
-      ),
-      trailing: Icon(
-        Icons.chevron_right_rounded,
-        color: Theme.of(context).colorScheme.outlineVariant,
-        size: 20,
-      ),
-      onTap: onTap,
-    );
-  }
 }

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../widgets/match_card.dart';
 import '../widgets/player_reveal_card.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/models/user_model.dart';
 import '../core/utils/avatar_image_helper.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_radius.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -72,8 +75,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -97,7 +100,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             SizedBox(
               height: 160,
               child: _isLoadingPlayers
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: AppLoadingIndicator())
                   : _players.isEmpty
                       ? const Center(
                           child: Text(
@@ -107,7 +110,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         )
                       : ListView.builder(
                           scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                           itemCount: _players.length,
                           itemBuilder: (context, index) {
                             final player = _players[index];
@@ -121,11 +124,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           },
                         ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
               ),
               child: Text(
                 'Trending Matches',
@@ -137,15 +140,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 if (state.status == MatchStatus.loading) {
                   return const Center(
                     child: Padding(
-                      padding: EdgeInsets.all(20.0),
-                      child: CircularProgressIndicator(),
+                      padding: EdgeInsets.all(AppSpacing.lg),
+                      child: AppLoadingIndicator(),
                     ),
                   );
                 }
                 if (state.status == MatchStatus.failure) {
                   return const Center(
                     child: Padding(
-                      padding: EdgeInsets.all(20.0),
+                      padding: EdgeInsets.all(AppSpacing.lg),
                       child: Text('Failed to load matches'),
                     ),
                   );
@@ -163,7 +166,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 if (upcomingMatches.isEmpty) {
                   return const Center(
                     child: Padding(
-                      padding: EdgeInsets.all(20.0),
+                      padding: EdgeInsets.all(AppSpacing.lg),
                       child: Text('No upcoming matches found'),
                     ),
                   );
@@ -178,7 +181,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 );
               },
             ),
-            const SizedBox(height: 100),
+            const SizedBox(height: AppSpacing.bottomNavClearance),
           ],
         ),
       ),
@@ -192,7 +195,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     String distance,
     String? photoUrl,
   ) {
-    final ImageProvider imageProvider = AvatarImageHelper.provider(photoUrl);
+    final ImageProvider? imageProvider = AvatarImageHelper.provider(photoUrl);
 
     return GestureDetector(
       onTap: () {
@@ -208,11 +211,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
       },
       child: Container(
         width: 120,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+        padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
@@ -233,7 +236,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ? Icon(Icons.person, color: Theme.of(context).colorScheme.primaryContainer)
                   : null,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               name,
               style: Theme.of(
@@ -242,7 +245,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xxs),
             Text(
               sport.toUpperCase(),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -252,7 +255,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xxs),
             Text(
               distance,
               style: Theme.of(

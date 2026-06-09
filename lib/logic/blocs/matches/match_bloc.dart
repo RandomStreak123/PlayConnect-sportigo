@@ -23,6 +23,10 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
   String? _lastSkillLevel;
   String? _lastSearch;
 
+  final Map<String, List<MatchModel>> _cache = {};
+  final Map<String, String?> _cacheCursors = {};
+  final Map<String, DateTime> _cacheTimestamps = {};
+
   String? _normalizeFilter(String? value) {
     if (value == null || value.isEmpty || value == 'All') return null;
     return value;
@@ -80,23 +84,102 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     _lastSkillLevel = event.skillLevel;
     _lastSearch = event.search;
 
-    emit(state.copyWith(
-      status: MatchStatus.loading,
-      clearMessage: true,
-      clearCursor: true,
-      hasMore: false,
-    ));
+    final key = '${event.sportType ?? 'All'}_${event.skillLevel ?? 'All'}_${event.search ?? ''}';
+    final isUnfiltered = (event.sportType == null || event.sportType == 'All') &&
+        (event.skillLevel == null || event.skillLevel == 'All') &&
+        (event.search == null || event.search!.isEmpty);
 
-    try {
-      final result = await _fetchNearbyMatches();
+    // 1. Check if we have a valid cache that is recent (e.g., < 10 seconds old) and not forced
+    if (!event.forceRefresh && _cache.containsKey(key)) {
+      final lastFetch = _cacheTimestamps[key];
+      if (lastFetch != null && DateTime.now().difference(lastFetch) < const Duration(seconds: 10)) {
+        emit(state.copyWith(
+          status: MatchStatus.success,
+          matches: _cache[key],
+          trendingMatches: isUnfiltered ? _cache[key] : state.trendingMatches,
+          sportType: event.sportType,
+          skillLevel: event.skillLevel,
+          search: event.search,
+          nextCursor: _cacheCursors[key],
+          hasMore: _cacheCursors[key] != null,
+          clearMessage: true,
+        ));
+        return;
+      }
+    }
+
+    // 2. If we have cached results, emit them instantly as a baseline (success status to keep list rendering)
+    if (_cache.containsKey(key)) {
       emit(state.copyWith(
         status: MatchStatus.success,
-        matches: result.matches,
-        nextCursor: result.nextCursor,
-        hasMore: result.nextCursor != null,
+        matches: _cache[key],
+        trendingMatches: isUnfiltered ? _cache[key] : state.trendingMatches,
+        sportType: event.sportType,
+        skillLevel: event.skillLevel,
+        search: event.search,
+        nextCursor: _cacheCursors[key],
+        hasMore: _cacheCursors[key] != null,
+        clearMessage: true,
       ));
+    } else {
+      // 3. Fallback: filter current matches in memory to show matching items instantly
+      final currentMatches = state.matches;
+      final localFiltered = currentMatches.where((m) {
+        if (event.sportType != null && event.sportType != 'All' && m.sportType.toLowerCase() != event.sportType!.toLowerCase()) {
+          return false;
+        }
+        if (event.skillLevel != null && event.skillLevel != 'All' && m.skillLevel.toLowerCase() != event.skillLevel!.toLowerCase()) {
+          return false;
+        }
+        if (event.search != null && !m.title.toLowerCase().contains(event.search!.toLowerCase())) {
+          return false;
+        }
+        return true;
+      }).toList();
+
+      emit(state.copyWith(
+        status: MatchStatus.loading,
+        matches: localFiltered,
+        sportType: event.sportType,
+        skillLevel: event.skillLevel,
+        search: event.search,
+        clearMessage: true,
+        clearCursor: true,
+        hasMore: false,
+      ));
+    }
+
+    // 4. Fetch the fresh data in the background
+    try {
+      final result = await _fetchNearbyMatches();
+      
+      // Update cache
+      _cache[key] = result.matches;
+      _cacheCursors[key] = result.nextCursor;
+      _cacheTimestamps[key] = DateTime.now();
+
+      // Only emit the results if the filters haven't changed while we were fetching
+      if (_lastSportType == event.sportType &&
+          _lastSkillLevel == event.skillLevel &&
+          _lastSearch == event.search) {
+        emit(state.copyWith(
+          status: MatchStatus.success,
+          matches: result.matches,
+          trendingMatches: isUnfiltered ? result.matches : state.trendingMatches,
+          sportType: event.sportType,
+          skillLevel: event.skillLevel,
+          search: event.search,
+          nextCursor: result.nextCursor,
+          hasMore: result.nextCursor != null,
+        ));
+      }
     } catch (_) {
-      emit(state.copyWith(status: MatchStatus.failure));
+      // If we already have cached/local matches, don't show failure screen, just keep what we have
+      if (_cache.containsKey(key) || state.matches.isNotEmpty) {
+        emit(state.copyWith(status: MatchStatus.success));
+      } else {
+        emit(state.copyWith(status: MatchStatus.failure));
+      }
     }
   }
 
@@ -113,9 +196,22 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
 
     try {
       final result = await _fetchNearbyMatches(cursor: state.nextCursor);
+      final key = '${_lastSportType ?? 'All'}_${_lastSkillLevel ?? 'All'}_${_lastSearch ?? ''}';
+      final isUnfiltered = (_lastSportType == null || _lastSportType == 'All') &&
+          (_lastSkillLevel == null || _lastSkillLevel == 'All') &&
+          (_lastSearch == null || _lastSearch!.isEmpty);
+      
+      final updatedMatches = [...state.matches, ...result.matches];
+
+      // Update cache for this key so it includes the appended page
+      _cache[key] = updatedMatches;
+      _cacheCursors[key] = result.nextCursor;
+      _cacheTimestamps[key] = DateTime.now();
+
       emit(state.copyWith(
         status: MatchStatus.success,
-        matches: [...state.matches, ...result.matches],
+        matches: updatedMatches,
+        trendingMatches: isUnfiltered ? updatedMatches : state.trendingMatches,
         nextCursor: result.nextCursor,
         hasMore: result.nextCursor != null,
       ));
@@ -129,16 +225,23 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     MatchCreated event,
     Emitter<MatchState> emit,
   ) async {
+    _cache.clear();
+    _cacheCursors.clear();
+    _cacheTimestamps.clear();
     emit(state.copyWith(clearMessage: true));
     try {
-      await _matchRepository.createMatch(event.match);
+      final newMatch = await _matchRepository.createMatch(event.match);
       // Refresh from page 1 after creating so the new match appears correctly.
       final result = await _fetchNearbyMatches();
       final myMatches = await _matchRepository.getMyMatches();
+      final isUnfiltered = (_lastSportType == null || _lastSportType == 'All') &&
+          (_lastSkillLevel == null || _lastSkillLevel == 'All') &&
+          (_lastSearch == null || _lastSearch!.isEmpty);
       emit(state.copyWith(
         status: MatchStatus.success,
         myMatchesStatus: MatchStatus.success,
         matches: result.matches,
+        trendingMatches: isUnfiltered ? result.matches : [newMatch, ...state.trendingMatches],
         nextCursor: result.nextCursor,
         hasMore: result.nextCursor != null,
         myMatches: myMatches,
@@ -158,10 +261,14 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     MatchLeft event,
     Emitter<MatchState> emit,
   ) async {
+    _cache.clear();
+    _cacheCursors.clear();
+    _cacheTimestamps.clear();
     emit(state.copyWith(clearMessage: true));
     try {
       final updated = await _matchRepository.leaveMatch(event.matchId);
       final matches = _upsertMatch(state.matches, updated);
+      final trending = _upsertMatch(state.trendingMatches, updated);
       final myMatches = state.myMatches
           .where((m) => m.id != updated.id)
           .toList(growable: false);
@@ -169,6 +276,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         status: MatchStatus.success,
         myMatchesStatus: MatchStatus.success,
         matches: matches,
+        trendingMatches: trending,
         myMatches: myMatches,
         message: 'Successfully left match',
         isActionSuccess: true,
@@ -177,10 +285,14 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
       try {
         final result = await _fetchNearbyMatches();
         final myMatches = await _matchRepository.getMyMatches();
+        final isUnfiltered = (_lastSportType == null || _lastSportType == 'All') &&
+            (_lastSkillLevel == null || _lastSkillLevel == 'All') &&
+            (_lastSearch == null || _lastSearch!.isEmpty);
         emit(state.copyWith(
           status: MatchStatus.success,
           myMatchesStatus: MatchStatus.success,
           matches: result.matches,
+          trendingMatches: isUnfiltered ? result.matches : state.trendingMatches,
           nextCursor: result.nextCursor,
           hasMore: result.nextCursor != null,
           myMatches: myMatches,
@@ -201,15 +313,20 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     MatchJoined event,
     Emitter<MatchState> emit,
   ) async {
+    _cache.clear();
+    _cacheCursors.clear();
+    _cacheTimestamps.clear();
     emit(state.copyWith(clearMessage: true));
     try {
       final updated = await _matchRepository.joinMatch(event.matchId);
       final matches = _upsertMatch(state.matches, updated);
+      final trending = _upsertMatch(state.trendingMatches, updated);
       final myMatches = _upsertOrAppendMyMatch(state.myMatches, updated);
       emit(state.copyWith(
         status: MatchStatus.success,
         myMatchesStatus: MatchStatus.success,
         matches: matches,
+        trendingMatches: trending,
         myMatches: myMatches,
         message: 'Successfully joined match!',
         isActionSuccess: true,
@@ -218,10 +335,14 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
       try {
         final result = await _fetchNearbyMatches();
         final myMatches = await _matchRepository.getMyMatches();
+        final isUnfiltered = (_lastSportType == null || _lastSportType == 'All') &&
+            (_lastSkillLevel == null || _lastSkillLevel == 'All') &&
+            (_lastSearch == null || _lastSearch!.isEmpty);
         emit(state.copyWith(
           status: MatchStatus.success,
           myMatchesStatus: MatchStatus.success,
           matches: result.matches,
+          trendingMatches: isUnfiltered ? result.matches : state.trendingMatches,
           nextCursor: result.nextCursor,
           hasMore: result.nextCursor != null,
           myMatches: myMatches,

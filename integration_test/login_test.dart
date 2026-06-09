@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sportigo/main.dart' as app;
 import 'package:sportigo/screens/home_screen.dart';
@@ -12,6 +13,10 @@ void main() {
   testWidgets(
     'Login and navigate to home screen',
         (WidgetTester tester) async {
+
+      // Clear saved login/session
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
 
       app.main();
 

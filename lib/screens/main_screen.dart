@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/utils/responsive_util.dart';
+import '../core/theme/app_spacing.dart';
 import 'home_screen.dart';
 import 'explore_screen.dart';
 import 'matches_screen.dart';
@@ -62,17 +63,16 @@ class _MainScreenState extends State<MainScreen> {
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: 16.0,
-            vertical: 8.0,
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildNavItem(0, Icons.home_rounded, 'Home'),
-              _buildNavItem(1, Icons.explore_rounded, 'Explore'),
-              _buildNavItem(2, Icons.sports_soccer_rounded, 'Matches'),
-              _buildNavItem(3, Icons.dynamic_feed_rounded, 'Activity'),
-              _buildNavItem(4, Icons.person_rounded, 'Profile'),
+              Expanded(child: _buildNavItem(0, Icons.home_rounded, 'Home')),
+              Expanded(child: _buildNavItem(1, Icons.explore_rounded, 'Explore')),
+              Expanded(child: _buildNavItem(2, Icons.sports_soccer_rounded, 'Matches')),
+              Expanded(child: _buildNavItem(3, Icons.dynamic_feed_rounded, 'Activity')),
+              Expanded(child: _buildNavItem(4, Icons.person_rounded, 'Profile')),
             ],
           ),
         ),
@@ -128,15 +128,18 @@ class _MainScreenState extends State<MainScreen> {
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
         decoration: BoxDecoration(
           color: isSelected
               ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppSpacing.md),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
@@ -144,15 +147,20 @@ class _MainScreenState extends State<MainScreen> {
                   ? Theme.of(context).colorScheme.primaryContainer
                   : Theme.of(context).colorScheme.outline,
             ),
-            if (isSelected) ...[
-              const SizedBox(height: 4),
-              Text(
+            const SizedBox(height: AppSpacing.xxs),
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: isSelected ? 1.0 : 0.0,
+              child: Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: Theme.of(context).colorScheme.primaryContainer,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),

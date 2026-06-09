@@ -12,12 +12,12 @@ class AvatarImageHelper {
     return '${ApiConstants.assetBaseUrl}/storage/$path';
   }
 
-  static ImageProvider provider(String? path) {
+  static ImageProvider? provider(String? path) {
     final url = resolveUrl(path);
     if (url != null) {
       return NetworkImage(url);
     }
-    return const AssetImage('assets/images/player_profile.png');
+    return null;
   }
 
   static Widget circleAvatar({
@@ -25,12 +25,13 @@ class AvatarImageHelper {
     double radius = 20,
     Color? backgroundColor,
   }) {
+    final hasImage = resolveUrl(path) != null;
     return CircleAvatar(
       radius: radius,
       backgroundColor: backgroundColor,
-      backgroundImage: provider(path),
-      onBackgroundImageError: (_, _) {},
-      child: resolveUrl(path) == null
+      backgroundImage: hasImage ? provider(path) : null,
+      onBackgroundImageError: hasImage ? (_, _) {} : null,
+      child: !hasImage
           ? Icon(Icons.person, size: radius, color: Colors.white70)
           : null,
     );

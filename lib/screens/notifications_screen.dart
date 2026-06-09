@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_icon_size.dart';
+import '../core/theme/app_radius.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -22,7 +25,7 @@ class NotificationsScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           _buildNotificationGroup(context, 'Today'),
           _buildNotificationItem(
@@ -43,7 +46,7 @@ class NotificationsScreen extends StatelessWidget {
             time: '5h ago',
             isUnread: true,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.lg),
           _buildNotificationGroup(context, 'Yesterday'),
           _buildNotificationItem(
             context,
@@ -70,7 +73,7 @@ class NotificationsScreen extends StatelessWidget {
 
   Widget _buildNotificationGroup(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Text(
         title,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -91,13 +94,13 @@ class NotificationsScreen extends StatelessWidget {
     required bool isUnread,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: isUnread 
             ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.05)
             : Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
           color: isUnread 
               ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1)
@@ -108,14 +111,14 @@ class NotificationsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
               color: iconColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(icon, color: iconColor, size: AppIconSize.sm),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,7 +140,7 @@ class NotificationsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xxs),
                 Text(
                   message,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -149,7 +152,7 @@ class NotificationsScreen extends StatelessWidget {
             ),
           ),
           if (isUnread) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.xs),
             Container(
               width: 8,
               height: 8,

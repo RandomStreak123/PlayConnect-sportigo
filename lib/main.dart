@@ -13,6 +13,7 @@ import 'logic/blocs/matches/match_bloc.dart';
 import 'logic/blocs/activity/activity_bloc.dart';
 import 'core/constants/colors.dart';
 import 'core/utils/sport_image_helper.dart';
+import 'widgets/app_loading_indicator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -139,7 +140,7 @@ class AppView extends StatelessWidget {
           switch (state.status) {
             case AuthStatus.unknown:
               return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
+                body: Center(child: AppLoadingIndicator()),
               );
             case AuthStatus.authenticated:
               return const MainScreen();

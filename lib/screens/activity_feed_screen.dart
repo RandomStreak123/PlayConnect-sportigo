@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../core/constants/colors.dart';
 import '../core/utils/avatar_image_helper.dart';
 import '../data/models/activity_model.dart';
 import '../data/repositories/match_repository.dart';
 import '../logic/blocs/activity/activity_bloc.dart';
 import 'match_details_screen.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_icon_size.dart';
+import '../core/theme/app_radius.dart';
 
 class ActivityFeedScreen extends StatefulWidget {
   const ActivityFeedScreen({super.key});
@@ -165,13 +169,13 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(AppSpacing.xs + 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         shape: BoxShape.circle,
         border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
       ),
-      child: Icon(iconData, color: color, size: 24),
+      child: Icon(iconData, color: color, size: AppIconSize.md),
     );
   }
 
@@ -215,14 +219,14 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                 child: ListView.builder(
                   controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                   itemCount: state.hasMore ? state.activities.length + 1 : state.activities.length,
                   itemBuilder: (context, index) {
                     if (index >= state.activities.length) {
                       return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24.0),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
                         child: Center(
-                          child: CircularProgressIndicator(),
+                          child: AppLoadingIndicator(),
                         ),
                       );
                     }
@@ -242,8 +246,8 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: Colors.white),
-                  SizedBox(height: 16),
+                  AppLoadingIndicator(color: Colors.white),
+                  SizedBox(height: AppSpacing.md),
                   Text(
                     'Loading match details...',
                     style: TextStyle(
@@ -267,10 +271,10 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
     final color = _getActivityColor(activity.type, sportType);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
           color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.25),
           width: 1,
@@ -284,13 +288,13 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: meta != null && meta['match_id'] != null ? () => _handleActivityTap(activity) : null,
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -300,7 +304,7 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                     radius: 24,
                     backgroundColor: Theme.of(context).colorScheme.surfaceDim,
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: AppSpacing.sm + 2),
 
                   // Content
                   Expanded(
@@ -334,15 +338,15 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                           ),
                         ),
                         if (meta != null && meta['location'] != null) ...[
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppSpacing.xs),
                           Row(
                             children: [
                               Icon(
                                 Icons.location_on_outlined,
-                                size: 14,
+                                size: AppIconSize.xs,
                                 color: Theme.of(context).colorScheme.outline,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: AppSpacing.xxs),
                               Expanded(
                                 child: Text(
                                   meta['location'].toString(),
@@ -359,7 +363,7 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.sm),
 
                   // Sport Icon Indicator
                   _getActivityIcon(activity.type, sportType, color),
@@ -374,15 +378,15 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
 
   Widget _buildShimmerLoader() {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
       itemCount: 6,
       itemBuilder: (context, index) {
         return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.only(bottom: AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
               color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.15),
             ),
@@ -392,7 +396,7 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
             children: [
               // Avatar Shimmer
               _buildShimmerBlock(48, 48, radius: 24),
-              const SizedBox(width: 14),
+              const SizedBox(width: AppSpacing.sm + 2),
 
               // Content Shimmer
               Expanded(
@@ -402,18 +406,18 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildShimmerBlock(80, 14, radius: 4),
-                        _buildShimmerBlock(40, 10, radius: 4),
+                        _buildShimmerBlock(80, 14, radius: AppRadius.xxs),
+                        _buildShimmerBlock(40, 10, radius: AppRadius.xxs),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    _buildShimmerBlock(double.infinity, 14, radius: 4),
+                    const SizedBox(height: AppSpacing.sm),
+                    _buildShimmerBlock(double.infinity, 14, radius: AppRadius.xxs),
                     const SizedBox(height: 6),
-                    _buildShimmerBlock(160, 14, radius: 4),
+                    _buildShimmerBlock(160, 14, radius: AppRadius.xxs),
                   ],
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: AppSpacing.sm + 2),
 
               // Icon Shimmer
               _buildShimmerBlock(44, 44, radius: 22),
@@ -424,7 +428,7 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
     );
   }
 
-  Widget _buildShimmerBlock(double width, double height, {double radius = 8}) {
+  Widget _buildShimmerBlock(double width, double height, {double radius = AppRadius.xs}) {
     return Container(
       width: width,
       height: height,
@@ -438,30 +442,30 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32.0),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.05),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.dynamic_feed_rounded,
-                size: 64,
+                size: AppIconSize.hero,
                 color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.8),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               'No Activity Yet',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Start by creating or joining matches to build the sports community!',
               textAlign: TextAlign.center,
@@ -470,7 +474,7 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                 height: 1.5,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             ElevatedButton.icon(
               onPressed: () {
                 // Refresh to check for items
@@ -481,9 +485,9 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm + 2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
               ),
             ),
@@ -496,17 +500,17 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
   Widget _buildErrorState(String message) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 48, color: Colors.redAccent),
-            const SizedBox(height: 16),
+            const Icon(Icons.error_outline_rounded, size: AppIconSize.xl, color: Colors.redAccent),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'Failed to load activities',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               message,
               textAlign: TextAlign.center,
@@ -514,7 +518,7 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             ElevatedButton(
               onPressed: () {
                 context.read<ActivityBloc>().add(const ActivityFetched());

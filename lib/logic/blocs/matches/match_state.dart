@@ -8,6 +8,10 @@ class MatchState {
     this.myMatchesStatus = MatchStatus.initial,
     this.matches = const <MatchModel>[],
     this.myMatches = const <MatchModel>[],
+    this.trendingMatches = const <MatchModel>[],
+    this.sportType,
+    this.skillLevel,
+    this.search,
     this.message,
     this.isActionSuccess = false,
     this.nextCursor,
@@ -18,6 +22,10 @@ class MatchState {
   final MatchStatus myMatchesStatus;
   final List<MatchModel> matches;
   final List<MatchModel> myMatches;
+  final List<MatchModel> trendingMatches;
+  final String? sportType;
+  final String? skillLevel;
+  final String? search;
   final String? message;
   final bool isActionSuccess;
 
@@ -32,6 +40,10 @@ class MatchState {
     MatchStatus? myMatchesStatus,
     List<MatchModel>? matches,
     List<MatchModel>? myMatches,
+    List<MatchModel>? trendingMatches,
+    String? sportType,
+    String? skillLevel,
+    String? search,
     String? message,
     bool? isActionSuccess,
     bool clearMessage = false,
@@ -44,6 +56,10 @@ class MatchState {
       myMatchesStatus: myMatchesStatus ?? this.myMatchesStatus,
       matches: matches ?? this.matches,
       myMatches: myMatches ?? this.myMatches,
+      trendingMatches: trendingMatches ?? this.trendingMatches,
+      sportType: sportType ?? this.sportType,
+      skillLevel: skillLevel ?? this.skillLevel,
+      search: search ?? this.search,
       message: clearMessage ? null : (message ?? this.message),
       isActionSuccess: isActionSuccess ?? this.isActionSuccess,
       nextCursor: clearCursor ? null : (nextCursor ?? this.nextCursor),

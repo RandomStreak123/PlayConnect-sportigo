@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../widgets/match_card.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import 'create_match_screen.dart';
 import '../core/utils/responsive_util.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_radius.dart';
+import '../core/theme/app_icon_size.dart';
 
 class MatchesScreen extends StatefulWidget {
   const MatchesScreen({super.key});
@@ -49,10 +53,10 @@ class _MatchesScreenState extends State<MatchesScreen> {
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(60),
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(
                   color: Colors.white.withValues(alpha: 0.2),
                   width: 1,
@@ -66,7 +70,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                 indicatorSize: TabBarIndicatorSize.tab,
                 indicator: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 labelStyle: const TextStyle(
                   fontWeight: FontWeight.bold,
@@ -81,8 +85,8 @@ class _MatchesScreenState extends State<MatchesScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.upcoming_rounded, size: 18),
-                        SizedBox(width: 8),
+                        Icon(Icons.upcoming_rounded, size: AppIconSize.sm - 2),
+                        SizedBox(width: AppSpacing.xs),
                         Text('Upcoming'),
                       ],
                     ),
@@ -91,8 +95,8 @@ class _MatchesScreenState extends State<MatchesScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.history_rounded, size: 18),
-                        SizedBox(width: 8),
+                        Icon(Icons.history_rounded, size: AppIconSize.sm - 2),
+                        SizedBox(width: AppSpacing.xs),
                         Text('Past Matches'),
                       ],
                     ),
@@ -118,8 +122,8 @@ class _MatchesScreenState extends State<MatchesScreen> {
         if (state.myMatchesStatus == MatchStatus.loading &&
             state.myMatches.isEmpty) {
           return Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+            child: AppLoadingIndicator(
+              color: Theme.of(context).colorScheme.primary,
             ),
           );
         }
@@ -159,7 +163,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                     
                     if (crossAxisCount == 1) {
                       return ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: filteredMatches.length,
                         itemBuilder: (context, index) {
@@ -168,7 +172,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                       );
                     } else {
                       return GridView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppSpacing.md),
                         physics: const AlwaysScrollableScrollPhysics(),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
@@ -196,12 +200,12 @@ class _MatchesScreenState extends State<MatchesScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           child: Container(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.xxl),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                     shape: BoxShape.circle,
@@ -210,11 +214,11 @@ class _MatchesScreenState extends State<MatchesScreen> {
                     isUpcoming
                         ? Icons.sports_soccer_rounded
                         : Icons.history_toggle_off_rounded,
-                    size: 80,
+                    size: AppIconSize.hero + 16,
                     color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   isUpcoming ? 'No Upcoming Matches' : 'No Match History',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -223,7 +227,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   isUpcoming
                       ? 'You have no scheduled matches. Join an existing game or create your own to start playing!'
@@ -234,7 +238,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.xl),
                 if (isUpcoming)
                   ElevatedButton.icon(
                     onPressed: () {
@@ -257,11 +261,11 @@ class _MatchesScreenState extends State<MatchesScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.md,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       elevation: 0,
                     ),

@@ -9,8 +9,11 @@ enum AuthStatus { unknown, authenticated, unauthenticated }
 
 class AuthRepository {
   final _controller = StreamController<AuthStatus>();
+  final _userController = StreamController<UserModel>.broadcast();
 
   AuthRepository();
+
+  Stream<UserModel> get userUpdates => _userController.stream;
 
   Stream<AuthStatus> get status async* {
     final token = await _getToken();
@@ -89,11 +92,6 @@ class AuthRepository {
       final data = _decodeJsonBody(response.body);
       if (data == null) throw Exception('Invalid server response');
       final user = UserModel.fromJson(data['user']);
-      final token = data['access_token'];
-
-      await _saveToken(token);
-      await _saveUserLocally(user);
-      _controller.add(AuthStatus.authenticated);
       return user;
     } else {
       throw Exception(_extractErrorMessage(response, 'Registration failed'));
@@ -134,14 +132,18 @@ class AuthRepository {
   Future<void> logOut() async {
     final token = await _getToken();
     if (token != null) {
-      await http.post(
-        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.logout}'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      try {
+        await http.post(
+          Uri.parse('${ApiConstants.baseUrl}${ApiConstants.logout}'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+      } catch (_) {
+        // Ignore network errors to allow local logout to succeed
+      }
     }
 
     await _removeToken();
@@ -149,33 +151,84 @@ class AuthRepository {
     _controller.add(AuthStatus.unauthenticated);
   }
 
+  Future<UserModel?> _getCachedUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('cached_user');
+    if (cached != null) {
+      try {
+        final data = jsonDecode(cached);
+        if (data is Map<String, dynamic>) {
+          return UserModel.fromJson(data);
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Future<void> _refreshUserInBackground(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.user}'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = _decodeJsonBody(response.body);
+        if (data != null) {
+          final user = UserModel.fromJson(data);
+          await _saveUserLocally(user);
+          _userController.add(user);
+        }
+      } else if (response.statusCode == 401) {
+        await logOut();
+      }
+    } catch (_) {}
+  }
+
+  Future<UserModel?> _fetchUserFromServer(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.user}'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = _decodeJsonBody(response.body);
+        if (data == null) {
+          await logOut();
+          return null;
+        }
+        final user = UserModel.fromJson(data);
+        await _saveUserLocally(user);
+        return user;
+      } else {
+        await logOut();
+        return null;
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Get user — returns local cache or fetches from server.
   Future<UserModel?> getUser() async {
     final token = await _getToken();
     if (token == null) return null;
 
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.user}'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = _decodeJsonBody(response.body);
-      if (data == null) {
-        await logOut();
-        return null;
-      }
-      final user = UserModel.fromJson(data);
-      await _saveUserLocally(user);
-      return user;
-    } else {
-      await logOut();
-      return null;
+    final cachedUser = await _getCachedUser();
+    if (cachedUser != null) {
+      _refreshUserInBackground(token);
+      return cachedUser;
     }
+
+    return _fetchUserFromServer(token);
   }
+
 
   Future<UserModel> uploadProfilePhoto(String filePath) async {
     final token = await _getToken();
@@ -265,5 +318,8 @@ class AuthRepository {
     }
   }
 
-  void dispose() => _controller.close();
+  void dispose() {
+    _controller.close();
+    _userController.close();
+  }
 }

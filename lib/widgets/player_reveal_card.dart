@@ -128,9 +128,11 @@ class PlayerRevealCard extends StatelessWidget {
                       radius: 46,
                       backgroundColor: theme.colorScheme.surfaceDim,
                       backgroundImage: AvatarImageHelper.provider(profilePicture),
-                      onBackgroundImageError: (exception, stackTrace) {},
+                      onBackgroundImageError: AvatarImageHelper.resolveUrl(profilePicture) != null
+                          ? (exception, stackTrace) {}
+                          : null,
                       child: AvatarImageHelper.resolveUrl(profilePicture) == null
-                          ? Icon(Icons.person, size: 40, color: Colors.white70)
+                          ? const Icon(Icons.person, size: 40, color: Colors.white70)
                           : null,
                     ),
                   ),

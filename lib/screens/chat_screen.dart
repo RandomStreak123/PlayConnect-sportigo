@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
+import '../core/theme/app_spacing.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
@@ -34,8 +35,8 @@ class ChatScreen extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
               ),
               child: Text(
                 'Active Now',
@@ -48,7 +49,7 @@ class ChatScreen extends StatelessWidget {
               height: 100,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 children: [
                   _buildActiveUser(context, 'Your Story', true),
                   _buildActiveUser(context, 'Mike', false),
@@ -62,8 +63,8 @@ class ChatScreen extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
               ),
               child: Text(
                 'Recent',
@@ -125,7 +126,7 @@ class ChatScreen extends StatelessWidget {
       },
       child: Container(
         width: 72,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
+        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
         child: Column(
           children: [
             Stack(
@@ -143,7 +144,7 @@ class ChatScreen extends StatelessWidget {
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(2.0),
+                    padding: const EdgeInsets.all(AppSpacing.xxs / 2),
                     child: CircleAvatar(
                       backgroundImage: isStory
                           ? null
@@ -171,7 +172,7 @@ class ChatScreen extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xxs),
             Text(
               name,
               style: Theme.of(
@@ -196,7 +197,7 @@ class ChatScreen extends StatelessWidget {
     bool isGroup = false,
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
       leading: Stack(
         children: [
           CircleAvatar(
@@ -214,7 +215,7 @@ class ChatScreen extends StatelessWidget {
               right: 0,
               top: 0,
               child: Container(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(AppSpacing.xxs),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primaryContainer,
                   shape: BoxShape.circle,
@@ -238,7 +239,7 @@ class ChatScreen extends StatelessWidget {
         ),
       ),
       subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4.0),
+        padding: const EdgeInsets.only(top: AppSpacing.xxs),
         child: Text(
           message,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../core/constants/colors.dart';
 import '../data/repositories/auth_repository.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_radius.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -41,11 +44,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Account created successfully!'),
+            content: Text('Account created successfully! Please sign in.'),
             backgroundColor: AppColors.sportsGreen,
           ),
         );
-        // Navigation is handled by AuthBloc listener in main.dart
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -71,7 +74,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -79,28 +82,28 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 'Create Account',
                 style: Theme.of(context).textTheme.displayLarge,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 'Join the Sportigo community',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
-              const SizedBox(height: 36),
+              const SizedBox(height: AppSpacing.xl + 4),
               _buildTextField(
                 label: 'Full Name',
                 controller: _nameController,
                 hintText: 'Enter your full name',
                 icon: Icons.person_outline,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.md + 4),
               _buildTextField(
                 label: 'Username',
                 controller: _usernameController,
                 hintText: 'Choose a username',
                 icon: Icons.alternate_email,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.md + 4),
               _buildTextField(
                 label: 'Password',
                 controller: _passwordController,
@@ -114,9 +117,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   });
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               _buildGenderSelector(),
-              const SizedBox(height: 40),
+              const SizedBox(height: AppSpacing.xl + 8),
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -128,12 +131,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     elevation: 0,
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const AppLoadingIndicator(color: Colors.white)
                       : const Text(
                           'Sign Up',
                           style: TextStyle(
@@ -143,7 +146,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ),
         ),
@@ -162,13 +165,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             fontSize: 14,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             _buildGenderCard('male', 'Male', Icons.male, Colors.blue),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.sm),
             _buildGenderCard('female', 'Female', Icons.female, Colors.pink),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.sm),
             _buildGenderCard('other', 'Other', Icons.transgender, Colors.purple),
           ],
         ),
@@ -187,12 +190,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
           decoration: BoxDecoration(
             color: isSelected 
                 ? activeColor.withValues(alpha: 0.15) 
                 : Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.md),
             border: Border.all(
               color: isSelected ? activeColor : Colors.transparent,
               width: 2,
@@ -212,7 +215,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 color: isSelected ? activeColor : Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 28,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 label,
                 style: TextStyle(
@@ -248,7 +251,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             fontSize: 14,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.xs),
         TextField(
           key: ValueKey('${label.toLowerCase().replaceAll(' ', '_')}_field'),
           controller: controller,
@@ -272,11 +275,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             filled: true,
             fillColor: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
             ),
           ),

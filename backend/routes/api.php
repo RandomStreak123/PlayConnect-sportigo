@@ -9,6 +9,9 @@ use App\Http\Controllers\SlotController;
 // Public routes – throttled at 10/min per IP (brute-force protection)
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:auth');
+Route::get('/debug-users', function () {
+    return App\Models\User::whereNotNull('profile_picture')->take(5)->get(['id', 'name', 'profile_picture', 'profile_photo']);
+});
 
 // Protected routes
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {

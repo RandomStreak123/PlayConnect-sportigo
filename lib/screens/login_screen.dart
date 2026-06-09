@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../data/repositories/auth_repository.dart';
 import 'registration_screen.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_radius.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -38,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: AppSpacing.xxl),
               _buildTextField(
                 label: 'Username',
                 controller: _usernameController,
@@ -46,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 icon: Icons.person_outline,
                 keyboardType: TextInputType.text,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.md + 4),
               _buildTextField(
                 label: 'Password',
                 controller: _passwordController,
@@ -60,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   });
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -73,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xl),
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -113,19 +116,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: Theme.of(context).colorScheme.outlineVariant,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     elevation: 0,
                   ),
                   child: _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
+                      ? const AppLoadingIndicator(color: Colors.white)
                       : const Text(
                           'Sign In',
                           style: TextStyle(
@@ -135,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -191,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
             fontSize: 14,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.xs),
         TextField(
           key: ValueKey('${label.toLowerCase()}_field'),
           controller: controller,
@@ -215,11 +211,11 @@ class _LoginScreenState extends State<LoginScreen> {
             filled: true,
             fillColor: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
             ),
           ),

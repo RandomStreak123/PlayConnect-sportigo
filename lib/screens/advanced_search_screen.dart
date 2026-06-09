@@ -3,6 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../data/models/match_model.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import 'match_details_screen.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_radius.dart';
+import '../core/theme/app_icon_size.dart';
 
 class AdvancedSearchScreen extends StatefulWidget {
   const AdvancedSearchScreen({super.key});
@@ -35,7 +38,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -48,20 +51,20 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 filled: true,
                 fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   borderSide: BorderSide(
                     color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   borderSide: BorderSide(
                     color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             
             Text(
               'Filters',
@@ -69,7 +72,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             
             _buildFilterSection(
               context,
@@ -78,7 +81,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               _selectedSport,
               (val) => setState(() => _selectedSport = val),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             
             _buildFilterSection(
               context,
@@ -87,7 +90,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               _selectedSkill,
               (val) => setState(() => _selectedSkill = val),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             
             Text(
               'Distance (km)',
@@ -109,7 +112,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               inactiveColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
               onChanged: (values) => setState(() => _distanceRange = values),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.xl),
             
             Text(
               'Recommended Matches',
@@ -117,7 +120,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             
             _buildRecommendedItem(
               context,
@@ -136,12 +139,12 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               '08:00',
             ),
             
-            const SizedBox(height: 100),
+            const SizedBox(height: AppSpacing.bottomNavClearance),
           ],
         ),
       ),
       bottomSheet: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           boxShadow: [
@@ -166,7 +169,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 },
                 child: const Text('Reset'),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
@@ -182,9 +185,9 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                   ),
                   child: const Text('Apply Filters'),
@@ -214,10 +217,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
           children: options.map((opt) {
             final isSelected = opt == selectedValue;
             return ChoiceChip(
@@ -232,7 +235,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               ),
               backgroundColor: Theme.of(context).colorScheme.surface,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
                 side: BorderSide(
                   color: isSelected 
                       ? Theme.of(context).colorScheme.primaryContainer 
@@ -278,11 +281,11 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
             color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
           ),
@@ -294,14 +297,15 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               height: 48,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Icon(
                 sport == 'Tennis' ? Icons.sports_tennis : Icons.sports_kabaddi,
                 color: Theme.of(context).colorScheme.primaryContainer,
+                size: AppIconSize.md,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,11 +316,11 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xxs),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 14, color: Theme.of(context).colorScheme.outline),
-                      const SizedBox(width: 4),
+                      Icon(Icons.location_on, size: AppIconSize.xs - 2, color: Theme.of(context).colorScheme.outline),
+                      const SizedBox(width: AppSpacing.xxs),
                       Text(
                         '$location · $distance',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(

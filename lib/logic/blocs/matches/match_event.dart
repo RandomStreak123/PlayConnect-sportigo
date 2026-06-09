@@ -9,11 +9,13 @@ final class MatchFetched extends MatchEvent {
     this.sportType,
     this.skillLevel,
     this.search,
+    this.forceRefresh = false,
   });
 
   final String? sportType;
   final String? skillLevel;
   final String? search;
+  final bool forceRefresh;
 }
 
 /// Fired by the UI when the user scrolls near the end of the list.
