@@ -1,0 +1,358 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../data/models/match_model.dart';
+import '../logic/blocs/matches/match_bloc.dart';
+import 'match_details_screen.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_radius.dart';
+import '../core/theme/app_icon_size.dart';
+
+class AdvancedSearchScreen extends StatefulWidget {
+  const AdvancedSearchScreen({super.key});
+
+  @override
+  State<AdvancedSearchScreen> createState() => _AdvancedSearchScreenState();
+}
+
+class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedSport = 'All';
+  String _selectedSkill = 'All';
+  RangeValues _distanceRange = const RangeValues(0, 10);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Advanced Search',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Search Input
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search matches, players, or clubs',
+                prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.outline),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            
+            Text(
+              'Filters',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            
+            _buildFilterSection(
+              context,
+              'Sport Type',
+              ['All', 'Football', 'Basketball', 'Tennis', 'Padel', 'Badminton'],
+              _selectedSport,
+              (val) => setState(() => _selectedSport = val),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            
+            _buildFilterSection(
+              context,
+              'Skill Level',
+              ['All', 'Beginner', 'Intermediate', 'Advanced', 'Professional'],
+              _selectedSkill,
+              (val) => setState(() => _selectedSkill = val),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            
+            Text(
+              'Distance (km)',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            RangeSlider(
+              values: _distanceRange,
+              min: 0,
+              max: 50,
+              divisions: 10,
+              labels: RangeLabels(
+                '${_distanceRange.start.round()} km',
+                '${_distanceRange.end.round()} km',
+              ),
+              activeColor: Theme.of(context).colorScheme.primaryContainer,
+              inactiveColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+              onChanged: (values) => setState(() => _distanceRange = values),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            
+            Text(
+              'Recommended Matches',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            
+            _buildRecommendedItem(
+              context,
+              'Sunset Doubles Bash',
+              'Tennis',
+              'Central Park Courts',
+              '2.5 km',
+              '18:30',
+            ),
+            _buildRecommendedItem(
+              context,
+              'Morning Padel Drill',
+              'Padel',
+              'Westside Club',
+              '5.1 km',
+              '08:00',
+            ),
+            
+            const SizedBox(height: AppSpacing.bottomNavClearance),
+          ],
+        ),
+      ),
+      bottomSheet: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedSport = 'All';
+                    _selectedSkill = 'All';
+                    _distanceRange = const RangeValues(0, 10);
+                    _searchController.clear();
+                  });
+                },
+                child: const Text('Reset'),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    context.read<MatchBloc>().add(MatchFetched(
+                          sportType: _selectedSport,
+                          skillLevel: _selectedSkill,
+                          search: _searchController.text.trim().isEmpty
+                              ? null
+                              : _searchController.text.trim(),
+                        ));
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                  ),
+                  child: const Text('Apply Filters'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterSection(
+    BuildContext context,
+    String title,
+    List<String> options,
+    String selectedValue,
+    Function(String) onSelected,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
+          children: options.map((opt) {
+            final isSelected = opt == selectedValue;
+            return ChoiceChip(
+              label: Text(opt),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) onSelected(opt);
+              },
+              selectedColor: Theme.of(context).colorScheme.primaryContainer,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                side: BorderSide(
+                  color: isSelected 
+                      ? Theme.of(context).colorScheme.primaryContainer 
+                      : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecommendedItem(
+    BuildContext context,
+    String title,
+    String sport,
+    String location,
+    String distance,
+    String time,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MatchDetailsScreen(
+              match: MatchModel(
+                id: 'rec_${title.toLowerCase().replaceAll(' ', '_')}',
+                title: title,
+                sportType: sport,
+                location: location,
+                dateTime: DateTime.now().toIso8601String(),
+                skillLevel: 'Intermediate',
+                availableSlots: 2,
+                maxSlots: 4,
+                joinedCount: 2,
+                participants: const [],
+                distance: 2.5,
+              ),
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Icon(
+                sport == 'Tennis' ? Icons.sports_tennis : Icons.sports_kabaddi,
+                color: Theme.of(context).colorScheme.primaryContainer,
+                size: AppIconSize.md,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, size: AppIconSize.xs - 2, color: Theme.of(context).colorScheme.outline),
+                      const SizedBox(width: AppSpacing.xxs),
+                      Text(
+                        '$location · $distance',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  time,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Today',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
