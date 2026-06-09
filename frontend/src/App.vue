@@ -136,12 +136,20 @@ onMounted(async () => {
     const state = urlParams.get('state')
     if (code) {
       try {
-        const response = await fetch('/api/auth/instagram', {
+        const token = localStorage.getItem('sportigo_token')
+        const isLinking = !!token
+        const endpoint = isLinking ? '/api/user/link/instagram' : '/api/auth/instagram'
+        const headers = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+        if (isLinking) {
+          headers['Authorization'] = `Bearer ${token}`
+        }
+
+        const response = await fetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
+          headers: headers,
           body: JSON.stringify({
             code: code,
             state: state || '',
@@ -152,22 +160,36 @@ onMounted(async () => {
         if (response.ok && data.access_token) {
           if (window.opener) {
             window.opener.postMessage({
-              type: 'instagram_oauth_success',
+              type: isLinking ? 'instagram_link_success' : 'instagram_oauth_success',
               user: data.user,
               access_token: data.access_token
             }, '*')
             window.close()
           } else {
-            // If not in a popup, log them in here directly
+            // If not in a popup, log them in here directly or update details
             localStorage.setItem('sportigo_user', JSON.stringify(data.user))
             localStorage.setItem('sportigo_token', data.access_token)
             window.location.href = '/'
           }
         } else {
-          callbackError.value = data.message || 'Instagram authentication failed'
+          const errMsg = data.message || (isLinking ? 'Instagram account linking failed' : 'Instagram authentication failed')
+          callbackError.value = errMsg
+          if (window.opener) {
+            window.opener.postMessage({
+              type: isLinking ? 'instagram_link_failed' : 'instagram_oauth_failed',
+              message: errMsg
+            }, '*')
+          }
         }
       } catch (err) {
-        callbackError.value = err.message || 'Failed to connect to authentication server'
+        const errMsg = err.message || 'Failed to connect to authentication server'
+        callbackError.value = errMsg
+        if (window.opener) {
+          window.opener.postMessage({
+            type: localStorage.getItem('sportigo_token') ? 'instagram_link_failed' : 'instagram_oauth_failed',
+            message: errMsg
+          }, '*')
+        }
       } finally {
         callbackLoading.value = false
       }
@@ -344,6 +366,7 @@ onMounted(async () => {
             <ProfileScreen 
               v-else-if="currentTab === 'profile'"
               :is-current-user="!profileTargetUser || profileTargetUser.id === currentUser.id"
+              :user-id="profileTargetUser ? profileTargetUser.id : null"
               :player-name="profileTargetUser ? profileTargetUser.name : ''"
               :profile-picture="profileTargetUser ? (profileTargetUser.profilePicture || profileTargetUser.profilePhotoUrl || profileTargetUser.avatar) : null"
               @auth-logout="triggerSnackbar('Successfully signed out.')"

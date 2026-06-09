@@ -269,4 +269,49 @@ class MatchController extends Controller
 
         return response()->json(['message' => 'Match deleted successfully!']);
     }
+
+    /**
+     * Record match results (win/loss/draw) for participants.
+     * Only the match creator can record results, and the match must be in the past.
+     */
+    public function recordResults(Request $request, SportsMatch $match)
+    {
+        $user = auth()->user();
+
+        // Only the match creator can record results
+        if ((int) $match->creator_id !== (int) $user->id) {
+            return response()->json(['message' => 'Only the match organizer can record results.'], 403);
+        }
+
+        // Match must be in the past
+        $matchDate = Carbon::parse($match->date_time);
+        if ($matchDate->isFuture()) {
+            return response()->json(['message' => 'Cannot record results for a match that has not yet been played.'], 422);
+        }
+
+        $request->validate([
+            'results' => 'required|array|min:1',
+            'results.*.user_id' => 'required|integer',
+            'results.*.result' => 'required|string|in:win,loss,draw',
+        ]);
+
+        $participantIds = $match->participants()->pluck('users.id')->toArray();
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($match, $request, $participantIds) {
+            foreach ($request->results as $entry) {
+                $userId = (int) $entry['user_id'];
+                $result = $entry['result'];
+
+                // Only update if the user is actually a participant
+                if (in_array($userId, $participantIds)) {
+                    $match->participants()->updateExistingPivot($userId, ['result' => $result]);
+                }
+            }
+        });
+
+        return response()->json([
+            'message' => 'Match results recorded successfully!',
+            'match' => $match->fresh(['user', 'participants'])
+        ]);
+    }
 }

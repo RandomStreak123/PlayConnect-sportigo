@@ -215,4 +215,92 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    public function linkInstagram(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string',
+            'state' => 'required|string',
+            'redirect_uri' => 'required|string',
+        ]);
+
+        $state = $request->state;
+        if (!\Illuminate\Support\Facades\Cache::has('instagram_state_' . $state)) {
+            return response()->json([
+                'message' => 'Invalid state parameter. Possible CSRF attack.'
+            ], 403);
+        }
+        \Illuminate\Support\Facades\Cache::forget('instagram_state_' . $state);
+
+        $clientId = env('INSTAGRAM_CLIENT_ID');
+        $clientSecret = env('INSTAGRAM_CLIENT_SECRET');
+
+        try {
+            // 1. Exchange code for access token
+            $response = \Illuminate\Support\Facades\Http::asForm()->post('https://api.instagram.com/oauth/access_token', [
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
+                'grant_type' => 'authorization_code',
+                'redirect_uri' => $request->redirect_uri,
+                'code' => $request->code,
+            ]);
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'message' => 'Failed to obtain access token from Instagram',
+                    'details' => $response->json()
+                ], 400);
+            }
+
+            $tokenData = $response->json();
+            $accessToken = $tokenData['access_token'];
+
+            // 2. Fetch user profile information (username, profile_picture_url, id)
+            $profileResponse = \Illuminate\Support\Facades\Http::get("https://graph.instagram.com/me", [
+                'fields' => 'id,username,profile_picture_url',
+                'access_token' => $accessToken
+            ]);
+
+            if (!$profileResponse->successful()) {
+                return response()->json([
+                    'message' => 'Failed to retrieve Instagram user profile details',
+                    'details' => $profileResponse->json()
+                ], 400);
+            }
+
+            $profileData = $profileResponse->json();
+            $username = $profileData['username'] ?? 'instagram_user';
+            $instagramId = $profileData['id'];
+            $profilePicture = $profileData['profile_picture_url'] ?? 'https://www.gravatar.com/avatar/' . md5($username) . '?d=identicon';
+
+            // 3. Check if this instagram_id is already linked to ANOTHER user
+            $existingLinkedUser = User::where('instagram_id', $instagramId)->where('id', '!=', $request->user()->id)->first();
+            if ($existingLinkedUser) {
+                return response()->json([
+                    'message' => 'This Instagram account is already linked to another PlayConnect profile.'
+                ], 409);
+            }
+
+            // 4. Link it to the currently authenticated user
+            $user = $request->user();
+            $user->instagram_id = $instagramId;
+            $user->auth_provider = 'instagram';
+            $user->avatar = $profilePicture; // update profile picture
+            $user->save();
+
+            // Refresh session
+            session(['user_id' => $user->id, 'username' => $user->username, 'profile_picture' => $profilePicture]);
+
+            return response()->json([
+                'access_token' => $request->bearerToken() ?? $request->header('Authorization'),
+                'token_type' => 'Bearer',
+                'user' => $user,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Instagram account linking failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

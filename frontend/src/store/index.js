@@ -193,6 +193,21 @@ const leaveMatch = async (matchId) => {
   }
 }
 
+const recordResults = async (matchId, results) => {
+  if (!state.currentUser) return null
+  const data = await safeFetch(`${API_URL}/matches/${matchId}/result`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ results })
+  })
+  if (data && data.match) {
+    const idx = state.matches.findIndex(m => m.id === matchId)
+    if (idx !== -1) state.matches[idx] = data.match
+    return data
+  }
+  return null
+}
+
 const createMatch = async (sportType, title, dateTime, location, maxSlots, skillLevel, price, womenOnly) => {
   if (!state.currentUser) return null
   const data = await safeFetch(`${API_URL}/matches`, {
@@ -283,6 +298,7 @@ export const store = {
   setLanguage,
   joinMatch,
   leaveMatch,
+  recordResults,
   createMatch,
   toggleLikeActivity,
   addCommentToActivity,

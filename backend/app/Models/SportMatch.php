@@ -60,7 +60,7 @@ class SportMatch extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class, 'sport_match_user');
+        return $this->belongsToMany(User::class, 'sport_match_user')->withPivot('result');
     }
 
     public function syncAvailableSlots(bool $save = true): void

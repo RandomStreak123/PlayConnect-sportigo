@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [UserController::class, 'show']);
     Route::post('/user/update', [UserController::class, 'update']);
     Route::put('/user', [UserController::class, 'update']);
+    Route::post('/user/link/instagram', [AuthController::class, 'linkInstagram']);
     
     // User Match History
     Route::get('/user/matches', [MatchController::class, 'userMatches']);
@@ -49,6 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/matches/{match}', [MatchController::class, 'destroy']);
     Route::post('/matches/{match}/join', [MatchController::class, 'join']);
     Route::post('/matches/{match}/leave', [MatchController::class, 'leave']);
+    Route::post('/matches/{match}/result', [MatchController::class, 'recordResults']);
     
     Route::get('/tournaments', [TournamentController::class, 'index']);
     Route::post('/tournaments', [TournamentController::class, 'store']);

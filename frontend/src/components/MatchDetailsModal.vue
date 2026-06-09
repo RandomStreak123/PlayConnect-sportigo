@@ -18,6 +18,9 @@ const props = defineProps({
 const emit = defineEmits(['close', 'open-player', 'action-success'])
 
 const isSubmitting = ref(false)
+const showResultsPanel = ref(false)
+const isSavingResults = ref(false)
+const pendingResults = ref({})
 
 const slotsLeft = computed(() => {
   return Math.max(0, props.match.maxSlots - props.match.joinedCount)
@@ -36,6 +39,17 @@ const isCreator = computed(() => {
 const isRestricted = computed(() => {
   if (!props.match.womenOnly) return false
   return store.state.currentUser?.gender !== 'female'
+})
+
+const isPastMatch = computed(() => {
+  try {
+    const dt = new Date(props.match.dateTime?.replace(' ', 'T'))
+    return dt < new Date()
+  } catch { return false }
+})
+
+const hasRecordedResults = computed(() => {
+  return props.match.participants.some(p => p.pivot?.result)
 })
 
 const imageSrc = computed(() => {
@@ -63,6 +77,45 @@ const handleLeave = () => {
     isSubmitting.value = false
     emit('action-success', 'Left the match.')
   }, 500)
+}
+
+const openResultsPanel = () => {
+  const existing = {}
+  props.match.participants.forEach(p => {
+    existing[p.id] = p.pivot?.result || null
+  })
+  pendingResults.value = existing
+  showResultsPanel.value = true
+}
+
+const setResult = (userId, result) => {
+  pendingResults.value[userId] = pendingResults.value[userId] === result ? null : result
+}
+
+const saveResults = async () => {
+  const results = Object.entries(pendingResults.value)
+    .filter(([, r]) => r !== null)
+    .map(([userId, result]) => ({ user_id: Number(userId), result }))
+
+  if (results.length === 0) {
+    emit('action-success', 'Please select at least one result.')
+    return
+  }
+
+  isSavingResults.value = true
+  try {
+    const data = await store.recordResults(props.match.id, results)
+    if (data) {
+      emit('action-success', 'Match results saved! 🏆')
+      showResultsPanel.value = false
+    } else {
+      emit('action-success', 'Failed to save results. ❌')
+    }
+  } catch (err) {
+    emit('action-success', 'Error saving results. ❌')
+  } finally {
+    isSavingResults.value = false
+  }
 }
 
 // sendChat removed
@@ -162,6 +215,9 @@ const handleShare = () => {
                 </span>
                 <span class="player-level">{{ t('skill_' + match.skillLevel) }}</span>
               </div>
+              <span v-if="p.pivot?.result" class="result-badge" :class="'result-' + p.pivot.result">
+                {{ p.pivot.result === 'win' ? '✅ Win' : p.pivot.result === 'loss' ? '❌ Loss' : '➖ Draw' }}
+              </span>
             </div>
             
             <div v-if="slotsLeft > 0 && !isCreator" class="waiting-spot">
@@ -170,6 +226,44 @@ const handleShare = () => {
               </span>
               <span class="waiting-text">{{ t('waitingSpotText') }}</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Record Results Panel (for match creator, past matches) -->
+        <div v-if="showResultsPanel" class="section-block results-panel animate-fade-in">
+          <h3 class="section-title">🏆 Record Match Results</h3>
+          <p class="results-hint">Tap Win, Loss, or Draw for each player. Tap again to deselect.</p>
+          <div class="results-player-list">
+            <div v-for="p in match.participants" :key="'res-' + p.id" class="results-player-row">
+              <div class="results-player-info">
+                <img :src="getPlayerAvatar(p.profilePicture, 'male')" class="results-player-avatar" />
+                <span class="results-player-name">{{ p.name }}</span>
+              </div>
+              <div class="results-btn-group">
+                <button 
+                  class="result-select-btn win" 
+                  :class="{ selected: pendingResults[p.id] === 'win' }"
+                  @click="setResult(p.id, 'win')"
+                >Win</button>
+                <button 
+                  class="result-select-btn loss" 
+                  :class="{ selected: pendingResults[p.id] === 'loss' }"
+                  @click="setResult(p.id, 'loss')"
+                >Loss</button>
+                <button 
+                  class="result-select-btn draw" 
+                  :class="{ selected: pendingResults[p.id] === 'draw' }"
+                  @click="setResult(p.id, 'draw')"
+                >Draw</button>
+              </div>
+            </div>
+          </div>
+          <div class="results-actions">
+            <button class="results-cancel-btn" @click="showResultsPanel = false">Cancel</button>
+            <button class="results-save-btn" :disabled="isSavingResults" @click="saveResults">
+              <span v-if="isSavingResults" class="loader small-loader"></span>
+              <span v-else>Save Results</span>
+            </button>
           </div>
         </div>
 
@@ -184,15 +278,24 @@ const handleShare = () => {
         <div v-else>
           <!-- Joined but not creator: Leave button -->
           <button 
-            v-if="isJoined && !isCreator" 
+            v-if="isJoined && !isCreator && !isPastMatch" 
             class="action-btn leave-btn"
             @click="handleLeave"
           >
             {{ t('leaveMatch') }}
           </button>
           
-          <!-- Creator indicator -->
-          <div v-else-if="isCreator" class="status-indicator-box">
+          <!-- Creator + past match: Record Results button -->
+          <button 
+            v-else-if="isCreator && isPastMatch && !showResultsPanel" 
+            class="action-btn record-results-btn"
+            @click="openResultsPanel"
+          >
+            🏆 {{ hasRecordedResults ? 'Update Results' : 'Record Results' }}
+          </button>
+
+          <!-- Creator indicator (future match) -->
+          <div v-else-if="isCreator && !isPastMatch" class="status-indicator-box">
             {{ t('createdMatchStatus') }}
           </div>
           
@@ -808,5 +911,212 @@ const handleShare = () => {
 @keyframes rotation {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Result badges on player tiles */
+.result-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.result-badge.result-win {
+  background-color: rgba(46, 125, 50, 0.12);
+  color: #2e7d32;
+}
+
+.result-badge.result-loss {
+  background-color: rgba(186, 26, 26, 0.1);
+  color: #ba1a1a;
+}
+
+.result-badge.result-draw {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+/* Record Results Panel */
+.results-panel {
+  background-color: var(--surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.results-hint {
+  font-size: 0.78rem;
+  color: var(--on-surface-variant);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.results-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.results-player-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.results-player-row:last-child {
+  border-bottom: none;
+}
+
+.results-player-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.results-player-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.results-player-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.results-btn-group {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.result-select-btn {
+  padding: 5px 12px;
+  border-radius: 16px;
+  border: 1.5px solid var(--outline-variant);
+  background: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--on-surface-variant);
+}
+
+.result-select-btn:hover {
+  transform: translateY(-1px);
+}
+
+.result-select-btn.win.selected {
+  background-color: #2e7d32;
+  border-color: #2e7d32;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.25);
+}
+
+.result-select-btn.loss.selected {
+  background-color: #ba1a1a;
+  border-color: #ba1a1a;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(186, 26, 26, 0.25);
+}
+
+.result-select-btn.draw.selected {
+  background-color: #b45309;
+  border-color: #b45309;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(180, 83, 9, 0.25);
+}
+
+.results-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.results-cancel-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--outline-variant);
+  background: none;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.results-cancel-btn:hover {
+  background-color: var(--surface-dim);
+}
+
+.results-save-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%);
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2);
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.results-save-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.results-save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.small-loader {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ffffff;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  animation: rotation 1s linear infinite;
+}
+
+.record-results-btn {
+  background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(46, 125, 50, 0.2);
+}
+
+.record-results-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.3);
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

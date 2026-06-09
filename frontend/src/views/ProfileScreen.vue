@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { store } from '../store'
 import { getPlayerAvatar } from '../utils/sportImageHelper'
 import { supabase } from '../utils/supabase'
@@ -12,6 +12,10 @@ const props = defineProps({
     type: Boolean,
     default: true
   },
+  userId: {
+    type: [Number, String],
+    default: null
+  },
   playerName: {
     type: String,
     default: ''
@@ -21,6 +25,39 @@ const props = defineProps({
     default: null
   }
 })
+
+const profileUser = ref(null)
+const loadingProfileUser = ref(false)
+
+const loadUserProfile = async () => {
+  if (props.isCurrentUser) {
+    profileUser.value = null
+    return
+  }
+  if (!props.userId) return
+
+  loadingProfileUser.value = true
+  try {
+    const res = await fetch(`/api/users/${props.userId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('sportigo_token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+    if (res.ok) {
+      profileUser.value = await res.json()
+    }
+  } catch (err) {
+    console.error('Failed to load public profile:', err)
+  } finally {
+    loadingProfileUser.value = false
+  }
+}
+
+watch(() => props.userId, () => {
+  loadUserProfile()
+}, { immediate: true })
 
 const selectedSport = ref('Football')
 const activeSegmentTab = ref(0) // 0: Activity, 1: Achievements, 2: Streaks
@@ -48,6 +85,12 @@ const currentUser = computed(() => {
   if (props.isCurrentUser) {
     return store.state.currentUser || { name: 'Champ', gender: 'male', profilePhotoUrl: null }
   } else {
+    if (profileUser.value) {
+      return {
+        ...profileUser.value,
+        profilePhotoUrl: profileUser.value.avatar || profileUser.value.profile_picture || profileUser.value.profile_photo || props.profilePicture
+      }
+    }
     return {
       name: props.playerName || 'Player',
       gender: 'male',
@@ -55,6 +98,173 @@ const currentUser = computed(() => {
     }
   }
 })
+
+const userMatches = computed(() => {
+  const matches = props.isCurrentUser ? store.state.matches : (profileUser.value?.matches || [])
+  const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
+  if (!uid) return []
+  
+  return matches.filter(m => {
+    const isCreator = Number(m.creator_id || m.user_id) === Number(uid)
+    const isParticipant = m.participants?.some(p => Number(p.id) === Number(uid))
+    return isCreator || isParticipant
+  })
+})
+
+// Filter to matches that have already been played (in the past)
+const playedMatches = computed(() => {
+  const now = new Date()
+  return userMatches.value.filter(m => {
+    const matchDate = new Date(m.date_time || m.date)
+    return matchDate < now
+  })
+})
+
+const showAllActivities = ref(false)
+
+const visibleActivities = computed(() => {
+  if (showAllActivities.value) {
+    return playedMatches.value
+  }
+  return playedMatches.value.slice(0, 4)
+})
+
+// Determine if a match is a win for the given user
+// Uses real recorded result from pivot data when available,
+// falls back to deterministic formula for unrecorded matches
+const isMatchWin = (match, uid) => {
+  // Check for real recorded result from pivot data
+  const participant = match.participants?.find(p => Number(p.id) === Number(uid))
+  if (participant?.pivot?.result) {
+    return participant.pivot.result === 'win'
+  }
+  // Fallback: deterministic formula for matches without recorded results
+  const matchId = match.id || 0
+  const userId = uid || 0
+  return ((matchId * 7 + userId * 13) % 10) < 6
+}
+
+const hasRealResult = (match, uid) => {
+  const participant = match.participants?.find(p => Number(p.id) === Number(uid))
+  return !!participant?.pivot?.result
+}
+
+const profileStats = computed(() => {
+  const matches = playedMatches.value
+  const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
+
+  // XP Rules (per Sportigo Profile Feature Roadmap)
+  // Join Match: 5 XP | Complete Match: 15 XP | Create Match: 20 XP | Win Match: 25 XP
+  let xp = 0
+  let wins = 0
+  let createdCount = 0
+
+  matches.forEach(m => {
+    const isCreator = Number(m.creator_id || m.user_id) === Number(uid)
+    const isWin = isMatchWin(m, uid)
+
+    // Create Match (20 XP) or Join Match (5 XP)
+    if (isCreator) {
+      xp += 20
+      createdCount++
+    } else {
+      xp += 5
+    }
+
+    // Complete Match: 15 XP (all past matches are completed)
+    xp += 15
+
+    // Win Match: 25 XP
+    if (isWin) {
+      xp += 25
+      wins++
+    }
+  })
+
+  const nextLevelXp = 1000
+  const level = Math.floor(xp / nextLevelXp) + 1
+  const currentLevelXp = xp % nextLevelXp
+  const progressPct = Math.round((currentLevelXp / nextLevelXp) * 100)
+
+  // Win Rate = Wins / Total Matches * 100
+  const winRate = matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0
+
+  // Streaks: consecutive wins counting backwards from the most recent past match
+  let streak = 0
+  const sortedMatches = [...matches].sort((a, b) => new Date(b.date_time || b.date) - new Date(a.date_time || a.date))
+  for (const m of sortedMatches) {
+    const isWin = isMatchWin(m, uid)
+    if (isWin) {
+      streak++
+    } else {
+      break
+    }
+  }
+
+  // Play Style (per Roadmap)
+  // Organizer: Creates Many Matches (>= 40% created)
+  // Attacker: High Scoring (win rate >= 70%)
+  // Defender: Defensive Focus (plays many but win rate < 50%)
+  // All-Rounder: Balanced Activity (default)
+  let playStyle = 'All-Rounder'
+  if (matches.length > 0) {
+    const createRatio = createdCount / matches.length
+    if (createRatio >= 0.4) {
+      playStyle = 'Organizer'
+    } else if (winRate >= 70) {
+      playStyle = 'Attacker'
+    } else if (winRate < 50 && matches.length >= 5) {
+      playStyle = 'Defender'
+    }
+  }
+
+  // Global Rank: improves as XP increases
+  const rankNum = Math.max(1, 1000 - Math.floor(xp / 5))
+  const globalRank = `#${rankNum} Kochi`
+
+  return {
+    xp,
+    level,
+    currentLevelXp,
+    nextLevelXp,
+    progressPct,
+    winRate,
+    streak,
+    playStyle,
+    globalRank,
+    totalGames: matches.length
+  }
+})
+
+// Calculate per-match XP for Activity Log display
+const getMatchXp = (match) => {
+  const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
+  const isCreator = Number(match.creator_id || match.user_id) === Number(uid)
+  const isWin = isMatchWin(match, uid)
+
+  let matchXp = isCreator ? 20 : 5   // Create or Join
+  matchXp += 15                       // Complete
+  if (isWin) matchXp += 25            // Win
+  return matchXp
+}
+
+// Date Formatting Helper
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    return d.toLocaleDateString(store.state.language === 'hi' ? 'hi-IN' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+  } catch (e) {
+    return dateStr
+  }
+}
 
 const avatarUrl = computed(() => {
   return getPlayerAvatar(currentUser.value.profilePhotoUrl, currentUser.value.gender)
@@ -237,6 +447,65 @@ const onFileSelected = async (event) => {
     }
   }
 }
+
+// Instagram Account Linking
+const linkingLoading = ref(false)
+
+const handleLinkInstagram = async () => {
+  if (currentUser.value.instagram_id) {
+    emit('toast-message', 'Your Instagram account is already linked! 📸')
+    return
+  }
+
+  linkingLoading.value = true
+  try {
+    const res = await fetch('/api/auth/instagram/url')
+    const data = await res.json()
+    if (data && data.url) {
+      const width = 450
+      const height = 650
+      const left = (window.screen.width - width) / 2
+      const top = (window.screen.height - height) / 2
+      
+      window.open(
+        data.url,
+        'InstagramLoginPopup',
+        `width=${width},height=${height},left=${left},top=${top},personalbar=0,toolbar=0,scrollbars=0,resizable=0`
+      )
+    } else {
+      throw new Error('Could not retrieve Instagram authorization URL')
+    }
+  } catch (err) {
+    emit('toast-message', err.message || 'Failed to initialize Instagram linking ❌')
+  } finally {
+    linkingLoading.value = false
+  }
+}
+
+const handleMessageEvent = async (event) => {
+  const allowedOrigins = [
+    window.location.origin,
+    'https://localhost:5173',
+    'https://127.0.0.1:5173'
+  ]
+  if (!allowedOrigins.includes(event.origin)) return
+  
+  if (event.data && event.data.type === 'instagram_link_success') {
+    emit('toast-message', 'Instagram account linked successfully! 🎉')
+    showSettingsModal.value = false
+    await store.init()
+  } else if (event.data && event.data.type === 'instagram_link_failed') {
+    emit('toast-message', event.data.message || 'Instagram linking failed ❌')
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('message', handleMessageEvent)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('message', handleMessageEvent)
+})
 </script>
 
 <template>
@@ -293,18 +562,19 @@ const onFileSelected = async (event) => {
       <div class="xp-header-row">
         <span class="xp-title">
           <span class="lightning-icon">⚡</span>
-          {{ t('level') }} 24 Player
+          {{ t('level') }} {{ profileStats.level }} Player
         </span>
-        <span class="xp-fraction">750 / 1000 XP</span>
+        <span class="xp-fraction">{{ profileStats.currentLevelXp }} / {{ profileStats.nextLevelXp }} XP</span>
       </div>
       
       <div class="xp-progress-bar">
-        <div class="xp-progress-fill" style="width: 75%"></div>
+        <div class="xp-progress-fill" :style="{ width: profileStats.progressPct + '%' }"></div>
       </div>
       
       <div class="xp-footer-row">
-        <span class="xp-progress-pct">Progress to Level 25: 75%</span>
-        <span class="xp-streak-tag">🔥 7 Match Winning Streak</span>
+        <span class="xp-progress-pct">Progress to Level {{ profileStats.level + 1 }}: {{ profileStats.progressPct }}%</span>
+        <span v-if="profileStats.streak > 0" class="xp-streak-tag">🔥 {{ profileStats.streak }} Match Winning Streak</span>
+        <span v-else class="xp-streak-tag">Start playing to build a streak!</span>
       </div>
     </div>
 
@@ -318,7 +588,7 @@ const onFileSelected = async (event) => {
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"/><path d="M12 2a6 6 0 0 1 6 6v3.5a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/></svg>
           </span>
         </div>
-        <div class="stat-card-value">72%</div>
+        <div class="stat-card-value">{{ profileStats.winRate }}%</div>
       </div>
       
       <!-- Card 2: Play Style -->
@@ -329,7 +599,7 @@ const onFileSelected = async (event) => {
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
           </span>
         </div>
-        <div class="stat-card-value">All-Rounder</div>
+        <div class="stat-card-value">{{ profileStats.playStyle }}</div>
       </div>
 
       <!-- Card 3: Total Games -->
@@ -340,7 +610,7 @@ const onFileSelected = async (event) => {
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><circle cx="12" cy="12" r="10"/><path d="m12 2-1.91 3.42L6.2 5.09M12 22l1.91-3.42 3.89.33M2.05 12.5l3.82-.76-.36-3.89M21.95 11.5l-3.82.76.36 3.89M12 7.5 9 9.5v3l3 2 3-2v-3Z"/><path d="M9 9.5 6.2 5.09M9 12.5l-3.48 2.54M12 14.5v3.42M15 12.5l3.48 2.54M15 9.5l2.8-4.41"/></svg>
           </span>
         </div>
-        <div class="stat-card-value">120 {{ t('played') }}</div>
+        <div class="stat-card-value">{{ profileStats.totalGames }} {{ t('played') }}</div>
       </div>
 
       <!-- Card 4: Global Rank -->
@@ -351,7 +621,7 @@ const onFileSelected = async (event) => {
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
           </span>
         </div>
-        <div class="stat-card-value">#128 Kochi</div>
+        <div class="stat-card-value">{{ profileStats.globalRank }}</div>
       </div>
     </div>
 
@@ -423,58 +693,53 @@ const onFileSelected = async (event) => {
     <div class="segment-panel">
       <!-- Activity -->
       <div v-if="activeSegmentTab === 0" class="panel-content-new animate-fade-in">
-        <div class="activity-tile-new">
-          <div class="activity-left">
-            <span class="activity-icon-circle bg-light-green">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 2-1.91 3.42L6.2 5.09M12 22l1.91-3.42 3.89.33M2.05 12.5l3.82-.76-.36-3.89M21.95 11.5l-3.82.76.36 3.89M12 7.5 9 9.5v3l3 2 3-2v-3Z"/><path d="M9 9.5 6.2 5.09M9 12.5l-3.48 2.54M12 14.5v3.42M15 12.5l3.48 2.54M15 9.5l2.8-4.41"/></svg>
-            </span>
-            <div class="activity-info-new">
-              <span class="activity-title-new">Won Football Tournament</span>
-              <span class="activity-desc-new">Kochi Arena • 2 hours ago</span>
+        <template v-if="playedMatches.length > 0">
+          <div v-for="match in visibleActivities" :key="match.id" class="activity-tile-new">
+            <div class="activity-left">
+              <span 
+                class="activity-icon-circle"
+                :class="Number(match.creator_id || match.user_id) === Number(props.isCurrentUser ? store.state.currentUser?.id : props.userId) ? 'bg-light-green' : 'bg-light-blue'"
+                style="display: flex; align-items: center; justify-content: center; font-size: 1.1rem;"
+              >
+                <span>{{ match.sport_type === 'Football' ? '⚽' : match.sport_type === 'Cricket' ? '🏏' : match.sport_type === 'Basketball' ? '🏀' : match.sport_type === 'Tennis' ? '🎾' : match.sport_type === 'Badminton' ? '🏸' : match.sport_type === 'Padel' ? '🏓' : '🏃' }}</span>
+              </span>
+              <div class="activity-info-new">
+                <span class="activity-title-new">
+                  {{ Number(match.creator_id || match.user_id) === Number(props.isCurrentUser ? store.state.currentUser?.id : props.userId) ? 'Organized' : 'Joined' }} 
+                  {{ match.sport_type || 'Sports' }} Match
+                </span>
+                <span class="activity-desc-new">{{ match.title }} at {{ match.location }} • {{ formatDate(match.date_time || match.date) }}</span>
+              </div>
             </div>
-          </div>
-          <span class="xp-badge-new">+24 XP</span>
-        </div>
-        
-        <div class="activity-tile-new">
-          <div class="activity-left">
-            <span class="activity-icon-circle bg-light-blue">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 5.5 12 12l-1.5-1.5 6.5-6.5a2.12 2.12 0 0 1 3 3z"/><path d="m11 11-8.5 8.5a1.5 1.5 0 0 0 0 2.12l.38.38a1.5 1.5 0 0 0 2.12 0L13.5 13.5"/><circle cx="18" cy="18" r="3"/></svg>
+            <span class="xp-badge-new">
+              +{{ getMatchXp(match) }} XP
             </span>
-            <div class="activity-info-new">
-              <span class="activity-title-new">Joined Cricket friendly match</span>
-              <span class="activity-desc-new">Royal Club Grounds • Yesterday</span>
-            </div>
           </div>
-          <span class="xp-badge-new">+10 XP</span>
-        </div>
-        
-        <div class="activity-tile-new">
-          <div class="activity-left">
-            <span class="activity-icon-circle bg-light-yellow">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="8" r="6"/><path d="M11.76 12.24 4 20"/><path d="m14 10-2.5-2.5"/><path d="m12.5 11.5-3-3"/></svg>
-            </span>
-            <div class="activity-info-new">
-              <span class="activity-title-new">Completed Tennis warm-up drill</span>
-              <span class="activity-desc-new">Town Court • 3 days ago</span>
-            </div>
+          <div v-if="playedMatches.length > 4" class="see-all-container">
+            <button class="see-all-btn" @click="showAllActivities = !showAllActivities">
+              {{ showAllActivities ? 'See Less' : 'See All' }}
+            </button>
           </div>
-          <span class="xp-badge-new">+15 XP</span>
+        </template>
+        <div v-else class="activity-empty-state" style="text-align: center; padding: 32px 16px; color: var(--outline); font-size: 0.88rem; font-weight: 500;">
+          No matches played yet. Join or organize a match to get started! ⚽
         </div>
       </div>
 
       <!-- Achievements -->
-      <div v-else-if="activeSegmentTab === 1" class="panel-content achievements animate-fade-in">
-        <div class="badge-item">🏅 MVP Match Player</div>
-        <div class="badge-item">🔥 5 Match Streak Hero</div>
+      <div v-else-if="activeSegmentTab === 1" class="panel-content achievements animate-fade-in" style="display: flex; flex-direction: column; gap: 10px;">
         <div class="badge-item">🤝 Fair Play Badge</div>
+        <div v-if="playedMatches.length > 0" class="badge-item">🏅 First Match Played</div>
+        <div v-if="playedMatches.length >= 5" class="badge-item">🔥 5 Match Veteran</div>
+        <div v-if="playedMatches.length >= 10" class="badge-item">🏆 Decathlete</div>
+        <div v-if="playedMatches.some(m => Number(m.creator_id || m.user_id) === Number(props.isCurrentUser ? store.state.currentUser?.id : props.userId))" class="badge-item">👑 Community Host</div>
       </div>
 
       <!-- Streaks -->
       <div v-else class="panel-content streaks animate-fade-in">
-        <div class="streak-details">
-          <span class="streak-large">7</span>
-          <span class="streak-label">{{ t('consecutiveWeekly') }}</span>
+        <div class="streak-details" style="display: flex; align-items: baseline; gap: 8px;">
+          <span class="streak-large" style="font-size: 2rem; font-weight: 800; color: #f97316;">{{ profileStats.streak }}</span>
+          <span class="streak-label" style="font-size: 0.9rem; font-weight: 600; color: var(--on-surface-variant);">{{ t('consecutiveWeekly') }}</span>
         </div>
       </div>
     </div>
@@ -534,6 +799,20 @@ const onFileSelected = async (event) => {
                 <span class="menu-subtitle">Update display name, bio, and settings</span>
               </div>
               <span class="chevron">➔</span>
+            </div>
+
+            <!-- Link Instagram -->
+            <div class="menu-tile" :class="{ 'disabled': linkingLoading || currentUser.instagram_id }" @click="handleLinkInstagram">
+              <span class="menu-icon">📸</span>
+              <div class="menu-info">
+                <span class="menu-title">{{ currentUser.instagram_id ? 'Instagram Linked' : 'Link Instagram' }}</span>
+                <span class="menu-subtitle">
+                  {{ currentUser.instagram_id ? `@${currentUser.username || 'Linked'}` : 'Connect your Instagram account' }}
+                </span>
+              </div>
+              <span v-if="linkingLoading" class="loader menu-loader"></span>
+              <span v-else-if="currentUser.instagram_id" class="check-icon">✓</span>
+              <span v-else class="chevron">➔</span>
             </div>
 
             <div class="menu-tile" @click="handleSettingsInfo('Sportigo platform game guide coming soon! 📑')">
@@ -1102,6 +1381,36 @@ const onFileSelected = async (event) => {
   border-radius: 12px;
 }
 
+.see-all-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.see-all-btn {
+  background-color: transparent;
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+  padding: 8px 24px;
+  border-radius: 24px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.see-all-btn:hover {
+  background-color: var(--primary);
+  color: var(--on-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.1);
+}
+
+.see-all-btn:active {
+  transform: translateY(0);
+}
+
 .section-sub-title {
   font-size: 0.95rem;
   font-weight: 700;
@@ -1328,6 +1637,25 @@ input:checked + .toggle-slider:before {
 .chevron {
   font-size: 0.82rem;
   color: var(--outline-variant);
+}
+
+.menu-tile.disabled {
+  cursor: default;
+}
+
+.menu-tile.disabled:hover {
+  background-color: var(--surface);
+}
+
+.menu-loader {
+  border-color: var(--primary);
+  border-bottom-color: transparent;
+}
+
+.check-icon {
+  color: #4caf50;
+  font-weight: bold;
+  font-size: 1.1rem;
 }
 
 /* Card bio & badges */

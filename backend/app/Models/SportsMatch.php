@@ -56,7 +56,7 @@ class SportsMatch extends Model
 
     public function participants()
     {
-        return $this->belongsToMany(User::class, 'sport_match_user', 'sport_match_id', 'user_id');
+        return $this->belongsToMany(User::class, 'sport_match_user', 'sport_match_id', 'user_id')->withPivot('result');
     }
 
     // Accessors for frontend / api camelCase formatting
