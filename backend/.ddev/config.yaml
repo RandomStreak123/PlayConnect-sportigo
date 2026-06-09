@@ -209,7 +209,7 @@ corepack_enable: false
 # Provide extra flags to the share provider script
 # See https://docs.ddev.com/en/stable/users/configuration/config/#share_provider_args
 
-# disable_settings_management: false
+disable_settings_management: true
 # If true, DDEV will not create CMS-specific settings files like
 # Drupal's settings.php/settings.ddev.php or TYPO3's additional.php
 # In this case the user must provide all such settings.

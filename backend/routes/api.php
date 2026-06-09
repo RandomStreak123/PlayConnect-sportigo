@@ -12,6 +12,8 @@ use App\Http\Controllers\UserController;
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::get('/auth/instagram/url', [AuthController::class, 'getInstagramUrl']);
+    Route::post('/auth/instagram', [AuthController::class, 'instagramLogin']);
 });
 
 Route::get('/migrate', function () {

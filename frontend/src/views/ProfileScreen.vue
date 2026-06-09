@@ -141,6 +141,7 @@ const handleShareProfile = () => {
 
 // Edit Profile Modal States
 const showEditModal = ref(false)
+const showSettingsModal = ref(false)
 const isSavingProfile = ref(false)
 
 const editName = ref('')
@@ -241,24 +242,24 @@ const onFileSelected = async (event) => {
 <template>
   <div 
     class="profile-container scrollable-y animate-fade-in"
-    :style="{ background: `linear-gradient(180deg, ${currentSportColor}1A 0%, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)` }"
+    :style="{ background: `linear-gradient(180deg, ${currentSportColor}2E 0%, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)` }"
   >
     <!-- Custom Header -->
     <div class="profile-header">
       <h2 class="title">{{ t('playerProfile') }}</h2>
-      <button v-if="isCurrentUser" class="settings-nav-btn" @click="handleSettingsInfo('Navigating to Settings panel... ⚙️')">
-        ⚙️
+      <button v-if="isCurrentUser" class="settings-nav-btn" @click="showSettingsModal = true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="menu-svg"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
 
     <!-- Profile Info Card -->
     <div class="profile-card">
-      <div class="card-banner" :style="{ background: currentSportGradient }"></div>
       <div class="avatar-wrap">
         <img :src="avatarUrl" class="card-avatar" @error="(e) => e.target.src = '/assets/images/players/download.jpg'" />
+        <span class="avatar-online-dot"></span>
         <button v-if="isCurrentUser" class="camera-btn" @click="fileInput.click()" :disabled="isUploading">
           <span v-if="isUploading">⏳</span>
-          <span v-else>📷</span>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h3l2-3h6l2 3h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><circle cx="12" cy="13" r="4"/></svg>
         </button>
         <input 
           ref="fileInput"
@@ -269,60 +270,127 @@ const onFileSelected = async (event) => {
         />
       </div>
 
-      <h3 class="card-name">{{ currentUser.name }}</h3>
-      <span class="card-level" :style="{ color: currentSportColor }">{{ t('level') }} 18</span>
-
-      <p class="card-bio">{{ currentUser.bio || t('noBioYet') }}</p>
-
-      <div class="profile-badges" v-if="currentUser.primary_sport || currentUser.skill_tier">
-        <span class="profile-badge sport" v-if="currentUser.primary_sport" :style="{ backgroundColor: getSportColor(currentUser.primary_sport) + '20', color: getSportColor(currentUser.primary_sport) }">
-          {{ getSportEmoji(currentUser.primary_sport) }} {{ currentUser.primary_sport }}
-        </span>
-        <span class="profile-badge skill" v-if="currentUser.skill_tier">
-          🏆 {{ currentUser.skill_tier }}
+      <div class="name-row">
+        <h3 class="card-name">{{ currentUser.name }}</h3>
+        <span class="verified-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#00a3ff"><path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-13 5l-4-4 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
         </span>
       </div>
 
-      <!-- Action tags -->
-      <div class="action-badges-row">
-        <button class="badge-btn" @click="handleShareProfile">
-          📤 {{ t('shareProfile') }}
-        </button>
-        <button v-if="isCurrentUser" class="badge-btn edit" @click="openEditModal">
-          ✏️ {{ t('editProfile') }}
-        </button>
+      <div class="card-badges-row">
+        <span class="badge-item-inline text-green">
+          🔥 {{ currentUser.skill_tier === 'Professional' || currentUser.skill_tier === 'Advanced' ? 'PRO PLAYER' : 'PLAYER' }}
+        </span>
+        <span class="badge-separator">•</span>
+        <span class="badge-item-inline text-gray">
+          🇮🇳 {{ currentUser.location || 'Kochi, IN' }}
+        </span>
       </div>
     </div>
 
-    <!-- XP system -->
-    <div class="xp-container">
-      <div class="xp-row">
-        <span class="xp-lbl">{{ t('levelProgression') }}</span>
-        <span class="xp-val">4,250 / 5,000 XP</span>
+    <!-- XP Progression Card -->
+    <div class="xp-card">
+      <div class="xp-header-row">
+        <span class="xp-title">
+          <span class="lightning-icon">⚡</span>
+          {{ t('level') }} 24 Player
+        </span>
+        <span class="xp-fraction">750 / 1000 XP</span>
       </div>
-      <div class="progress-track">
-        <div class="progress-fill" :style="{ width: '85%', backgroundColor: currentSportColor }"></div>
+      
+      <div class="xp-progress-bar">
+        <div class="xp-progress-fill" style="width: 75%"></div>
       </div>
-      <span class="xp-sub-lbl">750 XP to Level 19</span>
+      
+      <div class="xp-footer-row">
+        <span class="xp-progress-pct">Progress to Level 25: 75%</span>
+        <span class="xp-streak-tag">🔥 7 Match Winning Streak</span>
+      </div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="stats-grid">
-      <div class="stat-box">
-        <span class="stat-val">142</span>
-        <span class="stat-lbl">{{ t('matches') }}</span>
+    <!-- Stats Grid (2x2) -->
+    <div class="new-stats-grid">
+      <!-- Card 1: Win Rate -->
+      <div class="new-stat-card">
+        <div class="stat-header">
+          <span class="stat-card-title">{{ t('winRate') }}</span>
+          <span class="stat-svg-container">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"/><path d="M12 2a6 6 0 0 1 6 6v3.5a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/></svg>
+          </span>
+        </div>
+        <div class="stat-card-value">72%</div>
       </div>
-      <div class="stat-box">
-        <span class="stat-val">98%</span>
-        <span class="stat-lbl">{{ t('reliability') }}</span>
+      
+      <!-- Card 2: Play Style -->
+      <div class="new-stat-card">
+        <div class="stat-header">
+          <span class="stat-card-title">{{ t('playStyle') }}</span>
+          <span class="stat-svg-container">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          </span>
+        </div>
+        <div class="stat-card-value">All-Rounder</div>
       </div>
-      <div class="stat-box">
-        <span class="stat-val">4.8</span>
-        <span class="stat-lbl">{{ t('rating') }}</span>
+
+      <!-- Card 3: Total Games -->
+      <div class="new-stat-card">
+        <div class="stat-header">
+          <span class="stat-card-title">{{ t('totalGames') }}</span>
+          <span class="stat-svg-container">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><circle cx="12" cy="12" r="10"/><path d="m12 2-1.91 3.42L6.2 5.09M12 22l1.91-3.42 3.89.33M2.05 12.5l3.82-.76-.36-3.89M21.95 11.5l-3.82.76.36 3.89M12 7.5 9 9.5v3l3 2 3-2v-3Z"/><path d="M9 9.5 6.2 5.09M9 12.5l-3.48 2.54M12 14.5v3.42M15 12.5l3.48 2.54M15 9.5l2.8-4.41"/></svg>
+          </span>
+        </div>
+        <div class="stat-card-value">120 {{ t('played') }}</div>
       </div>
-      <div class="stat-box">
-        <span class="stat-val">7 🔥</span>
-        <span class="stat-lbl">{{ t('streak') }}</span>
+
+      <!-- Card 4: Global Rank -->
+      <div class="new-stat-card">
+        <div class="stat-header">
+          <span class="stat-card-title">{{ t('globalRank') }}</span>
+          <span class="stat-svg-container">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+          </span>
+        </div>
+        <div class="stat-card-value">#128 Kochi</div>
+      </div>
+    </div>
+
+    <!-- Friends & Share Card -->
+    <div class="friends-card">
+      <div class="friends-left">
+        <div class="friends-avatars">
+          <img src="/assets/images/players/download.jpg" class="friend-avatar-overlap" />
+          <img src="/assets/images/players/download.jpg" class="friend-avatar-overlap" />
+          <img src="/assets/images/players/download.jpg" class="friend-avatar-overlap" />
+          <img src="/assets/images/players/download.jpg" class="friend-avatar-overlap" />
+        </div>
+        <div class="friends-info-text">
+          <span class="friends-count">48 {{ t('friends') }}</span>
+          <span class="friends-online">12 {{ t('onlinePlayPals') }}</span>
+        </div>
+      </div>
+      <button class="share-pill-btn" @click="handleShareProfile">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="share-icon-svg"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        {{ t('share') }}
+      </button>
+    </div>
+
+    <!-- Favorite Sports Interests -->
+    <div class="sports-rating-section">
+      <h4 class="section-sub-title">{{ t('favoriteSportsInterests') }}</h4>
+      
+      <div class="chips-slider">
+        <button 
+          v-for="sport in sportsList" 
+          :key="sport.name"
+          class="sport-chip"
+          :class="{ active: selectedSport === sport.name }"
+          :style="selectedSport === sport.name ? { backgroundColor: '#2e7d32', borderColor: '#2e7d32', color: '#ffffff' } : { backgroundColor: '#ffffff', borderColor: '#cbd5e1', color: '#0f172a' }"
+          @click="selectedSport = sport.name"
+        >
+          <span class="chip-emoji">{{ sport.icon }}</span>
+          {{ t('sport_' + sport.name) }}
+        </button>
       </div>
     </div>
 
@@ -333,7 +401,7 @@ const onFileSelected = async (event) => {
         :class="{ active: activeSegmentTab === 0 }"
         @click="activeSegmentTab = 0"
       >
-        {{ t('activity') }}
+        {{ t('activityLog') }}
       </button>
       <button 
         class="segment-btn" 
@@ -354,20 +422,44 @@ const onFileSelected = async (event) => {
     <!-- Active Segment panels -->
     <div class="segment-panel">
       <!-- Activity -->
-      <div v-if="activeSegmentTab === 0" class="panel-content animate-fade-in">
-        <div class="activity-history-tile">
-          <span class="act-emoji">⚽</span>
-          <div class="act-details">
-            <span class="act-title">Played Friday 5v5 Turf Friendly</span>
-            <span class="act-date">3 days ago · Sportego Arena</span>
+      <div v-if="activeSegmentTab === 0" class="panel-content-new animate-fade-in">
+        <div class="activity-tile-new">
+          <div class="activity-left">
+            <span class="activity-icon-circle bg-light-green">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 2-1.91 3.42L6.2 5.09M12 22l1.91-3.42 3.89.33M2.05 12.5l3.82-.76-.36-3.89M21.95 11.5l-3.82.76.36 3.89M12 7.5 9 9.5v3l3 2 3-2v-3Z"/><path d="M9 9.5 6.2 5.09M9 12.5l-3.48 2.54M12 14.5v3.42M15 12.5l3.48 2.54M15 9.5l2.8-4.41"/></svg>
+            </span>
+            <div class="activity-info-new">
+              <span class="activity-title-new">Won Football Tournament</span>
+              <span class="activity-desc-new">Kochi Arena • 2 hours ago</span>
+            </div>
           </div>
+          <span class="xp-badge-new">+24 XP</span>
         </div>
-        <div class="activity-history-tile">
-          <span class="act-emoji">🏏</span>
-          <div class="act-details">
-            <span class="act-title">Organized Weekend T10 Practice</span>
-            <span class="act-date">1 week ago · Municipal Ground</span>
+        
+        <div class="activity-tile-new">
+          <div class="activity-left">
+            <span class="activity-icon-circle bg-light-blue">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 5.5 12 12l-1.5-1.5 6.5-6.5a2.12 2.12 0 0 1 3 3z"/><path d="m11 11-8.5 8.5a1.5 1.5 0 0 0 0 2.12l.38.38a1.5 1.5 0 0 0 2.12 0L13.5 13.5"/><circle cx="18" cy="18" r="3"/></svg>
+            </span>
+            <div class="activity-info-new">
+              <span class="activity-title-new">Joined Cricket friendly match</span>
+              <span class="activity-desc-new">Royal Club Grounds • Yesterday</span>
+            </div>
           </div>
+          <span class="xp-badge-new">+10 XP</span>
+        </div>
+        
+        <div class="activity-tile-new">
+          <div class="activity-left">
+            <span class="activity-icon-circle bg-light-yellow">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="8" r="6"/><path d="M11.76 12.24 4 20"/><path d="m14 10-2.5-2.5"/><path d="m12.5 11.5-3-3"/></svg>
+            </span>
+            <div class="activity-info-new">
+              <span class="activity-title-new">Completed Tennis warm-up drill</span>
+              <span class="activity-desc-new">Town Court • 3 days ago</span>
+            </div>
+          </div>
+          <span class="xp-badge-new">+15 XP</span>
         </div>
       </div>
 
@@ -387,107 +479,93 @@ const onFileSelected = async (event) => {
       </div>
     </div>
 
-    <!-- Sports ratings selection -->
-    <div class="sports-rating-section">
-      <h4 class="section-sub-title">{{ t('sportsSkillProfile') }}</h4>
-      
-      <div class="chips-slider">
-        <button 
-          v-for="sport in sportsList" 
-          :key="sport.name"
-          class="sport-chip"
-          :class="{ active: selectedSport === sport.name }"
-          :style="selectedSport === sport.name ? { backgroundColor: currentSportColor, borderColor: currentSportColor } : {}"
-          @click="selectedSport = sport.name"
-        >
-          <span class="chip-emoji">{{ sport.icon }}</span>
-          {{ sport.name }}
-        </button>
-      </div>
-
-      <!-- Rating stars display -->
-      <div class="stars-card">
-        <span class="stars-title">{{ t('rateSkillIn') }} {{ selectedSport }}</span>
-        <div class="stars-row">
-          <span 
-            v-for="star in 5" 
-            :key="star"
-            class="star-item"
-            @click="handleRate(star)"
-          >
-            {{ star <= (sportRatings[selectedSport] || 0) ? '⭐' : '☆' }}
-          </span>
+    <!-- Settings Full-Screen Panel -->
+    <Transition name="settings-slide">
+      <div v-if="showSettingsModal" class="settings-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
+        <div class="settings-panel-header">
+          <h2 class="settings-panel-title">{{ t('settings') }}</h2>
+          <button class="settings-close-btn" @click="showSettingsModal = false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
-        <span class="stars-helper-text">
-          {{ isCurrentUser ? t('tapStarsToRate') : t('selfAssessment') }}
-        </span>
-      </div>
-    </div>
 
-    <!-- Settings options -->
-    <div v-if="isCurrentUser" class="privacy-section">
-      <h4 class="section-sub-title">{{ t('personalization') }}</h4>
-      
-      <!-- Language Selector -->
-      <div class="setting-switch-tile">
-        <div class="setting-switch-info">
-          <span class="tile-title">🌐 {{ t('selectLanguage') }}</span>
-          <span class="tile-desc">Choose interface language</span>
-        </div>
-        <select 
-          :value="store.state.language" 
-          class="language-select-dropdown" 
-          @change="(e) => store.setLanguage(e.target.value)"
-        >
-          <option value="en">English / अंग्रेज़ी</option>
-          <option value="hi">Hindi / हिंदी</option>
-        </select>
-      </div>
+        <div class="settings-panel-body scrollable-y">
+          <!-- Personalization section -->
+          <div class="privacy-section">
+            <h4 class="section-sub-title">{{ t('personalization') }}</h4>
+            
+            <!-- Language Selector -->
+            <div class="setting-switch-tile">
+              <div class="setting-switch-info">
+                <span class="tile-title">🌐 {{ t('selectLanguage') }}</span>
+                <span class="tile-desc">Choose interface language</span>
+              </div>
+              <select 
+                :value="store.state.language" 
+                class="language-select-dropdown" 
+                @change="(e) => store.setLanguage(e.target.value)"
+              >
+                <option value="en">English / अंग्रेज़ी</option>
+                <option value="hi">Hindi / हिंदी</option>
+              </select>
+            </div>
 
-      <!-- Theme Switch -->
-      <div class="setting-switch-tile">
-        <div class="setting-switch-info">
-          <span class="tile-title">🌸 {{ t('elegantLavender') }}</span>
-          <span class="tile-desc">
-            {{ isLavenderTheme ? t('lavenderActive') : t('switchLavender') }}
-          </span>
-        </div>
-        <label class="toggle-control">
-          <input :checked="isLavenderTheme" type="checkbox" @change="handleThemeToggle" />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-    </div>
+            <!-- Theme Switch -->
+            <div class="setting-switch-tile">
+              <div class="setting-switch-info">
+                <span class="tile-title">🌸 {{ t('elegantLavender') }}</span>
+                <span class="tile-desc">
+                  {{ isLavenderTheme ? t('lavenderActive') : t('switchLavender') }}
+                </span>
+              </div>
+              <label class="toggle-control">
+                <input :checked="isLavenderTheme" type="checkbox" @change="handleThemeToggle" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
 
-    <!-- Menu settings lists -->
-    <div v-if="isCurrentUser" class="settings-menu-list">
-      <div class="menu-tile" @click="handleSettingsInfo('Sportigo platform game guide coming soon! 📑')">
-        <span class="menu-icon">🛡️</span>
-        <div class="menu-info">
-          <span class="menu-title">{{ t('gameRules') }}</span>
-          <span class="menu-subtitle">{{ t('gameRulesSub') }}</span>
-        </div>
-        <span class="chevron">➔</span>
-      </div>
+          <!-- Menu settings lists -->
+          <div class="settings-menu-list">
+            <div class="menu-tile" @click="() => { showSettingsModal = false; openEditModal(); }">
+              <span class="menu-icon">✏️</span>
+              <div class="menu-info">
+                <span class="menu-title">{{ t('editProfile') }}</span>
+                <span class="menu-subtitle">Update display name, bio, and settings</span>
+              </div>
+              <span class="chevron">➔</span>
+            </div>
 
-      <div class="menu-tile" @click="handleSettingsInfo('Tournament logs coming soon! 🏆')">
-        <span class="menu-icon">📊</span>
-        <div class="menu-info">
-          <span class="menu-title">{{ t('statsHistory') }}</span>
-          <span class="menu-subtitle">{{ t('statsHistorySub') }}</span>
-        </div>
-        <span class="chevron">➔</span>
-      </div>
+            <div class="menu-tile" @click="handleSettingsInfo('Sportigo platform game guide coming soon! 📑')">
+              <span class="menu-icon">🛡️</span>
+              <div class="menu-info">
+                <span class="menu-title">{{ t('gameRules') }}</span>
+                <span class="menu-subtitle">{{ t('gameRulesSub') }}</span>
+              </div>
+              <span class="chevron">➔</span>
+            </div>
 
-      <div class="menu-tile destructive" @click="handleLogout">
-        <span class="menu-icon">🚪</span>
-        <div class="menu-info">
-          <span class="menu-title">{{ t('signOut') }}</span>
-          <span class="menu-subtitle">{{ t('signOutSub') }}</span>
+            <div class="menu-tile" @click="handleSettingsInfo('Tournament logs coming soon! 🏆')">
+              <span class="menu-icon">📊</span>
+              <div class="menu-info">
+                <span class="menu-title">{{ t('statsHistory') }}</span>
+                <span class="menu-subtitle">{{ t('statsHistorySub') }}</span>
+              </div>
+              <span class="chevron">➔</span>
+            </div>
+
+            <div class="menu-tile destructive" @click="() => { showSettingsModal = false; handleLogout(); }">
+              <span class="menu-icon">🚪</span>
+              <div class="menu-info">
+                <span class="menu-title">{{ t('signOut') }}</span>
+                <span class="menu-subtitle">{{ t('signOutSub') }}</span>
+              </div>
+              <span class="chevron">➔</span>
+            </div>
+          </div>
         </div>
-        <span class="chevron">➔</span>
       </div>
-    </div>
+    </Transition>
 
     <!-- Edit Profile Modal -->
     <Teleport to="body">
@@ -587,329 +665,441 @@ const onFileSelected = async (event) => {
 
 .title {
   font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--on-surface);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .settings-nav-btn {
-  background: none;
+  background-color: #ffffff;
   border: none;
-  font-size: 1.2rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  color: #0f172a;
+  transition: all 0.2s ease;
+}
+
+.settings-nav-btn:hover {
+  transform: scale(1.05);
 }
 
 .profile-card {
-  background-color: var(--surface);
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-lg);
-  padding: 0 16px 24px;
+  background-color: #ffffff;
+  border: none;
+  border-radius: 32px;
+  padding: 36px 24px 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.02);
   margin-bottom: 24px;
-  overflow: hidden;
-  position: relative;
-}
-
-.card-banner {
-  width: 100%;
-  height: 120px;
-  margin-left: -16px;
-  margin-right: -16px;
-  width: calc(100% + 32px);
-  margin-bottom: 16px;
-  transition: background 0.6s ease;
   position: relative;
   overflow: hidden;
 }
 
-.card-banner::after {
+.profile-card::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.18) 0%, transparent 60%),
-                    linear-gradient(rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.2) 100%);
-  opacity: 0.8;
-  pointer-events: none;
-}
-
-.language-select-dropdown {
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--outline-variant);
-  background-color: var(--surface);
-  color: var(--on-surface);
-  font-family: var(--font-sans);
-  font-weight: 700;
-  font-size: 0.8rem;
-  outline: none;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-}
-
-.language-select-dropdown:focus {
-  border-color: var(--primary);
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background-color: rgba(209, 229, 217, 0.35);
+  z-index: 1;
 }
 
 .avatar-wrap {
   position: relative;
-  margin-top: -64px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   z-index: 2;
 }
 
 .card-avatar {
-  width: 88px;
-  height: 88px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid var(--surface);
-  box-shadow: var(--shadow-md);
+  padding: 6px;
+  border: 3px solid #00c49f;
+  background-color: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.avatar-online-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 16px;
+  height: 16px;
+  background-color: #4caf50;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  z-index: 3;
 }
 
 .camera-btn {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  background-color: var(--primary);
-  border: none;
-  width: 28px;
-  height: 28px;
+  bottom: 6px;
+  right: 6px;
+  background-color: #00c49f;
+  border: 3px solid #ffffff;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   color: #ffffff;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  font-size: 0.8rem;
-  box-shadow: var(--shadow-sm);
+  z-index: 3;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.camera-btn:hover {
+  transform: scale(1.05);
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  z-index: 2;
 }
 
 .card-name {
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   font-weight: 800;
-  color: var(--on-surface);
-  margin-bottom: 4px;
+  color: #0f172a;
 }
 
-.card-level {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  margin-bottom: 16px;
-}
-
-.action-badges-row {
+.verified-badge {
   display: flex;
-  gap: 10px;
+  align-items: center;
 }
 
-.badge-btn {
-  background-color: var(--scaffold-bg);
-  border: 1px solid var(--outline-variant);
-  padding: 8px 14px;
-  border-radius: var(--radius-md);
+.card-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--on-surface-variant);
-  cursor: pointer;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  z-index: 2;
 }
 
-.badge-btn.edit {
-  background-color: rgba(26, 35, 126, 0.05);
-  color: var(--primary);
-  border-color: rgba(26, 35, 126, 0.15);
+.badge-item-inline.text-green {
+  color: #2e7d32;
 }
 
-/* XP progressions */
-.xp-container {
-  background-color: var(--surface);
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  margin-bottom: 20px;
-  box-shadow: var(--shadow-sm);
+.badge-item-inline.text-gray {
+  color: #64748b;
 }
 
-.xp-row {
+.badge-separator {
+  color: #cbd5e1;
+}
+
+/* XP Progression Card */
+.xp-card {
+  background-color: #ffffff;
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.02);
+}
+
+.xp-header-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.85rem;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.xp-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lightning-icon {
+  color: #0e906c;
+}
+
+.xp-fraction {
+  font-size: 0.82rem;
   font-weight: 700;
-  margin-bottom: 8px;
+  color: #475569;
 }
 
-.xp-lbl { color: var(--on-surface-variant); }
-.xp-val { color: var(--on-surface); }
-
-.progress-track {
-  height: 8px;
-  background-color: var(--surface-dim);
-  border-radius: 4px;
+.xp-progress-bar {
+  height: 12px;
+  background-color: #f1f5f9;
+  border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 6px;
+  margin-bottom: 12px;
 }
 
-.progress-fill {
+.xp-progress-fill {
   height: 100%;
-  border-radius: 4px;
+  background-color: #00c49f;
+  border-radius: 6px;
 }
 
-.xp-sub-lbl {
-  font-size: 0.7rem;
-  color: var(--outline);
-  font-weight: 600;
+.xp-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.xp-progress-pct {
+  color: #64748b;
+}
+
+.xp-streak-tag {
+  color: #f97316;
 }
 
 /* Stats grid */
-.stats-grid {
+.new-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
   margin-bottom: 24px;
 }
 
-.stat-box {
-  background-color: var(--surface);
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-md);
-  padding: 12px 4px;
+.new-stat-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  min-height: 100px;
+}
+
+.stat-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
 }
 
-.stat-val {
-  font-family: var(--font-display);
+.stat-card-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.stat-card-icon {
   font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--on-surface);
-  margin-bottom: 2px;
 }
 
-.stat-lbl {
-  font-size: 0.65rem;
+.stat-card-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Friends & Share Card */
+.friends-card {
+  background-color: #ffffff;
+  border-radius: 24px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.02);
+  margin-bottom: 28px;
+}
+
+.friends-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.friends-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.friend-avatar-overlap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  margin-left: -10px;
+}
+
+.friend-avatar-overlap:first-child {
+  margin-left: 0;
+}
+
+.friends-info-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.friends-count {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.friends-online {
+  font-size: 0.72rem;
+  color: #0e906c;
   font-weight: 700;
-  color: var(--outline);
-  text-transform: uppercase;
+}
+
+.share-pill-btn {
+  background-color: #2e7d32;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 24px;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.15);
+  transition: all 0.2s ease;
+}
+
+.share-pill-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.share-icon-svg {
+  display: flex;
+  align-items: center;
+}
+
+/* Sports ratings selection */
+.sports-rating-section {
+  margin-bottom: 28px;
 }
 
 /* Segmented selector */
 .segmented-bar {
   display: flex;
-  background-color: var(--surface-dim);
-  border-radius: var(--radius-md);
-  padding: 4px;
-  margin-bottom: 16px;
+  gap: 16px;
+  background-color: transparent;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 20px;
 }
 
 .segment-btn {
-  flex: 1;
   border: none;
   background: none;
-  padding: 8px;
-  font-size: 0.8rem;
+  padding: 8px 16px;
+  font-size: 0.88rem;
   font-weight: 700;
-  border-radius: 12px;
-  color: var(--on-surface-variant);
+  border-radius: 20px;
+  color: #64748b;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .segment-btn.active {
-  background-color: var(--surface);
-  color: var(--primary);
-  box-shadow: var(--shadow-sm);
+  background-color: #e2f0e9;
+  color: #2e7d32;
+  box-shadow: none;
 }
 
 .segment-panel {
   margin-bottom: 28px;
 }
 
-.panel-content {
-  background-color: var(--surface);
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  min-height: 120px;
-  box-shadow: var(--shadow-sm);
-}
-
-.activity-history-tile {
+.panel-content-new {
   display: flex;
+  flex-direction: column;
   gap: 12px;
+}
+
+.activity-tile-new {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--outline-variant);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.02);
 }
 
-.activity-history-tile:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-  margin-bottom: 0;
-}
-
-.act-emoji { font-size: 1.25rem; }
-
-.act-details {
+.activity-left {
   display: flex;
-  flex-direction: column;
-}
-
-.act-title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--on-surface);
-}
-
-.act-date {
-  font-size: 0.72rem;
-  color: var(--outline);
-}
-
-.achievements {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.badge-item {
-  background-color: var(--scaffold-bg);
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-md);
-  padding: 10px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--on-surface);
-}
-
-.streak-details {
-  display: flex;
-  flex-direction: column;
   align-items: center;
+  gap: 14px;
+}
+
+.activity-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
   justify-content: center;
-  text-align: center;
-  padding-top: 14px;
+  align-items: center;
+  font-size: 1.2rem;
 }
 
-.streak-large {
-  font-size: 2.2rem;
+.activity-icon-circle.bg-light-green {
+  background-color: #e8f5e9;
+}
+
+.activity-icon-circle.bg-light-blue {
+  background-color: #e3f2fd;
+}
+
+.activity-icon-circle.bg-light-yellow {
+  background-color: #fffde7;
+}
+
+.activity-info-new {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-title-new {
+  font-size: 0.88rem;
   font-weight: 800;
-  color: var(--primary);
+  color: #0f172a;
 }
 
-.streak-label {
-  font-size: 0.78rem;
-  color: var(--on-surface-variant);
+.activity-desc-new {
+  font-size: 0.72rem;
+  color: #64748b;
   font-weight: 600;
 }
 
-/* Sports ratings selection */
-.sports-rating-section {
-  margin-bottom: 28px;
+.xp-badge-new {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 12px;
 }
 
 .section-sub-title {
@@ -1167,6 +1357,105 @@ input:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* Settings Full-Screen Panel */
+.settings-fullscreen-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: calc(100% - 280px);
+  height: 100vh;
+  background-color: var(--scaffold-bg);
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+  .settings-fullscreen-panel {
+    width: 100%;
+    left: 0;
+  }
+}
+
+.settings-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px 40px 20px;
+  border-bottom: 1px solid var(--outline-variant);
+  background-color: var(--surface);
+  flex-shrink: 0;
+}
+
+.settings-panel-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  letter-spacing: -0.5px;
+}
+
+.settings-close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--outline-variant);
+  background-color: var(--surface);
+  color: var(--on-surface-variant);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.settings-close-btn:hover {
+  background-color: var(--scaffold-bg);
+  color: var(--error, #ba1a1a);
+  border-color: var(--error, #ba1a1a);
+  transform: rotate(90deg);
+}
+
+.settings-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 40px;
+  max-width: 640px;
+}
+
+/* Slide-in transition for settings panel */
+.settings-slide-enter-active {
+  animation: settingsSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.settings-slide-leave-active {
+  animation: settingsSlideOut 0.25s ease-in forwards;
+}
+
+@keyframes settingsSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes settingsSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 /* Modal styles (matching CreateMatchModal layout) */

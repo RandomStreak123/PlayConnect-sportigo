@@ -67,6 +67,10 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     // Check that we are on the profile page
     await expect(page.locator('.title').first()).toContainText('Player Profile');
 
+    // Open Settings Modal by clicking hamburger button
+    await page.locator('.settings-nav-btn').click();
+    await page.waitForSelector('.modal-title:has-text("Settings")');
+
     // Locate the language selector select dropdown
     const select = page.locator('select.language-select-dropdown');
     await expect(select).toBeVisible();
@@ -74,14 +78,32 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     // Switch to Hindi
     await select.selectOption('hi');
 
-    // Verify translations are applied reactively
+    // Verify Settings Modal title translates to "सेटिंग्स"
+    await expect(page.locator('.modal-title').first()).toContainText('सेटिंग्स');
+
+    // Close Settings Modal
+    await page.locator('.close-btn').click();
+    await page.waitForTimeout(300);
+
+    // Verify translations are applied reactively on the main screen
     // Profile title should translate to "खिलाड़ी प्रोफ़ाइल"
     await expect(page.locator('.title').first()).toContainText('खिलाड़ी प्रोफ़ाइल');
     // Navigation label should translate to "होम" instead of "Home"
     await expect(page.locator('.link-label:has-text("होम"), .nav-label:has-text("होम")').filter({ visible: true })).toBeVisible();
 
+    // Reopen Settings Modal to switch back to English
+    await page.locator('.settings-nav-btn').click();
+    await page.waitForSelector('.modal-title:has-text("सेटिंग्स")');
+
     // Switch back to English
     await select.selectOption('en');
+
+    // Verify Settings Modal title translates back to "Settings"
+    await expect(page.locator('.modal-title').first()).toContainText('Settings');
+
+    // Close Settings Modal
+    await page.locator('.close-btn').click();
+    await page.waitForTimeout(300);
 
     // Verify translations revert to English
     await expect(page.locator('.title').first()).toContainText('Player Profile');

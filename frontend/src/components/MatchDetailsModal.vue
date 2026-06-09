@@ -240,10 +240,12 @@ const handleShare = () => {
 
 @media (min-width: 768px) {
   .modal-backdrop {
-    background-color: rgba(15, 23, 42, 0.45);
-    backdrop-filter: blur(8px);
-    align-items: center;
-    justify-content: center;
+    left: 280px;
+    width: calc(100vw - 280px);
+    background-color: var(--scaffold-bg);
+    backdrop-filter: none;
+    align-items: stretch;
+    justify-content: flex-start;
   }
 }
 
@@ -262,11 +264,11 @@ const handleShare = () => {
 @media (min-width: 768px) {
   .modal-sheet {
     width: 100%;
-    max-width: 650px;
-    height: 80vh;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    max-width: none;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
   }
 }
 
@@ -276,6 +278,12 @@ const handleShare = () => {
   background-size: cover;
   background-position: center;
   position: relative;
+}
+
+@media (min-width: 768px) {
+  .cover-banner {
+    height: 320px;
+  }
 }
 
 /* Fallback colors for sport categories if image not loading */
@@ -345,9 +353,24 @@ const handleShare = () => {
 .back-circle-btn { left: 16px; }
 .share-circle-btn { right: 16px; }
 
+@media (min-width: 768px) {
+  .back-circle-btn { left: max(24px, calc(50% - 476px)); }
+  .share-circle-btn { right: max(24px, calc(50% - 476px)); }
+}
+
 .details-content {
   flex: 1;
   padding: 16px 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .details-content {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 28px 24px;
+  }
 }
 
 .header-section {
@@ -690,6 +713,19 @@ const handleShare = () => {
   padding: 16px 20px 24px;
   background-color: var(--surface);
   border-top: 1px solid var(--outline-variant);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .details-footer {
+    padding: 20px 24px 32px;
+  }
+  .details-footer > div {
+    width: 100%;
+    max-width: 952px;
+    margin: 0 auto;
+  }
 }
 
 .loader-wrap {

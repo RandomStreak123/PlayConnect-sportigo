@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { store } from '../store'
 
 const emit = defineEmits(['auth-success'])
@@ -34,6 +34,8 @@ const selectGender = (gender) => {
   selectedGender.value = gender
 }
 
+const socialLoading = ref('')
+
 const handleSignIn = async () => {
   if (!loginUsername.value || !loginPassword.value) {
     loginError.value = 'Please enter username and password'
@@ -55,6 +57,91 @@ const handleSignIn = async () => {
     loginLoading.value = false
   }
 }
+
+const handleSocialLogin = async (provider) => {
+  if (provider === 'Instagram') {
+    socialLoading.value = 'Instagram'
+    try {
+      const res = await fetch('/api/auth/instagram/url')
+      const data = await res.json()
+      if (data && data.url) {
+        const width = 450
+        const height = 650
+        const left = (window.screen.width - width) / 2
+        const top = (window.screen.height - height) / 2
+        
+        window.open(
+          data.url,
+          'InstagramLoginPopup',
+          `width=${width},height=${height},left=${left},top=${top},personalbar=0,toolbar=0,scrollbars=0,resizable=0`
+        )
+      } else {
+        throw new Error('Could not get authorization URL')
+      }
+    } catch (err) {
+      const msg = err.message || 'Failed to initialize Instagram login'
+      if (activeTab.value === 'signup') {
+        signupError.value = msg
+      } else {
+        loginError.value = msg
+      }
+    } finally {
+      socialLoading.value = ''
+    }
+    return
+  }
+  socialLoading.value = provider
+  setTimeout(() => {
+    socialLoading.value = ''
+    const msg = `${provider} login integration coming soon! Stay tuned.`
+    if (activeTab.value === 'signup') {
+      signupError.value = msg
+    } else {
+      loginError.value = msg
+    }
+  }, 1200)
+}
+
+const handleMessageEvent = async (event) => {
+  const allowedOrigins = [
+    window.location.origin,
+    'https://localhost:5173',
+    'https://127.0.0.1:5173'
+  ]
+  if (!allowedOrigins.includes(event.origin)) return
+  
+  if (event.data && event.data.type === 'instagram_oauth_success') {
+    socialLoading.value = 'Instagram'
+    try {
+      const user = event.data.user
+      const token = event.data.access_token
+      
+      store.state.currentUser = user
+      localStorage.setItem('sportigo_user', JSON.stringify(user))
+      localStorage.setItem('sportigo_token', token)
+      await store.init()
+      
+      emit('auth-success')
+    } catch (err) {
+      const msg = err.message || 'Instagram authentication failed'
+      if (activeTab.value === 'signup') {
+        signupError.value = msg
+      } else {
+        loginError.value = msg
+      }
+    } finally {
+      socialLoading.value = ''
+    }
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('message', handleMessageEvent)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('message', handleMessageEvent)
+})
 
 const handleSignUp = async () => {
   if (!registerName.value || !registerUsername.value || !registerPassword.value) {
@@ -157,10 +244,54 @@ const handleSignUp = async () => {
         <a href="#" class="text-link">Forgot Password?</a>
       </div>
 
-      <button class="submit-btn" :disabled="loginLoading" @click="handleSignIn">
+      <button type="button" class="submit-btn" :disabled="loginLoading" @click="handleSignIn">
         <span v-if="loginLoading" class="loader"></span>
         <span v-else>Sign In</span>
       </button>
+
+      <!-- Social login divider -->
+      <div class="social-divider">
+        <span class="divider-line"></span>
+        <span class="divider-text">or continue with</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <!-- Social login buttons -->
+      <div class="social-buttons">
+        <button type="button" class="social-btn instagram" :disabled="!!socialLoading" @click.prevent.stop="handleSocialLogin('Instagram')">
+          <span v-if="socialLoading === 'Instagram'" class="loader social-loader"></span>
+          <template v-else>
+            <svg class="social-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
+              <defs>
+                <radialGradient id="ig-grad" cx="30%" cy="107%" r="150%">
+                  <stop offset="0%" stop-color="#fdf497"/>
+                  <stop offset="5%" stop-color="#fdf497"/>
+                  <stop offset="45%" stop-color="#fd5949"/>
+                  <stop offset="60%" stop-color="#d6249f"/>
+                  <stop offset="90%" stop-color="#285AEB"/>
+                </radialGradient>
+              </defs>
+              <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-grad)" stroke-width="2"/>
+              <circle cx="12" cy="12" r="5" stroke="url(#ig-grad)" stroke-width="2"/>
+              <circle cx="17.5" cy="6.5" r="1.5" fill="url(#ig-grad)"/>
+            </svg>
+            <span>Instagram</span>
+          </template>
+        </button>
+
+        <button type="button" class="social-btn google" :disabled="!!socialLoading" @click.prevent.stop="handleSocialLogin('Google')">
+          <span v-if="socialLoading === 'Google'" class="loader social-loader"></span>
+          <template v-else>
+            <svg class="social-icon" viewBox="0 0 24 24" width="20" height="20">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            <span>Google</span>
+          </template>
+        </button>
+      </div>
     </div>
 
     <!-- Sign Up Panel -->
@@ -243,10 +374,54 @@ const handleSignUp = async () => {
         </div>
       </div>
 
-      <button class="submit-btn" :disabled="signupLoading" @click="handleSignUp">
+      <button type="button" class="submit-btn" :disabled="signupLoading" @click="handleSignUp">
         <span v-if="signupLoading" class="loader"></span>
         <span v-else>Sign Up</span>
       </button>
+
+      <!-- Social signup divider -->
+      <div class="social-divider">
+        <span class="divider-line"></span>
+        <span class="divider-text">or sign up with</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <!-- Social signup buttons -->
+      <div class="social-buttons">
+        <button type="button" class="social-btn instagram" :disabled="!!socialLoading" @click.prevent.stop="handleSocialLogin('Instagram')">
+          <span v-if="socialLoading === 'Instagram'" class="loader social-loader"></span>
+          <template v-else>
+            <svg class="social-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
+              <defs>
+                <radialGradient id="ig-grad2" cx="30%" cy="107%" r="150%">
+                  <stop offset="0%" stop-color="#fdf497"/>
+                  <stop offset="5%" stop-color="#fdf497"/>
+                  <stop offset="45%" stop-color="#fd5949"/>
+                  <stop offset="60%" stop-color="#d6249f"/>
+                  <stop offset="90%" stop-color="#285AEB"/>
+                </radialGradient>
+              </defs>
+              <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-grad2)" stroke-width="2"/>
+              <circle cx="12" cy="12" r="5" stroke="url(#ig-grad2)" stroke-width="2"/>
+              <circle cx="17.5" cy="6.5" r="1.5" fill="url(#ig-grad2)"/>
+            </svg>
+            <span>Instagram</span>
+          </template>
+        </button>
+
+        <button type="button" class="social-btn google" :disabled="!!socialLoading" @click.prevent.stop="handleSocialLogin('Google')">
+          <span v-if="socialLoading === 'Google'" class="loader social-loader"></span>
+          <template v-else>
+            <svg class="social-icon" viewBox="0 0 24 24" width="20" height="20">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            <span>Google</span>
+          </template>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -532,9 +707,241 @@ const handleSignUp = async () => {
   100% { transform: rotate(360deg); }
 }
 
+/* Social login section */
+.social-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 28px 0 20px;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--outline-variant);
+}
+
+.divider-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--outline);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.social-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.social-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1px solid var(--outline-variant);
+  background-color: var(--surface);
+  color: var(--on-surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.social-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  border-radius: inherit;
+}
+
+.social-btn.instagram::before {
+  background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+}
+
+.social-btn.google::before {
+  background: linear-gradient(135deg, #4285F4, #34A853, #FBBC05, #EA4335);
+}
+
+.social-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.social-btn.instagram:hover {
+  border-color: #dc2743;
+  background: linear-gradient(45deg, rgba(240, 148, 51, 0.08), rgba(220, 39, 67, 0.08), rgba(188, 24, 136, 0.08));
+}
+
+.social-btn.google:hover {
+  border-color: #4285F4;
+  background-color: rgba(66, 133, 244, 0.04);
+}
+
+.social-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.social-icon {
+  flex-shrink: 0;
+}
+
+.social-loader {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+  border-color: var(--outline);
+  border-bottom-color: transparent;
+}
+
 @media (min-width: 1025px) {
   .logo-header {
     display: none;
   }
+}
+
+/* Instagram Sync Modal Styles */
+.ig-sync-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.ig-sync-modal-card {
+  background-color: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--outline-variant);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.ig-sync-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ig-sync-header h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--on-surface);
+}
+
+.ig-sync-description {
+  font-size: 0.88rem;
+  color: var(--on-surface-variant);
+  line-height: 1.5;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.ig-sync-error {
+  background-color: rgba(186, 26, 26, 0.1);
+  color: var(--error);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  border: 1px solid rgba(186, 26, 26, 0.2);
+}
+
+.ig-sync-input-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24px;
+}
+
+.ig-sync-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.ig-sync-input {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: var(--surface-dim);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  color: var(--on-surface);
+  outline: none;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.ig-sync-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.08);
+}
+
+.ig-sync-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.ig-sync-btn {
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.ig-sync-btn.cancel {
+  background-color: transparent;
+  color: var(--on-surface-variant);
+}
+
+.ig-sync-btn.cancel:hover {
+  background-color: var(--surface-variant);
+}
+
+.ig-sync-btn.submit {
+  background-color: var(--primary);
+  color: var(--on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+}
+
+.ig-sync-btn.submit:hover {
+  filter: brightness(1.1);
 }
 </style>

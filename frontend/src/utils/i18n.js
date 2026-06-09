@@ -31,6 +31,7 @@ const translations = {
     
     // Profile Page
     playerProfile: 'Player Profile',
+    settings: 'Settings',
     level: 'LEVEL',
     levelProgression: 'Level Progression',
     reliability: 'Reliability',
@@ -56,6 +57,16 @@ const translations = {
     editProfile: 'Edit Profile',
     noBioYet: 'No bio written yet. Tap Edit Profile to add one!',
     consecutiveWeekly: 'Consecutive Weekly Matches Played',
+    winRate: 'Win Rate',
+    playStyle: 'Play Style',
+    totalGames: 'Total Games',
+    globalRank: 'Global Rank',
+    played: 'Played',
+    friends: 'Friends',
+    onlinePlayPals: 'online play-pals',
+    favoriteSportsInterests: 'Favorite Sports Interests',
+    activityLog: 'Activity Log',
+    share: 'Share',
     
     // Language Settings
     selectLanguage: 'Language / भाषा',
@@ -175,6 +186,7 @@ const translations = {
     
     // Profile Page
     playerProfile: 'खिलाड़ी प्रोफ़ाइल',
+    settings: 'सेटिंग्स',
     level: 'स्तर',
     levelProgression: 'स्तर प्रगति',
     reliability: 'विश्वसनीयता',
@@ -200,6 +212,16 @@ const translations = {
     editProfile: 'प्रोफ़ाइल संपादित करें',
     noBioYet: 'अभी तक कोई परिचय नहीं लिखा है। जोड़ने के लिए प्रोफ़ाइल संपादित करें पर टैप करें!',
     consecutiveWeekly: 'लगातार साप्ताहिक मैच खेले गए',
+    winRate: 'जीत की दर',
+    playStyle: 'खेलने की शैली',
+    totalGames: 'कुल खेल',
+    globalRank: 'वैश्विक रैंक',
+    played: 'खेले गए',
+    friends: 'मित्र',
+    onlinePlayPals: 'ऑनलाइन खेल-साथी',
+    favoriteSportsInterests: 'पसंदीदा खेल रुचियां',
+    activityLog: 'गतिविधि लॉग',
+    share: 'साझा करें',
     
     // Language Settings
     selectLanguage: 'भाषा / Language',

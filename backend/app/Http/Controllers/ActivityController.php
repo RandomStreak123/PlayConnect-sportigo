@@ -15,13 +15,12 @@ class ActivityController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_name' => 'required|string',
-            'text' => 'required|string',
-            'icon' => 'required|string',
             'type' => 'required|string',
-            'avatar' => 'nullable|string',
-            'time' => 'nullable|string'
+            'message' => 'required|string',
+            'meta' => 'nullable|array'
         ]);
+
+        $validated['user_id'] = auth()->id();
 
         $activity = Activity::create($validated);
         return response()->json($activity, 201);
@@ -30,7 +29,7 @@ class ActivityController extends Controller
     public function update(Request $request, Activity $activity)
     {
         $validated = $request->validate([
-            'text' => 'required|string'
+            'message' => 'required|string'
         ]);
         
         $activity->update($validated);

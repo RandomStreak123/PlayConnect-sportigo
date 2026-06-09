@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { store } from './store'
 import { getPlayerAvatar } from './utils/sportImageHelper'
 import { t } from './utils/i18n'
@@ -82,11 +82,13 @@ const switchTab = (tabName) => {
     profileTargetUser.value = null
   }
   currentTab.value = tabName
+  showDetailsModal.value = false
   store.init() // Silently refresh matches, feeds, and profiles
 }
 
 const viewUserProfile = (player) => {
   profileTargetUser.value = player
+  showDetailsModal.value = false
   currentTab.value = 'profile'
   store.init()
 }
@@ -121,10 +123,77 @@ const handleApplyFilters = (filters) => {
 const isWomenTheme = computed(() => {
   return store.isWomenMode.value
 })
+
+// Instagram Actual OAuth Callback Handling
+const isInstagramCallbackActive = ref(window.location.search.includes('code='))
+const callbackError = ref('')
+const callbackLoading = ref(isInstagramCallbackActive.value)
+
+onMounted(async () => {
+  if (isInstagramCallbackActive.value) {
+    const urlParams = new URLSearchParams(window.location.search)
+    const code = urlParams.get('code')
+    const state = urlParams.get('state')
+    if (code) {
+      try {
+        const response = await fetch('/api/auth/instagram', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            code: code,
+            state: state || '',
+            redirect_uri: window.location.origin + window.location.pathname
+          })
+        })
+        const data = await response.json()
+        if (response.ok && data.access_token) {
+          if (window.opener) {
+            window.opener.postMessage({
+              type: 'instagram_oauth_success',
+              user: data.user,
+              access_token: data.access_token
+            }, '*')
+            window.close()
+          } else {
+            // If not in a popup, log them in here directly
+            localStorage.setItem('sportigo_user', JSON.stringify(data.user))
+            localStorage.setItem('sportigo_token', data.access_token)
+            window.location.href = '/'
+          }
+        } else {
+          callbackError.value = data.message || 'Instagram authentication failed'
+        }
+      } catch (err) {
+        callbackError.value = err.message || 'Failed to connect to authentication server'
+      } finally {
+        callbackLoading.value = false
+      }
+    }
+  }
+})
 </script>
 
 <template>
-  <div class="web-layout-root" :class="{ 'theme-women': isWomenTheme }">
+  <div v-if="isInstagramCallbackActive" class="instagram-callback-wrapper">
+    <div class="instagram-callback-container">
+      <div class="instagram-logo-section">
+        <h1 class="instagram-logo-text">Instagram</h1>
+      </div>
+      <div v-if="callbackLoading" class="instagram-callback-loading">
+        <span class="ig-spinner large"></span>
+        <p class="callback-status">Connecting to Instagram...</p>
+      </div>
+      <div v-else-if="callbackError" class="instagram-callback-error">
+        <span class="error-icon">❌</span>
+        <p class="error-msg">{{ callbackError }}</p>
+        <button type="button" class="ig-btn" @click="window.close()">Close Window</button>
+      </div>
+    </div>
+  </div>
+  <div v-else class="web-layout-root" :class="{ 'theme-women': isWomenTheme }">
     <!-- Unauthenticated layout -->
     <div v-if="!isAuthenticated" class="auth-viewport">
       <!-- Left decorative hero split (visible on desktop) -->
@@ -399,6 +468,8 @@ const isWomenTheme = computed(() => {
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Grand+Hotel&display=swap');
+
 .web-layout-root {
   width: 100%;
   height: 100vh;
@@ -871,5 +942,397 @@ const isWomenTheme = computed(() => {
   .theme-women .nav-item.active .nav-svg {
     stroke: var(--primary);
   }
+}
+
+/* Instagram Mock Login Styles */
+
+.instagram-mock-wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #fafafa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #262626;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  z-index: 99999;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.instagram-mock-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 350px;
+}
+
+.instagram-login-box {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #dbdbdb;
+  border-radius: 1px;
+  padding: 10px 40px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.instagram-logo-section {
+  margin: 22px 0 12px 0;
+}
+
+.instagram-logo-text {
+  font-family: 'Grand Hotel', cursive;
+  font-size: 3.2rem;
+  font-weight: 500;
+  margin: 0;
+  color: #262626;
+}
+
+.instagram-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: 24px;
+}
+
+.ig-input-group {
+  margin-bottom: 6px;
+  width: 100%;
+}
+
+.ig-input {
+  width: 100%;
+  padding: 9px 8px;
+  background: #fafafa;
+  border: 1px solid #dbdbdb;
+  border-radius: 3px;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+  color: #262626;
+}
+
+.ig-input:focus {
+  border-color: #a8a8a8;
+}
+
+.ig-btn {
+  background-color: #0095f6;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 5px 9px;
+  margin-top: 8px;
+  cursor: pointer;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ig-btn:hover {
+  background-color: #1877f2;
+}
+
+.ig-btn:disabled {
+  background-color: #b2dffc;
+  cursor: not-allowed;
+}
+
+.ig-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: ig-rotation 0.8s linear infinite;
+}
+
+@keyframes ig-rotation {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.ig-divider {
+  display: flex;
+  align-items: center;
+  margin: 18px 0;
+}
+
+.ig-divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: #dbdbdb;
+}
+
+.ig-divider-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8e8e8e;
+  padding: 0 18px;
+}
+
+.ig-facebook-login {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: #385185;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.fb-svg {
+  color: #385185;
+}
+
+.ig-forgot-password {
+  text-align: center;
+  font-size: 12px;
+  color: #00376b;
+  text-decoration: none;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.instagram-signup-box {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #dbdbdb;
+  border-radius: 1px;
+  padding: 20px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.ig-signup-text {
+  font-size: 14px;
+  margin: 0;
+  color: #262626;
+}
+
+.ig-signup-link {
+  color: #0095f6;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.ig-error-message {
+  color: #ed4956;
+  font-size: 13px;
+  line-height: 16px;
+  margin: 10px 0;
+  text-align: center;
+  font-weight: 500;
+}
+
+.ig-demo-credentials {
+  background-color: #fafafa;
+  border: 1px dashed #dbdbdb;
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 11px;
+  color: #8e8e8e;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.ig-demo-credentials code {
+  background: #eaeaea;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+  color: #262626;
+  font-weight: bold;
+}
+
+.instagram-callback-wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #fafafa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #262626;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 100000;
+}
+
+.instagram-callback-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 350px;
+  background-color: #ffffff;
+  border: 1px solid #dbdbdb;
+  border-radius: 1px;
+  padding: 40px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.instagram-callback-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.instagram-callback-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.ig-spinner.large {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+  border-color: #0095f6;
+  border-bottom-color: transparent;
+}
+
+.callback-status {
+  font-size: 14px;
+  color: #8e8e8e;
+  margin-top: 16px;
+  font-weight: 500;
+}
+
+.error-icon {
+  font-size: 2rem;
+  margin-bottom: 12px;
+}
+
+.error-msg {
+  font-size: 14px;
+  color: #ed4956;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+/* Instagram OAuth Simulation Styles */
+.oauth-consent-box {
+  padding: 30px !important;
+}
+
+.oauth-permission-card {
+  width: 100%;
+  border: 1px solid #dbdbdb;
+  border-radius: 4px;
+  padding: 16px;
+  margin-top: 16px;
+  background-color: #fafafa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.app-icon-badge {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary, #7B61FF) 100%);
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  margin-bottom: 12px;
+}
+
+.oauth-req-text {
+  font-size: 13px;
+  color: #262626;
+  text-align: center;
+  line-height: 1.4;
+  margin: 0 0 12px 0;
+}
+
+.permissions-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid #dbdbdb;
+  padding-top: 12px;
+}
+
+.perm-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perm-check {
+  color: #0095f6;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.perm-lbl {
+  font-size: 12px;
+  color: #8e8e8e;
+  font-weight: 600;
+}
+
+.ig-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #262626;
+  margin-bottom: 6px;
+  display: block;
+  text-align: left;
+}
+
+.oauth-btn-authorize {
+  background-color: #0095f6 !important;
+  color: #ffffff !important;
+}
+
+.oauth-btn-authorize:hover {
+  background-color: #1877f2 !important;
+}
+
+.oauth-btn-cancel {
+  background-color: transparent !important;
+  color: #8e8e8e !important;
+  border: 1px solid #dbdbdb !important;
+  margin-top: 8px;
+}
+
+.oauth-btn-cancel:hover {
+  background-color: #fafafa !important;
+  color: #262626 !important;
+}
+
+.footer-info {
+  background-color: #ffffff !important;
+  border-color: #dbdbdb !important;
+  color: #8e8e8e !important;
 }
 </style>
