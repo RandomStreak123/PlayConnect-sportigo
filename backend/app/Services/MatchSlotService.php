@@ -109,6 +109,25 @@ class MatchSlotService
             $match->users()->attach($user->id);
             $match->syncAvailableSlots();
 
+            // Create notification for match creator if they are not the joining user
+            if ($match->creator_id !== $user->id) {
+                try {
+                    \App\Models\Notification::create([
+                        'user_id' => $match->creator_id,
+                        'type' => 'match_joined',
+                        'title' => 'Player Joined',
+                        'message' => "{$user->name} joined your {$match->sport_type} match: \"{$match->title}\".",
+                        'meta' => [
+                            'match_id' => $match->id,
+                            'sport_type' => $match->sport_type,
+                            'title' => $match->title,
+                        ],
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to create join notification: ' . $e->getMessage());
+                }
+            }
+
             try {
                 ActivityService::create(
                     $user->id,
@@ -149,6 +168,25 @@ class MatchSlotService
             $match = SportMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
             $match->users()->detach($user->id);
             $match->syncAvailableSlots();
+
+            // Create notification for match creator if they are not the leaving user
+            if ($match->creator_id !== $user->id) {
+                try {
+                    \App\Models\Notification::create([
+                        'user_id' => $match->creator_id,
+                        'type' => 'match_left',
+                        'title' => 'Player Left',
+                        'message' => "{$user->name} left your {$match->sport_type} match: \"{$match->title}\".",
+                        'meta' => [
+                            'match_id' => $match->id,
+                            'sport_type' => $match->sport_type,
+                            'title' => $match->title,
+                        ],
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to create leave notification: ' . $e->getMessage());
+                }
+            }
 
             try {
                 ActivityService::create(

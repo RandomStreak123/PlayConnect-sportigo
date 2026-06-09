@@ -26,6 +26,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::put('/profile',        [\App\Http\Controllers\API\ProfileController::class, 'updateProfile']);
     Route::get('/players',        [\App\Http\Controllers\API\ProfileController::class, 'players']);
     Route::get('/activities',     [\App\Http\Controllers\API\ActivityController::class, 'index']);
+    Route::get('/notifications',  [\App\Http\Controllers\API\NotificationController::class, 'index']);
+    Route::put('/notifications/read-all', [\App\Http\Controllers\API\NotificationController::class, 'markAllAsRead']);
+    Route::put('/notifications/{notification}/read', [\App\Http\Controllers\API\NotificationController::class, 'markAsRead']);
 
     // Match reads (covered by the outer throttle:api — 60/min)
     Route::get('/matches/mine',        [MatchController::class, 'mine']);
