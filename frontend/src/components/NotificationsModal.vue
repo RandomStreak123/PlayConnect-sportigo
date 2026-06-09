@@ -31,8 +31,14 @@ const getIconClass = (title) => {
   return 'default'
 }
 
-const handleMarkAllRead = () => {
-  store.state.notifications.forEach(n => n.read = true)
+const handleMarkAllRead = async () => {
+  await store.markAllNotificationsAsRead()
+}
+
+const handleMarkRead = async (item) => {
+  if (!item.read) {
+    await store.markNotificationAsRead(item.id)
+  }
 }
 </script>
 
@@ -60,7 +66,7 @@ const handleMarkAllRead = () => {
             :key="item.id"
             class="notification-card"
             :class="{ unread: !item.read }"
-            @click="item.read = true"
+            @click="handleMarkRead(item)"
           >
             <div class="card-icon-wrap" :class="getIconClass(item.title)">
               {{ getIcon(item.title) }}

@@ -49,6 +49,22 @@ const safeFetch = async (url, options = {}) => {
   }
 }
 
+// Helper to format relative time
+const formatRelativeTime = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays === 1) return 'Yesterday'
+  return `${diffDays}d ago`
+}
+
 // Initialize state from database
 const init = async () => {
   const token = localStorage.getItem('sportigo_token')
@@ -58,11 +74,12 @@ const init = async () => {
   try {
     const headers = getAuthHeaders()
 
-    // Fetch user details, matches, and activities in parallel
-    const [userData, matchesData, activitiesData] = await Promise.all([
+    // Fetch user details, matches, activities, and notifications in parallel
+    const [userData, matchesData, activitiesData, notificationsData] = await Promise.all([
       safeFetch(`${API_URL}/user`, { headers }),
       safeFetch(`${API_URL}/matches`, { headers }),
-      safeFetch(`${API_URL}/activities`, { headers })
+      safeFetch(`${API_URL}/activities`, { headers }),
+      safeFetch(`${API_URL}/notifications`, { headers })
     ])
 
     if (userData) {
@@ -74,6 +91,14 @@ const init = async () => {
     }
     if (Array.isArray(activitiesData)) {
       state.activities = activitiesData
+    }
+    if (notificationsData && Array.isArray(notificationsData.data)) {
+      state.notifications = notificationsData.data.map(n => ({
+        ...n,
+        read: Boolean(n.is_read),
+        body: n.message,
+        time: formatRelativeTime(n.created_at)
+      }))
     }
   } catch (e) {
     console.error('Store init error:', e)
@@ -286,6 +311,27 @@ const sendMessage = async (matchId, text) => {
   }
 }
 
+const markNotificationAsRead = async (notificationId) => {
+  if (!state.currentUser) return
+  const idx = state.notifications.findIndex(n => n.id === notificationId)
+  if (idx !== -1) {
+    state.notifications[idx].read = true
+  }
+  await safeFetch(`${API_URL}/notifications/${notificationId}/read`, {
+    method: 'PUT',
+    headers: getAuthHeaders()
+  })
+}
+
+const markAllNotificationsAsRead = async () => {
+  if (!state.currentUser) return
+  state.notifications.forEach(n => n.read = true)
+  await safeFetch(`${API_URL}/notifications/read-all`, {
+    method: 'PUT',
+    headers: getAuthHeaders()
+  })
+}
+
 export const store = {
   state,
   isWomenMode,
@@ -303,5 +349,7 @@ export const store = {
   toggleLikeActivity,
   addCommentToActivity,
   loadChats,
-  sendMessage
+  sendMessage,
+  markNotificationAsRead,
+  markAllNotificationsAsRead
 }
