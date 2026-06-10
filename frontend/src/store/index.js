@@ -138,6 +138,24 @@ const login = async (username, password) => {
   throw new Error(data?.message || 'Invalid login details')
 }
 
+const loginWithGoogle = async (credential) => {
+  const data = await safeFetch(`${API_URL}/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ credential })
+  })
+
+  if (data && data.access_token) {
+    state.currentUser = data.user
+    localStorage.setItem('sportigo_user', JSON.stringify(data.user))
+    localStorage.setItem('sportigo_token', data.access_token)
+    await init()
+    return true
+  }
+
+  throw new Error(data?.message || 'Google login failed')
+}
+
 const register = async (name, username, password, gender) => {
   const data = await safeFetch(`${API_URL}/register`, {
     method: 'POST',
@@ -364,6 +382,7 @@ export const store = {
   isWomenMode,
   init,
   login,
+  loginWithGoogle,
   register,
   logout,
   updateProfile,

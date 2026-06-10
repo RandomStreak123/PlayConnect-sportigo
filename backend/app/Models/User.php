@@ -22,6 +22,7 @@ class User extends Authenticatable
         'hide_phone',
         'profile_picture',
         'profile_photo',
+        'google_id',
         // Legacy/additional fields for tests
         'phone',
         'bio',
