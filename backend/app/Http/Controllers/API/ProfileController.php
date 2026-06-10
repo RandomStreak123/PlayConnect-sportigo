@@ -68,8 +68,13 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
             'phone_number' => 'nullable|string|max:20|unique:users,phone_number,' . $user->id,
+            'email' => 'nullable|string|email|max:255|unique:users,email,' . $user->id,
             'hide_phone' => 'nullable|boolean',
             'theme_preference' => 'nullable|string|in:system,activeSteelBlue,elegantLavender',
+            'bio' => 'nullable|string|max:1000',
+            'primary_sport' => 'nullable|string|max:255',
+            'skill_tier' => 'nullable|string|max:255',
+            'gender' => 'nullable|string|in:male,female,other',
         ]);
 
         if (array_key_exists('name', $validated)) {
@@ -78,25 +83,26 @@ class ProfileController extends Controller
         if (array_key_exists('phone_number', $validated)) {
             $user->phone_number = $validated['phone_number'];
         }
+        if (array_key_exists('email', $validated)) {
+            $user->email = $validated['email'];
+        }
         if (array_key_exists('hide_phone', $validated)) {
             $user->hide_phone = $validated['hide_phone'];
         }
         if (array_key_exists('theme_preference', $validated)) {
             $user->theme_preference = $validated['theme_preference'];
         }
-
-        // Gender is set once at registration and cannot be changed afterward if already set.
-        if ($request->has('gender')) {
-            if ($user->gender !== null) {
-                return response()->json([
-                    'message' => 'Gender can only be set during registration or initial profile setup.',
-                ], 422);
-            }
-
-            $validatedGender = $request->validate([
-                'gender' => 'required|string|in:male,female,other',
-            ]);
-            $user->gender = $validatedGender['gender'];
+        if (array_key_exists('bio', $validated)) {
+            $user->bio = $validated['bio'];
+        }
+        if (array_key_exists('primary_sport', $validated)) {
+            $user->primary_sport = $validated['primary_sport'];
+        }
+        if (array_key_exists('skill_tier', $validated)) {
+            $user->skill_tier = $validated['skill_tier'];
+        }
+        if (array_key_exists('gender', $validated)) {
+            $user->gender = $validated['gender'];
         }
 
         $user->save();
