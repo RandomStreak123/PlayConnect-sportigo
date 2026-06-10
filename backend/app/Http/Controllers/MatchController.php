@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SportsMatch;
 use App\Models\Activity;
+use App\Models\PlayerRating;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -326,5 +327,71 @@ class MatchController extends Controller
             ->get();
 
         return response()->json($matches);
+    }
+
+    /**
+     * Submit ratings for players in a match.
+     */
+    public function submitRatings(Request $request, SportsMatch $match)
+    {
+        $user = auth()->user();
+
+        // User must be a participant in the match
+        if (!$match->participants()->where('user_id', $user->id)->exists()) {
+            return response()->json(['message' => 'You must be a participant in this match to submit ratings.'], 403);
+        }
+
+        // Match must be in the past
+        $matchDate = Carbon::parse($match->date_time);
+        if ($matchDate->isFuture()) {
+            return response()->json(['message' => 'Cannot submit ratings for a match that has not yet been played.'], 422);
+        }
+
+        $request->validate([
+            'ratings' => 'required|array|min:1',
+            'ratings.*.user_id' => 'required|integer',
+            'ratings.*.rating' => 'required|integer|min:1|max:5',
+        ]);
+
+        $savedRatings = [];
+
+        foreach ($request->ratings as $entry) {
+            $ratedUserId = (int) $entry['user_id'];
+
+            // User can't rate themselves
+            if ($ratedUserId === (int) $user->id) {
+                continue;
+            }
+
+            $rating = PlayerRating::updateOrCreate(
+                [
+                    'match_id' => $match->id,
+                    'rater_id' => $user->id,
+                    'rated_id' => $ratedUserId,
+                ],
+                [
+                    'rating' => $entry['rating'],
+                ]
+            );
+
+            $savedRatings[] = $rating;
+        }
+
+        return response()->json([
+            'message' => 'Ratings submitted successfully!',
+            'ratings' => $savedRatings,
+        ]);
+    }
+
+    /**
+     * Get all ratings for a match.
+     */
+    public function getRatings(SportsMatch $match)
+    {
+        $ratings = PlayerRating::where('match_id', $match->id)
+            ->with(['rater:id,name', 'rated:id,name'])
+            ->get();
+
+        return response()->json($ratings);
     }
 }

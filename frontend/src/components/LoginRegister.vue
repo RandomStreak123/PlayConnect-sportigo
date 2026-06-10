@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { store } from '../store'
 
 const emit = defineEmits(['auth-success'])
@@ -59,37 +59,6 @@ const handleSignIn = async () => {
 }
 
 const handleSocialLogin = async (provider) => {
-  if (provider === 'Instagram') {
-    socialLoading.value = 'Instagram'
-    try {
-      const res = await fetch('/api/auth/instagram/url')
-      const data = await res.json()
-      if (data && data.url) {
-        const width = 450
-        const height = 650
-        const left = (window.screen.width - width) / 2
-        const top = (window.screen.height - height) / 2
-        
-        window.open(
-          data.url,
-          'InstagramLoginPopup',
-          `width=${width},height=${height},left=${left},top=${top},personalbar=0,toolbar=0,scrollbars=0,resizable=0`
-        )
-      } else {
-        throw new Error('Could not get authorization URL')
-      }
-    } catch (err) {
-      const msg = err.message || 'Failed to initialize Instagram login'
-      if (activeTab.value === 'signup') {
-        signupError.value = msg
-      } else {
-        loginError.value = msg
-      }
-    } finally {
-      socialLoading.value = ''
-    }
-    return
-  }
   socialLoading.value = provider
   setTimeout(() => {
     socialLoading.value = ''
@@ -101,47 +70,6 @@ const handleSocialLogin = async (provider) => {
     }
   }, 1200)
 }
-
-const handleMessageEvent = async (event) => {
-  const allowedOrigins = [
-    window.location.origin,
-    'https://localhost:5173',
-    'https://127.0.0.1:5173'
-  ]
-  if (!allowedOrigins.includes(event.origin)) return
-  
-  if (event.data && event.data.type === 'instagram_oauth_success') {
-    socialLoading.value = 'Instagram'
-    try {
-      const user = event.data.user
-      const token = event.data.access_token
-      
-      store.state.currentUser = user
-      localStorage.setItem('sportigo_user', JSON.stringify(user))
-      localStorage.setItem('sportigo_token', token)
-      await store.init()
-      
-      emit('auth-success')
-    } catch (err) {
-      const msg = err.message || 'Instagram authentication failed'
-      if (activeTab.value === 'signup') {
-        signupError.value = msg
-      } else {
-        loginError.value = msg
-      }
-    } finally {
-      socialLoading.value = ''
-    }
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('message', handleMessageEvent)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('message', handleMessageEvent)
-})
 
 const handleSignUp = async () => {
   if (!registerName.value || !registerUsername.value || !registerPassword.value) {
@@ -256,29 +184,7 @@ const handleSignUp = async () => {
         <span class="divider-line"></span>
       </div>
 
-      <!-- Social login buttons -->
       <div class="social-buttons">
-        <button type="button" class="social-btn instagram" :disabled="!!socialLoading" @click.prevent.stop="handleSocialLogin('Instagram')">
-          <span v-if="socialLoading === 'Instagram'" class="loader social-loader"></span>
-          <template v-else>
-            <svg class="social-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
-              <defs>
-                <radialGradient id="ig-grad" cx="30%" cy="107%" r="150%">
-                  <stop offset="0%" stop-color="#fdf497"/>
-                  <stop offset="5%" stop-color="#fdf497"/>
-                  <stop offset="45%" stop-color="#fd5949"/>
-                  <stop offset="60%" stop-color="#d6249f"/>
-                  <stop offset="90%" stop-color="#285AEB"/>
-                </radialGradient>
-              </defs>
-              <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-grad)" stroke-width="2"/>
-              <circle cx="12" cy="12" r="5" stroke="url(#ig-grad)" stroke-width="2"/>
-              <circle cx="17.5" cy="6.5" r="1.5" fill="url(#ig-grad)"/>
-            </svg>
-            <span>Instagram</span>
-          </template>
-        </button>
-
         <button type="button" class="social-btn google" :disabled="!!socialLoading" @click.prevent.stop="handleSocialLogin('Google')">
           <span v-if="socialLoading === 'Google'" class="loader social-loader"></span>
           <template v-else>
@@ -386,29 +292,7 @@ const handleSignUp = async () => {
         <span class="divider-line"></span>
       </div>
 
-      <!-- Social signup buttons -->
       <div class="social-buttons">
-        <button type="button" class="social-btn instagram" :disabled="!!socialLoading" @click.prevent.stop="handleSocialLogin('Instagram')">
-          <span v-if="socialLoading === 'Instagram'" class="loader social-loader"></span>
-          <template v-else>
-            <svg class="social-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
-              <defs>
-                <radialGradient id="ig-grad2" cx="30%" cy="107%" r="150%">
-                  <stop offset="0%" stop-color="#fdf497"/>
-                  <stop offset="5%" stop-color="#fdf497"/>
-                  <stop offset="45%" stop-color="#fd5949"/>
-                  <stop offset="60%" stop-color="#d6249f"/>
-                  <stop offset="90%" stop-color="#285AEB"/>
-                </radialGradient>
-              </defs>
-              <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-grad2)" stroke-width="2"/>
-              <circle cx="12" cy="12" r="5" stroke="url(#ig-grad2)" stroke-width="2"/>
-              <circle cx="17.5" cy="6.5" r="1.5" fill="url(#ig-grad2)"/>
-            </svg>
-            <span>Instagram</span>
-          </template>
-        </button>
-
         <button type="button" class="social-btn google" :disabled="!!socialLoading" @click.prevent.stop="handleSocialLogin('Google')">
           <span v-if="socialLoading === 'Google'" class="loader social-loader"></span>
           <template v-else>
@@ -766,10 +650,6 @@ const handleSignUp = async () => {
   border-radius: inherit;
 }
 
-.social-btn.instagram::before {
-  background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
-}
-
 .social-btn.google::before {
   background: linear-gradient(135deg, #4285F4, #34A853, #FBBC05, #EA4335);
 }
@@ -777,11 +657,6 @@ const handleSignUp = async () => {
 .social-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-}
-
-.social-btn.instagram:hover {
-  border-color: #dc2743;
-  background: linear-gradient(45deg, rgba(240, 148, 51, 0.08), rgba(220, 39, 67, 0.08), rgba(188, 24, 136, 0.08));
 }
 
 .social-btn.google:hover {
@@ -814,134 +689,4 @@ const handleSignUp = async () => {
   }
 }
 
-/* Instagram Sync Modal Styles */
-.ig-sync-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  backdrop-filter: blur(4px);
-}
-
-.ig-sync-modal-card {
-  background-color: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  width: 90%;
-  max-width: 400px;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--outline-variant);
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-.ig-sync-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.ig-sync-header h3 {
-  font-size: 1.25rem;
-  font-weight: 800;
-  margin: 0;
-  color: var(--on-surface);
-}
-
-.ig-sync-description {
-  font-size: 0.88rem;
-  color: var(--on-surface-variant);
-  line-height: 1.5;
-  margin-bottom: 24px;
-  text-align: left;
-}
-
-.ig-sync-error {
-  background-color: rgba(186, 26, 26, 0.1);
-  color: var(--error);
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-bottom: 16px;
-  border: 1px solid rgba(186, 26, 26, 0.2);
-}
-
-.ig-sync-input-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 24px;
-}
-
-.ig-sync-label {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--on-surface);
-  margin-bottom: 8px;
-  text-align: left;
-}
-
-.ig-sync-input {
-  width: 100%;
-  padding: 12px 16px;
-  background-color: var(--surface-dim);
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-md);
-  font-size: 0.95rem;
-  color: var(--on-surface);
-  outline: none;
-  font-weight: 600;
-  box-sizing: border-box;
-}
-
-.ig-sync-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.08);
-}
-
-.ig-sync-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.ig-sync-btn {
-  padding: 12px 20px;
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-}
-
-.ig-sync-btn.cancel {
-  background-color: transparent;
-  color: var(--on-surface-variant);
-}
-
-.ig-sync-btn.cancel:hover {
-  background-color: var(--surface-variant);
-}
-
-.ig-sync-btn.submit {
-  background-color: var(--primary);
-  color: var(--on-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 140px;
-}
-
-.ig-sync-btn.submit:hover {
-  filter: brightness(1.1);
-}
 </style>

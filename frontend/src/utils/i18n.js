@@ -154,7 +154,8 @@ const translations = {
     matchFullStatus: 'MATCH FULL',
     joinMatchSpots: 'Join Match',
     spotsLeftSuffix: 'spots left',
-    slotsOpenSuffix: 'slots open'
+    slotsOpenSuffix: 'slots open',
+    clickToViewMap: 'Click to view on Google Maps'
   },
   hi: {
     // Nav / General
@@ -309,7 +310,8 @@ const translations = {
     matchFullStatus: 'मैच पूर्ण',
     joinMatchSpots: 'मैच में शामिल हों',
     spotsLeftSuffix: 'स्थान शेष',
-    slotsOpenSuffix: 'खुले स्थान'
+    slotsOpenSuffix: 'खुले स्थान',
+    clickToViewMap: 'गूगल मैप्स पर देखने के लिए क्लिक करें'
   }
 }
 

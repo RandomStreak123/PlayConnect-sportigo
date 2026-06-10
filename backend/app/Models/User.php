@@ -28,8 +28,6 @@ class User extends Authenticatable
         'primary_sport',
         'skill_tier',
         'avatar',
-        'instagram_id',
-        'auth_provider',
     ];
 
     protected $hidden = [

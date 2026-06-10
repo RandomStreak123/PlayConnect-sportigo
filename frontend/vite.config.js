@@ -1,12 +1,15 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import basicSsl from '@vitejs/plugin-basic-ssl'
+import fs from 'fs'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue(), basicSsl()],
+  plugins: [vue()],
   server: {
-    https: true,
+    https: {
+      key: fs.readFileSync('/home/ajith/.ssl/localhost+2-key.pem'),
+      cert: fs.readFileSync('/home/ajith/.ssl/localhost+2.pem'),
+    },
     proxy: {
       '/api': {
         target: 'https://playconnect-backend.ddev.site',

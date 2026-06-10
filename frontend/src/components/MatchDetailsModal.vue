@@ -19,8 +19,13 @@ const emit = defineEmits(['close', 'open-player', 'action-success'])
 
 const isSubmitting = ref(false)
 const showResultsPanel = ref(false)
+const showRatingPanel = ref(false)
 const isSavingResults = ref(false)
+const isSavingRatings = ref(false)
 const pendingResults = ref({})
+const pendingRatings = ref({}) // { userId: starCount }
+const existingRatings = ref(null) // ratings already submitted by this user
+const hasRatedAlready = ref(false)
 
 const slotsLeft = computed(() => {
   return Math.max(0, props.match.maxSlots - props.match.joinedCount)
@@ -123,6 +128,75 @@ const saveResults = async () => {
 const handleShare = () => {
   emit('action-success', 'Share link copied to clipboard! 📋')
 }
+
+// Player Rating Logic
+const otherParticipants = computed(() => {
+  if (!store.state.currentUser) return []
+  return props.match.participants.filter(p => p.id !== store.state.currentUser.id)
+})
+
+const openRatingPanel = async () => {
+  // Initialize all ratings to 0 (not rated yet)
+  const ratings = {}
+  otherParticipants.value.forEach(p => {
+    ratings[p.id] = 0
+  })
+  pendingRatings.value = ratings
+  hasRatedAlready.value = false
+
+  // Load existing ratings by this user for this match
+  try {
+    const data = await store.getMatchRatings(props.match.id)
+    if (data && Array.isArray(data)) {
+      const myId = store.state.currentUser.id
+      const myRatings = data.filter(r => r.rater_id === myId)
+      if (myRatings.length > 0) {
+        hasRatedAlready.value = true
+        myRatings.forEach(r => {
+          if (ratings[r.rated_id] !== undefined) {
+            ratings[r.rated_id] = r.rating
+          }
+        })
+        pendingRatings.value = { ...ratings }
+      }
+    }
+  } catch (e) {
+    // ignore - first time rating
+  }
+
+  showRatingPanel.value = true
+}
+
+const setPlayerRating = (userId, stars) => {
+  pendingRatings.value[userId] = pendingRatings.value[userId] === stars ? 0 : stars
+}
+
+const saveRatings = async () => {
+  const ratings = Object.entries(pendingRatings.value)
+    .filter(([, r]) => r > 0)
+    .map(([userId, rating]) => ({ user_id: Number(userId), rating }))
+
+  if (ratings.length === 0) {
+    emit('action-success', 'Please rate at least one player ⭐')
+    return
+  }
+
+  isSavingRatings.value = true
+  try {
+    const data = await store.submitPlayerRatings(props.match.id, ratings)
+    if (data) {
+      const xpEarned = ratings.length * 10
+      emit('action-success', `Ratings saved! You earned +${xpEarned} XP ⭐`)
+      showRatingPanel.value = false
+    } else {
+      emit('action-success', 'Failed to save ratings ❌')
+    }
+  } catch (err) {
+    emit('action-success', 'Error saving ratings ❌')
+  } finally {
+    isSavingRatings.value = false
+  }
+}
 </script>
 
 <template>
@@ -177,15 +251,23 @@ const handleShare = () => {
               <span class="tile-desc">{{ t('skill_' + match.skillLevel) }} {{ t('skillLevel') }}</span>
             </div>
           </div>
-          <div class="info-tile">
+          <a 
+            :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="info-tile location-tile-link"
+          >
             <span class="tile-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tile-svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             </span>
             <div class="tile-info">
-              <span class="tile-title">{{ match.location }}</span>
-              <span class="tile-desc">{{ slotsLeft }} {{ t('slotsOpenSuffix') }}</span>
+              <span class="tile-title location-title-text">
+                {{ match.location }}
+                <svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </span>
+              <span class="tile-desc">{{ slotsLeft }} {{ t('slotsOpenSuffix') }} • {{ t('clickToViewMap') }}</span>
             </div>
-          </div>
+          </a>
         </div>
 
         <!-- Description -->
@@ -267,6 +349,40 @@ const handleShare = () => {
           </div>
         </div>
 
+        <!-- Player Rating Panel -->
+        <div v-if="showRatingPanel" class="section-block results-panel animate-fade-in">
+          <h3 class="section-title">⭐ Rate Players</h3>
+          <p class="results-hint">
+            {{ hasRatedAlready ? 'Update your ratings for each player. Tap stars to rate.' : 'Rate each player from 1 to 5 stars. You earn +10 XP per player rated!' }}
+          </p>
+          <div class="results-player-list">
+            <div v-for="p in otherParticipants" :key="'rate-' + p.id" class="results-player-row">
+              <div class="results-player-info">
+                <img :src="getPlayerAvatar(p.profilePicture, 'male')" class="results-player-avatar" />
+                <span class="results-player-name">{{ p.name }}</span>
+              </div>
+              <div class="star-rating-group">
+                <button 
+                  v-for="star in 5" 
+                  :key="star"
+                  class="star-btn"
+                  :class="{ filled: pendingRatings[p.id] >= star }"
+                  @click="setPlayerRating(p.id, star)"
+                >
+                  ★
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="results-actions">
+            <button class="results-cancel-btn" @click="showRatingPanel = false">Cancel</button>
+            <button class="results-save-btn rating-save" :disabled="isSavingRatings" @click="saveRatings">
+              <span v-if="isSavingRatings" class="loader small-loader"></span>
+              <span v-else>{{ hasRatedAlready ? 'Update Ratings' : 'Submit Ratings' }}</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Match Chat section removed -->
       </div>
 
@@ -285,14 +401,15 @@ const handleShare = () => {
             {{ t('leaveMatch') }}
           </button>
           
-          <!-- Creator + past match: Record Results button -->
-          <button 
-            v-else-if="isCreator && isPastMatch && !showResultsPanel" 
-            class="action-btn record-results-btn"
-            @click="openResultsPanel"
-          >
-            🏆 {{ hasRecordedResults ? 'Update Results' : 'Record Results' }}
-          </button>
+          <!-- Creator + past match: Record Results + Rate Players -->
+          <div v-else-if="isCreator && isPastMatch && !showResultsPanel && !showRatingPanel" class="action-btn-group">
+            <button class="action-btn record-results-btn" @click="openResultsPanel">
+              🏆 {{ hasRecordedResults ? 'Update Results' : 'Record Results' }}
+            </button>
+            <button class="action-btn rate-players-btn" @click="openRatingPanel">
+              ⭐ Rate Players
+            </button>
+          </div>
 
           <!-- Creator indicator (future match) -->
           <div v-else-if="isCreator && !isPastMatch" class="status-indicator-box">
@@ -300,6 +417,10 @@ const handleShare = () => {
           </div>
           
           <!-- Joined normal user indicator -->
+          <div v-else-if="isJoined && isPastMatch" class="status-indicator-box">
+            ✅ Match Completed
+          </div>
+
           <div v-else-if="isJoined" class="status-indicator-box">
             {{ t('joinedMatchStatus') }}
           </div>
@@ -1118,5 +1239,99 @@ const handleShare = () => {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Player Rating Styles */
+.star-rating-group {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: #d1d5db;
+  transition: all 0.2s ease;
+  padding: 2px;
+  line-height: 1;
+}
+
+.star-btn:hover {
+  transform: scale(1.2);
+}
+
+.star-btn.filled {
+  color: #f59e0b;
+  text-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
+}
+
+.rate-players-btn {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25);
+}
+
+.rate-players-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+}
+
+.action-btn-group {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn-group .action-btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 0.88rem;
+}
+
+.rating-save {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25) !important;
+}
+
+.rating-save:hover {
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35) !important;
+}
+
+/* Location Map Link Styles */
+.location-tile-link {
+  text-decoration: none !important;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.location-tile-link:hover .tile-icon {
+  transform: scale(1.05);
+  border-color: var(--primary) !important;
+  background-color: rgba(26, 35, 126, 0.04) !important;
+}
+
+.location-title-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.location-tile-link:hover .location-title-text {
+  color: var(--primary) !important;
+  text-decoration: underline !important;
+}
+
+.external-link-icon {
+  stroke: var(--primary);
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.location-tile-link:hover .external-link-icon {
+  opacity: 1;
 }
 </style>

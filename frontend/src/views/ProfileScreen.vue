@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { store } from '../store'
 import { getPlayerAvatar } from '../utils/sportImageHelper'
 import { supabase } from '../utils/supabase'
@@ -130,18 +130,14 @@ const visibleActivities = computed(() => {
 })
 
 // Determine if a match is a win for the given user
-// Uses real recorded result from pivot data when available,
-// falls back to deterministic formula for unrecorded matches
+// Only uses real recorded results from pivot data — no fake fallback
 const isMatchWin = (match, uid) => {
-  // Check for real recorded result from pivot data
   const participant = match.participants?.find(p => Number(p.id) === Number(uid))
   if (participant?.pivot?.result) {
     return participant.pivot.result === 'win'
   }
-  // Fallback: deterministic formula for matches without recorded results
-  const matchId = match.id || 0
-  const userId = uid || 0
-  return ((matchId * 7 + userId * 13) % 10) < 6
+  // No result recorded yet — return null (unrecorded)
+  return null
 }
 
 const hasRealResult = (match, uid) => {
@@ -154,14 +150,15 @@ const profileStats = computed(() => {
   const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
 
   // XP Rules (per Sportigo Profile Feature Roadmap)
-  // Join Match: 5 XP | Complete Match: 15 XP | Create Match: 20 XP | Win Match: 25 XP
+  // Join Match: 5 XP | Complete Match: 15 XP | Create Match: 20 XP | Win Match: 25 XP | Rate Player: 10 XP each
   let xp = 0
   let wins = 0
+  let recordedMatchCount = 0
   let createdCount = 0
 
   matches.forEach(m => {
     const isCreator = Number(m.creator_id || m.user_id) === Number(uid)
-    const isWin = isMatchWin(m, uid)
+    const result = isMatchWin(m, uid) // true = win, false = loss/draw, null = unrecorded
 
     // Create Match (20 XP) or Join Match (5 XP)
     if (isCreator) {
@@ -174,27 +171,35 @@ const profileStats = computed(() => {
     // Complete Match: 15 XP (all past matches are completed)
     xp += 15
 
-    // Win Match: 25 XP
-    if (isWin) {
+    // Win Match: 25 XP (only for real recorded wins)
+    if (result === true) {
       xp += 25
       wins++
+      recordedMatchCount++
+    } else if (result === false) {
+      recordedMatchCount++
     }
+    // result === null means unrecorded — does not count toward win rate
   })
+
+  // Rating XP: 10 XP per player rated
+  xp += totalRatingsGiven.value * 10
 
   const nextLevelXp = 1000
   const level = Math.floor(xp / nextLevelXp) + 1
   const currentLevelXp = xp % nextLevelXp
   const progressPct = Math.round((currentLevelXp / nextLevelXp) * 100)
 
-  // Win Rate = Wins / Total Matches * 100
-  const winRate = matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0
+  // Win Rate = Wins / Matches with recorded results * 100
+  const winRate = recordedMatchCount > 0 ? Math.round((wins / recordedMatchCount) * 100) : 0
 
-  // Streaks: consecutive wins counting backwards from the most recent past match
+  // Streaks: consecutive wins counting backwards from the most recent recorded match
   let streak = 0
   const sortedMatches = [...matches].sort((a, b) => new Date(b.date_time || b.date) - new Date(a.date_time || a.date))
   for (const m of sortedMatches) {
-    const isWin = isMatchWin(m, uid)
-    if (isWin) {
+    const result = isMatchWin(m, uid)
+    if (result === null) continue // skip unrecorded matches
+    if (result === true) {
       streak++
     } else {
       break
@@ -213,7 +218,7 @@ const profileStats = computed(() => {
       playStyle = 'Organizer'
     } else if (winRate >= 70) {
       playStyle = 'Attacker'
-    } else if (winRate < 50 && matches.length >= 5) {
+    } else if (winRate < 50 && recordedMatchCount >= 5) {
       playStyle = 'Defender'
     }
   }
@@ -232,7 +237,8 @@ const profileStats = computed(() => {
     streak,
     playStyle,
     globalRank,
-    totalGames: matches.length
+    totalGames: matches.length,
+    recordedGames: recordedMatchCount
   }
 })
 
@@ -240,11 +246,11 @@ const profileStats = computed(() => {
 const getMatchXp = (match) => {
   const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
   const isCreator = Number(match.creator_id || match.user_id) === Number(uid)
-  const isWin = isMatchWin(match, uid)
+  const result = isMatchWin(match, uid)
 
   let matchXp = isCreator ? 20 : 5   // Create or Join
   matchXp += 15                       // Complete
-  if (isWin) matchXp += 25            // Win
+  if (result === true) matchXp += 25  // Win (only real recorded wins)
   return matchXp
 }
 
@@ -321,6 +327,8 @@ const handleThemeToggle = (e) => {
   const checked = e.target.checked
   store.setThemePreference(checked ? 'elegantLavender' : 'activeSteelBlue')
 }
+
+const showLogoutConfirm = ref(false)
 
 const handleLogout = () => {
   store.logout()
@@ -448,63 +456,32 @@ const onFileSelected = async (event) => {
   }
 }
 
-// Instagram Account Linking
-const linkingLoading = ref(false)
 
-const handleLinkInstagram = async () => {
-  if (currentUser.value.instagram_id) {
-    emit('toast-message', 'Your Instagram account is already linked! 📸')
-    return
-  }
 
-  linkingLoading.value = true
-  try {
-    const res = await fetch('/api/auth/instagram/url')
-    const data = await res.json()
-    if (data && data.url) {
-      const width = 450
-      const height = 650
-      const left = (window.screen.width - width) / 2
-      const top = (window.screen.height - height) / 2
-      
-      window.open(
-        data.url,
-        'InstagramLoginPopup',
-        `width=${width},height=${height},left=${left},top=${top},personalbar=0,toolbar=0,scrollbars=0,resizable=0`
-      )
-    } else {
-      throw new Error('Could not retrieve Instagram authorization URL')
-    }
-  } catch (err) {
-    emit('toast-message', err.message || 'Failed to initialize Instagram linking ❌')
-  } finally {
-    linkingLoading.value = false
-  }
-}
+// Track total ratings given by the user
+const totalRatingsGiven = ref(0)
 
-const handleMessageEvent = async (event) => {
-  const allowedOrigins = [
-    window.location.origin,
-    'https://localhost:5173',
-    'https://127.0.0.1:5173'
-  ]
-  if (!allowedOrigins.includes(event.origin)) return
+const loadRatingsCounts = async () => {
+  const matches = playedMatches.value
+  if (matches.length === 0) return
   
-  if (event.data && event.data.type === 'instagram_link_success') {
-    emit('toast-message', 'Instagram account linked successfully! 🎉')
-    showSettingsModal.value = false
-    await store.init()
-  } else if (event.data && event.data.type === 'instagram_link_failed') {
-    emit('toast-message', event.data.message || 'Instagram linking failed ❌')
+  let totalRated = 0
+  for (const match of matches) {
+    try {
+      const data = await store.getMatchRatings(match.id)
+      if (data && Array.isArray(data)) {
+        const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
+        totalRated += data.filter(r => Number(r.rater_id) === Number(uid)).length
+      }
+    } catch (e) {
+      // skip
+    }
   }
+  totalRatingsGiven.value = totalRated
 }
 
 onMounted(() => {
-  window.addEventListener('message', handleMessageEvent)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('message', handleMessageEvent)
+  loadRatingsCounts()
 })
 </script>
 
@@ -801,19 +778,6 @@ onUnmounted(() => {
               <span class="chevron">➔</span>
             </div>
 
-            <!-- Link Instagram -->
-            <div class="menu-tile" :class="{ 'disabled': linkingLoading || currentUser.instagram_id }" @click="handleLinkInstagram">
-              <span class="menu-icon">📸</span>
-              <div class="menu-info">
-                <span class="menu-title">{{ currentUser.instagram_id ? 'Instagram Linked' : 'Link Instagram' }}</span>
-                <span class="menu-subtitle">
-                  {{ currentUser.instagram_id ? `@${currentUser.username || 'Linked'}` : 'Connect your Instagram account' }}
-                </span>
-              </div>
-              <span v-if="linkingLoading" class="loader menu-loader"></span>
-              <span v-else-if="currentUser.instagram_id" class="check-icon">✓</span>
-              <span v-else class="chevron">➔</span>
-            </div>
 
             <div class="menu-tile" @click="handleSettingsInfo('Sportigo platform game guide coming soon! 📑')">
               <span class="menu-icon">🛡️</span>
@@ -833,7 +797,7 @@ onUnmounted(() => {
               <span class="chevron">➔</span>
             </div>
 
-            <div class="menu-tile destructive" @click="() => { showSettingsModal = false; handleLogout(); }">
+            <div class="menu-tile destructive" @click="showLogoutConfirm = true">
               <span class="menu-icon">🚪</span>
               <div class="menu-info">
                 <span class="menu-title">{{ t('signOut') }}</span>
@@ -925,6 +889,23 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+    </Teleport>
+
+    <!-- Logout Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showLogoutConfirm" class="logout-confirm-backdrop" @click="showLogoutConfirm = false">
+          <div class="logout-confirm-card animate-slide-up" @click.stop>
+            <div class="logout-confirm-icon">🚪</div>
+            <h3 class="logout-confirm-title">Sign Out?</h3>
+            <p class="logout-confirm-desc">Are you sure you want to sign out of your account?</p>
+            <div class="logout-confirm-actions">
+              <button class="logout-btn-no" @click="showLogoutConfirm = false">No, Stay</button>
+              <button class="logout-btn-yes" @click="() => { showLogoutConfirm = false; showSettingsModal = false; handleLogout(); }">Yes, Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -1946,5 +1927,101 @@ input:checked + .toggle-slider:before {
   to {
     transform: translateY(0);
   }
+}
+
+/* Logout Confirmation Modal */
+.logout-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 24px;
+}
+
+.logout-confirm-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px 28px 24px;
+  max-width: 320px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.logout-confirm-icon {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
+}
+
+.logout-confirm-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.logout-confirm-desc {
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.logout-confirm-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.logout-btn-no {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 2px solid #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn-no:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.logout-btn-yes {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.logout-btn-yes:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

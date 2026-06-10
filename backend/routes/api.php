@@ -12,8 +12,6 @@ use App\Http\Controllers\UserController;
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
-    Route::get('/auth/instagram/url', [AuthController::class, 'getInstagramUrl']);
-    Route::post('/auth/instagram', [AuthController::class, 'instagramLogin']);
 });
 
 Route::get('/migrate', function () {
@@ -31,7 +29,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [UserController::class, 'show']);
     Route::post('/user/update', [UserController::class, 'update']);
     Route::put('/user', [UserController::class, 'update']);
-    Route::post('/user/link/instagram', [AuthController::class, 'linkInstagram']);
     
     // User Match History
     Route::get('/user/matches', [MatchController::class, 'userMatches']);
@@ -79,6 +76,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/matches/{match}/join',      [MatchController::class, 'join']);
         Route::post('/matches/{match}/leave',     [MatchController::class, 'leave']);
         Route::post('/matches/{match}/result',    [MatchController::class, 'recordResults']);
+        Route::post('/matches/{match}/ratings',   [MatchController::class, 'submitRatings']);
+        Route::get('/matches/{match}/ratings',    [MatchController::class, 'getRatings']);
     });
 });
 

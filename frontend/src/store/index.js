@@ -332,6 +332,23 @@ const markAllNotificationsAsRead = async () => {
   })
 }
 
+const submitPlayerRatings = async (matchId, ratings) => {
+  if (!state.currentUser) return null
+  const data = await safeFetch(`${API_URL}/matches/${matchId}/ratings`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ ratings })
+  })
+  return data
+}
+
+const getMatchRatings = async (matchId) => {
+  const data = await safeFetch(`${API_URL}/matches/${matchId}/ratings`, {
+    headers: getAuthHeaders()
+  })
+  return data
+}
+
 export const store = {
   state,
   isWomenMode,
@@ -351,5 +368,7 @@ export const store = {
   loadChats,
   sendMessage,
   markNotificationAsRead,
-  markAllNotificationsAsRead
+  markAllNotificationsAsRead,
+  submitPlayerRatings,
+  getMatchRatings
 }
