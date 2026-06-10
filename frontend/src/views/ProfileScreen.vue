@@ -1490,6 +1490,33 @@ onMounted(() => {
 /* Toggle settings style */
 .privacy-section {
   margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.language-select-dropdown {
+  padding: 8px 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  color: var(--on-surface);
+  font-size: 0.85rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.language-select-dropdown:hover {
+  background-color: var(--scaffold-bg);
+  border-color: var(--outline);
+}
+
+.language-select-dropdown:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.1);
 }
 
 .setting-switch-tile {
@@ -1703,6 +1730,12 @@ input:checked + .toggle-slider:before {
   .settings-fullscreen-panel {
     width: 100%;
     left: 0;
+  }
+  .settings-panel-header {
+    padding: 20px 24px 16px;
+  }
+  .settings-panel-body {
+    padding: 20px 24px;
   }
 }
 
