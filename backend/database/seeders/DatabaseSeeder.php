@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Ajith',
                 'email' => 'ajith@playconnect.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'password' => \Illuminate\Support\Facades\Hash::make('24681000'),
                 'primary_sport' => 'Football',
                 'skill_tier' => 'Advanced',
                 'gender' => 'male',
@@ -26,101 +26,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        \App\Models\User::updateOrCreate(
-            ['username' => 'admin'],
-            [
-                'name' => 'Admin User',
-                'email' => 'admin@playconnect.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('password'),
-                'primary_sport' => 'Tennis',
-                'skill_tier' => 'Expert',
-                'gender' => 'male',
-                'avatar' => 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=150',
-                'phone' => '+91 99999 88888',
-                'bio' => 'System administrator and sports coordinator.',
-                'role' => 'athlete'
-            ]
-        );
 
-        \App\Models\User::updateOrCreate(
-            ['username' => 'wembley'],
-            [
-                'name' => 'Wembley Arena',
-                'email' => 'wembley@playconnect.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('password'),
-                'phone' => '+91 99999 77777',
-                'bio' => 'World-class turf and sports facilities in Wembley.',
-                'role' => 'venue',
-                'avatar' => 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=150',
-                'primary_sport' => 'Football',
-                'skill_tier' => 'Advanced',
-                'gender' => 'male'
-            ]
-        );
-
-        \App\Models\User::updateOrCreate(
-            ['username' => 'stadium'],
-            [
-                'name' => 'Stadium Turf',
-                'email' => 'stadium@playconnect.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('password'),
-                'phone' => '+91 99999 66666',
-                'bio' => 'Premium multi-sport stadium turf for local teams.',
-                'role' => 'venue',
-                'avatar' => 'https://images.unsplash.com/photo-1518063319789-7217e6706b04?auto=format&fit=crop&q=80&w=150',
-                'primary_sport' => 'Football',
-                'skill_tier' => 'Advanced',
-                'gender' => 'male'
-            ]
-        );
-
-        \App\Models\User::updateOrCreate(
-            ['username' => 'camp_nou'],
-            [
-                'name' => 'Camp Nou Turf',
-                'email' => 'camp_nou@playconnect.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('password'),
-                'phone' => '+91 99999 55555',
-                'bio' => 'State of the art soccer pitches and coaching facilities.',
-                'role' => 'venue',
-                'avatar' => 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&q=80&w=150',
-                'primary_sport' => 'Football',
-                'skill_tier' => 'Advanced',
-                'gender' => 'male'
-            ]
-        );
-
-        \App\Models\User::updateOrCreate(
-            ['username' => 'virat'],
-            [
-                'name' => 'Virat Kohli',
-                'email' => 'virat@playconnect.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('password'),
-                'primary_sport' => 'Cricket',
-                'skill_tier' => 'Professional',
-                'gender' => 'male',
-                'avatar' => 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150',
-                'phone' => '+91 98765 00001',
-                'bio' => 'Professional cricketer. Love competitive matches.',
-                'role' => 'athlete'
-            ]
-        );
-
-        \App\Models\User::updateOrCreate(
-            ['username' => 'sunil'],
-            [
-                'name' => 'Sunil Chhetri',
-                'email' => 'sunil@playconnect.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('password'),
-                'primary_sport' => 'Football',
-                'skill_tier' => 'Professional',
-                'gender' => 'male',
-                'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150',
-                'phone' => '+91 98765 00002',
-                'bio' => 'Striker. Always looking for a good football match.',
-                'role' => 'athlete'
-            ]
-        );
 
         \App\Models\User::updateOrCreate(
             ['username' => 'saina'],
@@ -288,102 +194,6 @@ class DatabaseSeeder extends Seeder
             'banner_url' => 'https://images.unsplash.com/photo-1595435066319-3544d6735be5?auto=format&fit=crop&q=80&w=600'
         ]);
 
-        // Seed initial sync storage values for venues so they are not empty on first login
-        \App\Models\StorageSync::updateOrCreate(
-            ['key' => 'venue_registry'],
-            ['value' => json_encode(['wembley', 'stadium', 'camp_nou'])]
-        );
 
-        // Wembley Arena
-        \App\Models\StorageSync::updateOrCreate(
-            ['key' => 'venueName_wembley'],
-            ['value' => 'Wembley Arena']
-        );
-        \App\Models\StorageSync::updateOrCreate(
-            ['key' => 'venueLocation_wembley'],
-            ['value' => 'London, UK']
-        );
-        \App\Models\StorageSync::updateOrCreate(
-            ['key' => 'venue_pitches_wembley'],
-            ['value' => json_encode([
-                [
-                    'id' => 1,
-                    'name' => 'Main Futsal Arena',
-                    'type' => 'Football 5v5',
-                    'nextSlots' => [
-                        ['time' => '05:00 PM - 06:00 PM', 'status' => 'Vacant'],
-                        ['time' => '06:00 PM - 07:00 PM', 'status' => 'Vacant'],
-                        ['time' => '07:00 PM - 08:00 PM', 'status' => 'Vacant']
-                    ]
-                ],
-                [
-                    'id' => 2,
-                    'name' => 'Wembley Grass Court',
-                    'type' => 'Football 7v7',
-                    'nextSlots' => [
-                        ['time' => '06:00 PM - 07:30 PM', 'status' => 'Vacant'],
-                        ['time' => '07:30 PM - 09:00 PM', 'status' => 'Vacant']
-                    ]
-                ]
-            ])]
-        );
-
-        // Stadium Turf
-        \App\Models\StorageSync::updateOrCreate(
-            ['key' => 'venueName_stadium'],
-            ['value' => 'Stadium Turf']
-        );
-        \App\Models\StorageSync::updateOrCreate(
-            ['key' => 'venueLocation_stadium'],
-            ['value' => 'Ernakulam, Kochi']
-        );
-        \App\Models\StorageSync::updateOrCreate(
-            ['key' => 'venue_pitches_stadium'],
-            ['value' => json_encode([
-                [
-                    'id' => 1,
-                    'name' => 'Stadium Pitch A',
-                    'type' => 'Football 5v5',
-                    'nextSlots' => [
-                        ['time' => '04:00 PM - 05:00 PM', 'status' => 'Vacant'],
-                        ['time' => '05:00 PM - 06:00 PM', 'status' => 'Vacant'],
-                        ['time' => '06:00 PM - 07:00 PM', 'status' => 'Vacant']
-                    ]
-                ],
-                [
-                    'id' => 2,
-                    'name' => 'Stadium Tennis Court',
-                    'type' => 'Tennis Singles',
-                    'nextSlots' => [
-                        ['time' => '08:00 AM - 09:00 AM', 'status' => 'Vacant'],
-                        ['time' => '09:00 AM - 10:00 AM', 'status' => 'Vacant']
-                    ]
-                ]
-            ])]
-        );
-
-        // Camp Nou Turf
-        \App\Models\StorageSync::updateOrCreate(
-            ['key' => 'venueName_camp_nou'],
-            ['value' => 'Camp Nou Turf']
-        );
-        \App\Models\StorageSync::updateOrCreate(
-            ['key' => 'venueLocation_camp_nou'],
-            ['value' => 'Barcelona, Spain']
-        );
-        \App\Models\StorageSync::updateOrCreate(
-            ['key' => 'venue_pitches_camp_nou'],
-            ['value' => json_encode([
-                [
-                    'id' => 1,
-                    'name' => 'Camp Nou Pitch',
-                    'type' => 'Football 11v11',
-                    'nextSlots' => [
-                        ['time' => '05:00 PM - 07:00 PM', 'status' => 'Vacant'],
-                        ['time' => '07:00 PM - 09:00 PM', 'status' => 'Vacant']
-                    ]
-                ]
-            ])]
-        );
     }
 }

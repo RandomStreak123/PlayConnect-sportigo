@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getPlayerAvatar } from '../utils/sportImageHelper'
 import { store } from '../store'
 import MatchCard from '../components/MatchCard.vue'
@@ -9,22 +9,20 @@ const emit = defineEmits(['open-details', 'open-player'])
 
 const isLoadingPlayers = ref(false)
 
-// Dynamic list of mock players based on store participants
-const players = ref([
-  { id: 101, name: 'Sonu Govind', gender: 'male', profilePicture: '/assets/images/players/images (1).jpg', proximity: 'Proximity Enabled' },
-  { id: 201, name: 'Rahul Sen', gender: 'male', profilePicture: '/assets/images/players/download.jpg', proximity: 'Proximity Enabled' },
-  { id: 202, name: 'Athul Krishna', gender: 'male', profilePicture: '/assets/images/players/download (1).jpg', proximity: 'Proximity Enabled' },
-  { id: 205, name: 'Sandra Paul', gender: 'female', profilePicture: '/assets/images/players/images (2).jpg', proximity: 'Proximity Enabled' },
-  { id: 103, name: 'Anjali Menon', gender: 'female', profilePicture: '/assets/images/players/images (2).jpg', proximity: 'Proximity Enabled' },
-  { id: 102, name: 'Akash Madhav', gender: 'male', profilePicture: '/assets/images/players/download (3).jpg', proximity: 'Proximity Enabled' }
-])
-
-const loadPlayers = () => {
+const loadPlayers = async () => {
   isLoadingPlayers.value = true
-  setTimeout(() => {
+  try {
+    await store.fetchPlayers()
+  } catch (e) {
+    console.error('Failed to fetch players:', e)
+  } finally {
     isLoadingPlayers.value = false
-  }, 600)
+  }
 }
+
+onMounted(() => {
+  loadPlayers()
+})
 
 const upcomingMatches = computed(() => {
   const now = new Date()
@@ -117,20 +115,20 @@ const handleDragEnd = (e) => {
       <div v-if="isLoadingPlayers" class="loader-wrap">
         <span class="loader"></span>
       </div>
-      <div v-else-if="players.length === 0" class="empty-state">
+      <div v-else-if="store.state.players.length === 0" class="empty-state">
         {{ t('noPlayersRegistered') }}
       </div>
       <div 
         v-else
-        v-for="player in players"
+        v-for="player in store.state.players"
         :key="player.id"
         class="player-card"
-        @click="emit('open-player', player, 'Football')"
+        @click="emit('open-player', player, player.primary_sport || 'Football')"
       >
-        <img :src="getPlayerAvatar(player.profilePicture, player.gender)" class="player-avatar" />
+        <img :src="getPlayerAvatar(player.avatar || player.profile_photo || player.profile_picture, player.gender)" class="player-avatar" />
         <span class="player-name">{{ player.name }}</span>
-        <span class="player-sport">FOOTBALL</span>
-        <span class="player-distance">{{ player.proximity }}</span>
+        <span class="player-sport">{{ (player.primary_sport || 'Football').toUpperCase() }}</span>
+        <span class="player-distance">Proximity Enabled</span>
       </div>
     </div>
 

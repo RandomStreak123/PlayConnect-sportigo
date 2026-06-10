@@ -5,6 +5,7 @@ const state = reactive({
   themePreference: localStorage.getItem('sportigo_theme_pref') || 'system',
   language: localStorage.getItem('sportigo_language') || 'en',
   matches: [],
+  players: [],
   activities: [],
   notifications: [],
   chats: {},
@@ -99,8 +100,10 @@ const init = async () => {
       })
       state.matches = combined
     }
-    if (Array.isArray(activitiesData)) {
-      state.activities = activitiesData
+    if (activitiesData) {
+      state.activities = Array.isArray(activitiesData)
+        ? activitiesData
+        : (Array.isArray(activitiesData.data) ? activitiesData.data : [])
     }
     if (notificationsData && Array.isArray(notificationsData.data)) {
       state.notifications = notificationsData.data.map(n => ({
@@ -234,7 +237,11 @@ const joinMatch = async (matchId) => {
   }
   // Refresh activities
   const acts = await safeFetch(`${API_URL}/activities`, { headers: getAuthHeaders() })
-  if (Array.isArray(acts)) state.activities = acts
+  if (acts) {
+    state.activities = Array.isArray(acts)
+      ? acts
+      : (Array.isArray(acts.data) ? acts.data : [])
+  }
 }
 
 const leaveMatch = async (matchId) => {
@@ -284,7 +291,11 @@ const createMatch = async (sportType, title, dateTime, location, maxSlots, skill
     state.matches.unshift(data)
     safeFetch(`${API_URL}/activities`, { headers: getAuthHeaders() })
       .then(acts => {
-        if (Array.isArray(acts)) state.activities = acts
+        if (acts) {
+          state.activities = Array.isArray(acts)
+            ? acts
+            : (Array.isArray(acts.data) ? acts.data : [])
+        }
       })
       .catch(e => console.warn("Failed to fetch activities asynchronously:", e));
     return data
@@ -380,6 +391,48 @@ const getMatchRatings = async (matchId) => {
   return data
 }
 
+const fetchPlayers = async (search = '') => {
+  const headers = getAuthHeaders()
+  const url = search ? `${API_URL}/players?search=${encodeURIComponent(search)}` : `${API_URL}/players`
+  const data = await safeFetch(url, { headers })
+  if (data && data.success) {
+    state.players = data.data || []
+    return state.players
+  }
+  return []
+}
+
+const fetchMatches = async (filters = {}) => {
+  const headers = getAuthHeaders()
+  const params = new URLSearchParams()
+  if (filters.sportType) params.append('sport_type', filters.sportType)
+  if (filters.skillLevel) params.append('skill_level', filters.skillLevel)
+  if (filters.search) params.append('search', filters.search)
+  if (filters.womenOnly !== undefined) params.append('women_only', filters.womenOnly ? '1' : '0')
+  if (filters.cursor) params.append('cursor', filters.cursor)
+
+  const url = `${API_URL}/matches?${params.toString()}`
+  const data = await safeFetch(url, { headers })
+  if (data && data.data) {
+    if (filters.cursor) {
+      const existingIds = new Set(state.matches.map(m => m.id))
+      data.data.forEach(m => {
+        if (!existingIds.has(m.id)) {
+          state.matches.push(m)
+        }
+      })
+    } else {
+      state.matches = data.data
+    }
+    return {
+      data: data.data,
+      next_cursor: data.next_cursor,
+      has_more: data.has_more
+    }
+  }
+  return { data: [], next_cursor: null, has_more: false }
+}
+
 export const store = {
   state,
   isWomenMode,
@@ -402,5 +455,7 @@ export const store = {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   submitPlayerRatings,
-  getMatchRatings
+  getMatchRatings,
+  fetchPlayers,
+  fetchMatches
 }

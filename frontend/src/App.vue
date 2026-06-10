@@ -115,8 +115,19 @@ const openMatchDetails = (match) => {
   showDetailsModal.value = true
 }
 
-const handleApplyFilters = (filters) => {
-  triggerSnackbar(`Filtered search by ${filters.sport || 'all'} matches!`)
+const handleApplyFilters = async (filters) => {
+  try {
+    const backendFilters = {}
+    if (filters.search) backendFilters.search = filters.search
+    if (filters.sport && filters.sport !== 'All') backendFilters.sportType = filters.sport
+    if (filters.skill && filters.skill !== 'All') backendFilters.skillLevel = filters.skill
+
+    await store.fetchMatches(backendFilters)
+    triggerSnackbar(`Filtered search applied!`)
+  } catch (e) {
+    console.error('Failed to filter matches:', e)
+    triggerSnackbar(`Failed to apply filters`)
+  }
 }
 
 // Theme selector
