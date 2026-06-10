@@ -393,6 +393,8 @@ const isWomenTheme = computed(() => {
       :show="showSearchModal"
       @close="showSearchModal = false"
       @apply-filters="handleApplyFilters"
+      @open-player="openPlayerReveal"
+      @open-details="openMatchDetails"
     />
 
     <!-- Notifications modal list -->
