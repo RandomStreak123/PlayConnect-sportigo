@@ -29,6 +29,7 @@ class UserTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/user/update', [
             'name' => 'Updated Name',
+            'email' => 'updated@example.com',
             'phone' => '+1234567890',
             'bio' => 'A new custom bio',
             'primary_sport' => 'Football',
@@ -41,6 +42,7 @@ class UserTest extends TestCase
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
             'name' => 'Updated Name',
+            'email' => 'updated@example.com',
             'phone' => '+1234567890',
             'bio' => 'A new custom bio',
             'primary_sport' => 'Football',

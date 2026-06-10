@@ -188,13 +188,14 @@ const logout = async () => {
   localStorage.removeItem('sportigo_token')
 }
 
-const updateProfile = async (name, gender, avatar, bio, primarySport, skillTier) => {
+const updateProfile = async (name, gender, avatar, bio, primarySport, skillTier, email) => {
   if (!state.currentUser) return
   const body = { name, gender }
   if (avatar) body.avatar = avatar
   if (bio !== undefined) body.bio = bio
   if (primarySport !== undefined) body.primary_sport = primarySport
   if (skillTier !== undefined) body.skill_tier = skillTier
+  if (email !== undefined) body.email = email
 
   const data = await safeFetch(`${API_URL}/user`, {
     method: 'PUT',

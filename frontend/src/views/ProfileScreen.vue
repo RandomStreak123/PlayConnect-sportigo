@@ -363,6 +363,7 @@ const showSettingsModal = ref(false)
 const isSavingProfile = ref(false)
 
 const editName = ref('')
+const editEmail = ref('')
 const editBio = ref('')
 const editSport = ref('')
 const editSkill = ref('')
@@ -370,6 +371,7 @@ const editGender = ref('')
 
 const openEditModal = () => {
   editName.value = currentUser.value.name || ''
+  editEmail.value = currentUser.value.email || ''
   editBio.value = currentUser.value.bio || ''
   editSport.value = currentUser.value.primary_sport || 'Football'
   editSkill.value = currentUser.value.skill_tier || 'Intermediate'
@@ -393,7 +395,8 @@ const saveProfileDetails = async () => {
       null, // keep current avatar
       editBio.value.trim(),
       editSport.value,
-      editSkill.value
+      editSkill.value,
+      editEmail.value.trim()
     )
     
     emit('toast-message', 'Profile details updated successfully! 🎉')
@@ -827,6 +830,17 @@ onMounted(() => {
                 v-model="editName"
                 type="text" 
                 placeholder="e.g. Champ"
+                class="form-input"
+              />
+            </div>
+
+            <!-- Email -->
+            <div class="input-group">
+              <label class="input-label">Email Address (for Google Login Link)</label>
+              <input 
+                v-model="editEmail"
+                type="email" 
+                placeholder="e.g. user@example.com"
                 class="form-input"
               />
             </div>
