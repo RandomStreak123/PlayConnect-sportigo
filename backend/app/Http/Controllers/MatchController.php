@@ -312,19 +312,6 @@ class MatchController extends Controller
         ]);
     }
 
-    public function mine(Request $request)
-    {
-        $user = auth()->user();
-        $matches = SportsMatch::with(['user', 'participants'])
-            ->whereHas('participants', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->orderBy('date_time', 'desc')
-            ->get();
-
-        return response()->json($matches);
-    }
-
     /**
      * Submit ratings for players in a match.
      */
