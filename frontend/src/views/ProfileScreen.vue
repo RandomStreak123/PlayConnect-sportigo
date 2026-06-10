@@ -505,7 +505,6 @@ onMounted(() => {
     <div class="profile-card">
       <div class="avatar-wrap">
         <img :src="avatarUrl" class="card-avatar" @error="(e) => e.target.src = '/assets/images/players/download.jpg'" />
-        <span class="avatar-online-dot"></span>
         <button v-if="isCurrentUser" class="camera-btn" @click="fileInput.click()" :disabled="isUploading">
           <span v-if="isUploading">⏳</span>
           <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h3l2-3h6l2 3h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -1009,17 +1008,7 @@ onMounted(() => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
-.avatar-online-dot {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 16px;
-  height: 16px;
-  background-color: #4caf50;
-  border: 3px solid #ffffff;
-  border-radius: 50%;
-  z-index: 3;
-}
+/* avatar-online-dot removed */
 
 .camera-btn {
   position: absolute;
