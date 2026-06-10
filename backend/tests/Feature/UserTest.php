@@ -51,6 +51,25 @@ class UserTest extends TestCase
         ]);
     }
 
+    public function test_can_update_user_profile_with_null_email()
+    {
+        $user = User::factory()->create([
+            'email' => 'old@example.com',
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/user/update', [
+            'name' => 'Updated Name',
+            'email' => null,
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => null,
+        ]);
+    }
+
     public function test_can_retrieve_all_users()
     {
         $user = User::factory()->create();

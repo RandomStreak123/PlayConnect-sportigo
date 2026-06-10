@@ -195,7 +195,9 @@ const updateProfile = async (name, gender, avatar, bio, primarySport, skillTier,
   if (bio !== undefined) body.bio = bio
   if (primarySport !== undefined) body.primary_sport = primarySport
   if (skillTier !== undefined) body.skill_tier = skillTier
-  if (email !== undefined) body.email = email
+  if (email !== undefined) {
+    body.email = (typeof email === 'string' && email.trim() === '') ? null : email
+  }
 
   const data = await safeFetch(`${API_URL}/user`, {
     method: 'PUT',
