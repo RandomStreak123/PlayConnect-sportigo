@@ -18,6 +18,7 @@ class ApiConstants {
   static const String register = '/register';
   static const String logout = '/logout';
   static const String user = '/user';
+  static const String players = '/players';
 
   // Match endpoints
   static const String matches = '/matches';

@@ -9,6 +9,8 @@ class UserModel {
   final String? gender;
   final bool hidePhone;
   final String? themePreference;
+  final String? primarySport;
+  final String? skillTier;
 
   UserModel({
     required this.id,
@@ -19,6 +21,8 @@ class UserModel {
     this.gender,
     this.hidePhone = false,
     this.themePreference = 'system',
+    this.primarySport,
+    this.skillTier,
   });
 
   UserModel copyWith({
@@ -30,6 +34,8 @@ class UserModel {
     String? gender,
     bool? hidePhone,
     String? themePreference,
+    String? primarySport,
+    String? skillTier,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -40,6 +46,8 @@ class UserModel {
       gender: gender ?? this.gender,
       hidePhone: hidePhone ?? this.hidePhone,
       themePreference: themePreference ?? this.themePreference,
+      primarySport: primarySport ?? this.primarySport,
+      skillTier: skillTier ?? this.skillTier,
     );
   }
 
@@ -65,6 +73,8 @@ class UserModel {
       gender: json['gender'],
       hidePhone: json['hide_phone'] == 1 || json['hide_phone'] == true,
       themePreference: json['theme_preference'] ?? 'system',
+      primarySport: json['primary_sport'],
+      skillTier: json['skill_tier'],
     );
   }
 
@@ -78,6 +88,8 @@ class UserModel {
       'gender': gender,
       'hide_phone': hidePhone ? 1 : 0,
       'theme_preference': themePreference,
+      'primary_sport': primarySport,
+      'skill_tier': skillTier,
     };
   }
 }

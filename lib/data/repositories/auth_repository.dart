@@ -296,12 +296,17 @@ class AuthRepository {
     }
   }
 
-  Future<List<UserModel>> getPlayers() async {
+  Future<List<UserModel>> getPlayers({String? search}) async {
     final token = await _getToken();
     if (token == null) throw Exception('User not authenticated');
 
+    final queryParams = search != null && search.isNotEmpty ? {'search': search} : null;
+    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.players}').replace(
+      queryParameters: queryParams,
+    );
+
     final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/players'),
+      uri,
       headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
