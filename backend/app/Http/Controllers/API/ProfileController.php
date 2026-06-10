@@ -110,11 +110,18 @@ class ProfileController extends Controller
     public function players(Request $request)
     {
         $currentUser = $request->user();
-        
-        $players = User::where('id', '!=', $currentUser->id)
-            ->latest()
-            ->take(15)
-            ->get();
+        $query = User::where('id', '!=', $currentUser->id);
+
+        if ($request->filled('search')) {
+            $searchTerm = '%' . $request->input('search') . '%';
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', $searchTerm)
+                  ->orWhere('username', 'like', $searchTerm)
+                  ->orWhere('primary_sport', 'like', $searchTerm);
+            });
+        }
+
+        $players = $query->latest()->take(15)->get();
             
         return response()->json([
             'success' => true,

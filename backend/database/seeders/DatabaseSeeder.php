@@ -90,6 +90,54 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        \App\Models\User::updateOrCreate(
+            ['username' => 'virat'],
+            [
+                'name' => 'Virat Kohli',
+                'email' => 'virat@playconnect.com',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'primary_sport' => 'Cricket',
+                'skill_tier' => 'Professional',
+                'gender' => 'male',
+                'avatar' => 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150',
+                'phone' => '+91 98765 00001',
+                'bio' => 'Professional cricketer. Love competitive matches.',
+                'role' => 'athlete'
+            ]
+        );
+
+        \App\Models\User::updateOrCreate(
+            ['username' => 'sunil'],
+            [
+                'name' => 'Sunil Chhetri',
+                'email' => 'sunil@playconnect.com',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'primary_sport' => 'Football',
+                'skill_tier' => 'Professional',
+                'gender' => 'male',
+                'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150',
+                'phone' => '+91 98765 00002',
+                'bio' => 'Striker. Always looking for a good football match.',
+                'role' => 'athlete'
+            ]
+        );
+
+        \App\Models\User::updateOrCreate(
+            ['username' => 'saina'],
+            [
+                'name' => 'Saina Nehwal',
+                'email' => 'saina@playconnect.com',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'primary_sport' => 'Badminton',
+                'skill_tier' => 'Professional',
+                'gender' => 'female',
+                'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
+                'phone' => '+91 98765 00003',
+                'bio' => 'Badminton player. Let\'s play some singles or doubles!',
+                'role' => 'athlete'
+            ]
+        );
+
         Tournament::create([
             'title' => 'Monsoon Futsal League 2026',
             'category' => 'Football',
