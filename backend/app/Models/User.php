@@ -87,6 +87,7 @@ class User extends Authenticatable
     public function setPhoneAttribute($value)
     {
         $this->attributes['phone_number'] = $value;
+        $this->attributes['phone'] = $value;
     }
 
     public function setAvatarAttribute($value)

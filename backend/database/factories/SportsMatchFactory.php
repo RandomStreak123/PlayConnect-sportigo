@@ -2,16 +2,16 @@
 
 namespace Database\Factories;
 
-use App\Models\SportMatch;
+use App\Models\SportsMatch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<SportMatch>
+ * @extends Factory<SportsMatch>
  */
-class SportMatchFactory extends Factory
+class SportsMatchFactory extends Factory
 {
-    protected $model = SportMatch::class;
+    protected $model = SportsMatch::class;
 
     private static array $sportTypes  = ['Football', 'Basketball', 'Tennis', 'Padel', 'Badminton', 'Cricket'];
     private static array $skillLevels = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];

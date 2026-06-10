@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\SportMatch;
+use App\Models\SportsMatch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -16,19 +16,19 @@ use App\Services\ActivityService;
  */
 class MatchSlotService
 {
-    public function syncMatch(SportMatch $match, bool $save = false): SportMatch
+    public function syncMatch(SportsMatch $match, bool $save = false): SportsMatch
     {
         $match->syncAvailableSlots($save);
 
         if ($save) {
-            return $match->fresh(['users:id,name,profile_picture']);
+            return $match->fresh(['participants:id,name,profile_picture']);
         }
         return $match;
     }
 
     public function syncCollection(Collection $matches, bool $save = false): Collection
     {
-        $matches->each(fn (SportMatch $match) => $match->syncAvailableSlots($save));
+        $matches->each(fn (SportsMatch $match) => $match->syncAvailableSlots($save));
 
         return $matches;
     }
@@ -36,13 +36,13 @@ class MatchSlotService
     /**
      * @param  array<string, mixed>  $validated
      */
-    public function createMatch(array $validated, User $user, bool $womenOnly): SportMatch
+    public function createMatch(array $validated, User $user, bool $womenOnly): SportsMatch
     {
         $maxSlots = (int) $validated['available_slots'];
         $openSlots = max(0, $maxSlots - 1);
 
         return DB::transaction(function () use ($validated, $womenOnly, $maxSlots, $user, $openSlots) {
-            $match = SportMatch::create([
+            $match = SportsMatch::create([
                 ...collect($validated)->except('available_slots')->all(),
                 'available_slots' => $openSlots,
                 'max_slots' => $maxSlots,
@@ -50,7 +50,7 @@ class MatchSlotService
                 'creator_id' => $user->id,
             ]);
 
-            $match->users()->attach($user->id);
+            $match->participants()->attach($user->id);
             $match->syncAvailableSlots();
 
             try {
@@ -69,15 +69,15 @@ class MatchSlotService
                 Log::error('Activity feed failed: ' . $e->getMessage());
             }
 
-            return $match->load('users:id,name,profile_picture');
+            return $match->load('participants:id,name,profile_picture');
         });
     }
 
-    public function updateOpenSlots(SportMatch $match, int $totalSlots): SportMatch
+    public function updateOpenSlots(SportsMatch $match, int $totalSlots): SportsMatch
     {
         return DB::transaction(function () use ($match, $totalSlots) {
-            $match = SportMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
-            $joined = $match->users()->count();
+            $match = SportsMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
+            $joined = $match->participants()->count();
             $openSlots = max(0, $totalSlots - $joined);
             
             $match->update([
@@ -86,31 +86,31 @@ class MatchSlotService
             ]);
             $match->syncAvailableSlots();
 
-            return $match->load('users:id,name,profile_picture');
+            return $match->load('participants:id,name,profile_picture');
         });
     }
 
     /**
-     * @return array{error?: string, status?: int, match?: SportMatch}
+     * @return array{error?: string, status?: int, match?: SportsMatch}
      */
-    public function join(SportMatch $match, User $user): array
+    public function join(SportsMatch $match, User $user): array
     {
         return DB::transaction(function () use ($match, $user) {
-            $match = SportMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
+            $match = SportsMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
 
-            if ($match->users()->where('user_id', $user->id)->exists()) {
+            if ($match->participants()->where('user_id', $user->id)->exists()) {
                 return ['error' => 'Already joined', 'status' => 409];
             }
 
-            if ($match->users()->count() >= $match->max_slots) {
+            if ($match->participants()->count() >= $match->max_slots) {
                 return ['error' => 'Match is full', 'status' => 409];
             }
 
-            $match->users()->attach($user->id);
+            $match->participants()->attach($user->id);
             $match->syncAvailableSlots();
 
             // Create notification for match creator if they are not the joining user
-            if ($match->creator_id !== $user->id) {
+            if ((int) $match->creator_id !== (int) $user->id) {
                 try {
                     \App\Models\Notification::create([
                         'user_id' => $match->creator_id,
@@ -144,20 +144,20 @@ class MatchSlotService
                 Log::error('Activity feed failed: ' . $e->getMessage());
             }
 
-            return ['match' => $match->load('users:id,name,profile_picture')];
+            return ['match' => $match->load('participants:id,name,profile_picture')];
         });
     }
 
     /**
-     * @return array{error?: string, status?: int, match?: SportMatch}
+     * @return array{error?: string, status?: int, match?: SportsMatch}
      */
-    public function leave(SportMatch $match, User $user): array
+    public function leave(SportsMatch $match, User $user): array
     {
-        if (! $match->users()->where('user_id', $user->id)->exists()) {
+        if (! $match->participants()->where('user_id', $user->id)->exists()) {
             return ['error' => 'You are not a member of this match', 'status' => 404];
         }
 
-        if ($match->creator_id === $user->id) {
+        if ((int) $match->creator_id === (int) $user->id) {
             return [
                 'error' => 'Match creators cannot leave. Delete the match instead.',
                 'status' => 403,
@@ -165,12 +165,12 @@ class MatchSlotService
         }
 
         return DB::transaction(function () use ($match, $user) {
-            $match = SportMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
-            $match->users()->detach($user->id);
+            $match = SportsMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
+            $match->participants()->detach($user->id);
             $match->syncAvailableSlots();
 
             // Create notification for match creator if they are not the leaving user
-            if ($match->creator_id !== $user->id) {
+            if ((int) $match->creator_id !== (int) $user->id) {
                 try {
                     \App\Models\Notification::create([
                         'user_id' => $match->creator_id,
@@ -204,7 +204,7 @@ class MatchSlotService
                 Log::error('Activity feed failed: ' . $e->getMessage());
             }
 
-            return ['match' => $match->load('users:id,name,profile_picture')];
+            return ['match' => $match->load('participants:id,name,profile_picture')];
         });
     }
 }

@@ -13,11 +13,13 @@ class StorageSyncController extends Controller
             $keys = [$request->input('key')];
         }
 
+        $query = \App\Models\StorageSync::where('user_id', auth()->id());
+
         if (empty($keys)) {
-            return response()->json(\App\Models\StorageSync::all()->pluck('value', 'key'));
+            return response()->json($query->get()->pluck('value', 'key'));
         }
 
-        $items = \App\Models\StorageSync::whereIn('key', $keys)->get()->pluck('value', 'key');
+        $items = $query->whereIn('key', $keys)->get()->pluck('value', 'key');
         return response()->json($items);
     }
 
@@ -29,7 +31,10 @@ class StorageSyncController extends Controller
         ]);
 
         $item = \App\Models\StorageSync::updateOrCreate(
-            ['key' => $request->key],
+            [
+                'user_id' => auth()->id(),
+                'key' => $request->key
+            ],
             ['value' => $request->value]
         );
 

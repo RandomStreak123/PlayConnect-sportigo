@@ -37,3 +37,13 @@ backend/storage/logs/
 *.sln
 *.sw?
 
+
+# Flutter/Dart build and tool directories
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.iml
+
+

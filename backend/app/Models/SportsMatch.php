@@ -47,6 +47,9 @@ class SportsMatch extends Model
         'skillLevel',
         'category',
         'date',
+        'slots_left',
+        'slotsLeft',
+        'users',
     ];
 
     public function user()
@@ -57,6 +60,37 @@ class SportsMatch extends Model
     public function participants()
     {
         return $this->belongsToMany(User::class, 'sport_match_user', 'sport_match_id', 'user_id')->withPivot('result');
+    }
+
+    public function getUsersAttribute()
+    {
+        return $this->participants;
+    }
+
+    public function getSlotsLeftAttribute(): int
+    {
+        $max = (int) ($this->max_slots ?? 0);
+        return max(0, $max - $this->getJoinedCountAttribute());
+    }
+
+    public function syncAvailableSlots(bool $save = true): void
+    {
+        $joined = $this->relationLoaded('participants')
+            ? $this->participants->count()
+            : $this->participants()->count();
+
+        $originalMax = $this->max_slots;
+        $originalAvailable = $this->available_slots;
+
+        if ($this->max_slots === null || $this->max_slots < $joined) {
+            $this->max_slots = max($joined, (int) $this->available_slots + $joined);
+        }
+
+        $this->available_slots = max(0, $this->max_slots - $joined);
+
+        if ($save && ($this->max_slots !== $originalMax || $this->available_slots !== $originalAvailable || $this->isDirty())) {
+            $this->saveQuietly();
+        }
     }
 
     // Accessors for frontend / api camelCase formatting
@@ -87,7 +121,9 @@ class SportsMatch extends Model
 
     public function getJoinedCountAttribute()
     {
-        return $this->participants()->count();
+        return $this->relationLoaded('participants')
+            ? $this->participants->count()
+            : $this->participants()->count();
     }
 
     public function getOrganizerAttribute()

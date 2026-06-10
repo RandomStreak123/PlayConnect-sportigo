@@ -5,47 +5,98 @@ namespace App\Http\Controllers;
 use App\Models\SportsMatch;
 use App\Models\Activity;
 use App\Models\PlayerRating;
+use App\Services\MatchSlotService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class MatchController extends Controller
 {
-    public function index()
+    private const SPORT_TYPES = [
+        'Football', 'Basketball', 'Tennis', 'Padel', 'Badminton', 'Cricket',
+    ];
+
+    private const SKILL_LEVELS = [
+        'Beginner', 'Intermediate', 'Advanced', 'Professional',
+    ];
+
+    public function __construct(
+        private readonly MatchSlotService $slotService,
+    ) {}
+
+    public function index(Request $request)
     {
-        return SportsMatch::with(['user', 'participants'])->get();
+        $query = SportsMatch::with(['user', 'participants']);
+
+        if ($request->filled('sport_type')) {
+            $query->where('sport_type', $request->input('sport_type'));
+        }
+
+        if ($request->filled('skill_level')) {
+            $query->where('skill_level', $request->input('skill_level'));
+        }
+
+        if ($request->filled('search')) {
+            // Prefix search only — allows index usage on title/location.
+            $searchTerm = $request->input('search').'%';
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', $searchTerm)
+                    ->orWhere('location', 'like', $searchTerm);
+            });
+        }
+
+        if ($request->has('women_only')) {
+            $query->where('women_only', $request->boolean('women_only'));
+        }
+
+        /** @var \Illuminate\Pagination\CursorPaginator $paginator */
+        $paginator = $query
+            ->where('date_time', '>=', now())
+            ->orderBy('date_time')
+            ->orderBy('id')          // secondary sort for stable cursor
+            ->cursorPaginate(15, ['*'], 'cursor', $request->input('cursor'));
+
+        // Sync slots in-memory on the current page only (not the whole table)
+        $this->slotService->syncCollection($paginator->getCollection());
+
+        return response()->json([
+            'data'        => $paginator->items(),
+            'next_cursor' => $paginator->nextCursor()?->encode(),
+            'has_more'    => $paginator->hasMorePages(),
+        ]);
+    }
+
+    public function mine(Request $request)
+    {
+        $user = auth()->user();
+        $matches = SportsMatch::with(['user', 'participants'])
+            ->whereHas('participants', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->orderBy('date_time', 'desc')
+            ->get();
+
+        $this->slotService->syncCollection($matches);
+
+        return response()->json($matches);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'title' => 'required|string',
-            'category' => 'nullable|string',
-            'sport_type' => 'nullable|string',
-            'location' => 'required|string',
-            'date' => 'nullable|string',
-            'date_time' => 'nullable|string',
-            'price' => 'nullable|string',
-            'max_slots' => 'nullable|integer',
-            'maxSlots' => 'nullable|integer',
-            'skill_level' => 'nullable|string',
-            'skillLevel' => 'nullable|string',
-            'is_women_only' => 'boolean|nullable',
-            'women_only' => 'boolean|nullable',
+        $validated = $request->validate([
+            'sport_type' => ['required', 'string', Rule::in(self::SPORT_TYPES)],
+            'title' => 'required|string|max:255',
+            'date_time' => 'required|date',
+            'location' => 'required|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'available_slots' => 'required|integer|min:1',
+            'skill_level' => ['required', 'string', Rule::in(self::SKILL_LEVELS)],
+            'women_only' => 'nullable|boolean',
         ]);
 
-        $sportType = $request->sport_type ?? $request->category ?? 'Football';
-        $dateTime = $request->date_time ?? $request->date ?? now()->toDateTimeString();
-        $maxSlots = $request->max_slots ?? $request->maxSlots ?? 10;
-        $skillLevel = $request->skill_level ?? $request->skillLevel ?? 'Intermediate';
-        $womenOnly = $request->women_only ?? $request->is_women_only ?? false;
-
-        $user = auth()->user();
-        if ($womenOnly && strtolower($user->gender) !== 'female') {
-            return response()->json(['message' => 'Only female athletes can host women-only matches.'], 403);
-        }
-
         try {
-            $matchDate = Carbon::parse($dateTime);
+            $matchDate = Carbon::parse($validated['date_time']);
             if ($matchDate->isPast() && $matchDate->diffInHours(Carbon::now(), false) > 2) {
                 return response()->json([
                     'message' => 'Cannot create a match in the past. Please select today or a future date/time.'
@@ -57,199 +108,89 @@ class MatchController extends Controller
             ], 422);
         }
 
-        $match = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $user, $sportType, $dateTime, $maxSlots, $skillLevel, $womenOnly) {
-            $newMatch = SportsMatch::create([
-                'creator_id' => $user->id,
-                'title' => $request->title,
-                'sport_type' => $sportType,
-                'location' => $request->location,
-                'date_time' => $dateTime,
-                'available_slots' => $maxSlots - 1,
-                'max_slots' => $maxSlots,
-                'skill_level' => $skillLevel,
-                'status' => 'open',
-                'women_only' => $womenOnly
-            ]);
+        $womenOnly = $request->boolean('women_only');
 
-            // Only attach as participant if they satisfy the gender restriction
-            if (!($newMatch->women_only && strtolower($user->gender) !== 'female')) {
-                $newMatch->participants()->attach($user->id);
-            }
+        if ($womenOnly && $request->user()->gender !== 'female') {
+            return response()->json([
+                'message' => 'Only female players can create women-only matches.',
+                'error_code' => 'FEMALE_ONLY_MATCH_RESTRICTION',
+            ], 403);
+        }
 
-            // Create activity record
-            Activity::create([
-                'user_id' => $user->id,
-                'type' => 'match_created',
-                'message' => "{$user->name} created a {$sportType} match: \"{$request->title}\" at {$request->location}",
-                'meta' => [
-                    'title' => $request->title,
-                    'location' => $request->location,
-                    'match_id' => $newMatch->id,
-                    'sport_type' => $sportType
-                ]
-            ]);
+        $match = $this->slotService->createMatch(
+            $validated,
+            $request->user(),
+            $womenOnly,
+        );
 
-            return $newMatch;
-        });
-
-        return response()->json($match->load(['user', 'participants']), 201);
+        return response()->json($match, 201);
     }
 
     public function show(SportsMatch $match)
     {
-        return response()->json($match->load(['user', 'participants']));
+        $match->load(['user', 'participants']);
+
+        return response()->json($this->slotService->syncMatch($match));
     }
 
     public function update(Request $request, SportsMatch $match)
     {
-        $request->validate([
-            'title' => 'required|string',
-            'category' => 'nullable|string',
-            'sport_type' => 'nullable|string',
-            'location' => 'required|string',
-            'date' => 'nullable|string',
-            'date_time' => 'nullable|string',
-            'max_slots' => 'nullable|integer',
-            'maxSlots' => 'nullable|integer',
-            'skill_level' => 'nullable|string',
-            'skillLevel' => 'nullable|string',
-            'is_women_only' => 'boolean|nullable',
-            'women_only' => 'boolean|nullable',
-        ]);
-
-        $sportType = $request->sport_type ?? $request->category ?? $match->sport_type;
-        $dateTime = $request->date_time ?? $request->date ?? $match->date_time;
-        $maxSlots = $request->max_slots ?? $request->maxSlots ?? $match->max_slots;
-        $skillLevel = $request->skill_level ?? $request->skillLevel ?? $match->skill_level;
-        $womenOnly = $request->women_only ?? $request->is_women_only ?? $match->women_only;
-
-        $user = auth()->user();
-        if ($womenOnly && strtolower($user->gender) !== 'female') {
-            return response()->json(['message' => 'Only female athletes can host women-only matches.'], 403);
+        if ($match->creator_id !== $request->user()->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        try {
-            $matchDate = Carbon::parse($dateTime);
-            if ($matchDate->isPast() && $matchDate->diffInHours(Carbon::now(), false) > 2) {
+        $validated = $request->validate([
+            'sport_type' => ['sometimes', 'string', Rule::in(self::SPORT_TYPES)],
+            'title' => 'sometimes|string|max:255',
+            'date_time' => 'sometimes|date',
+            'location' => 'sometimes|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'available_slots' => 'sometimes|integer|min:0',
+            'skill_level' => ['sometimes', 'string', Rule::in(self::SKILL_LEVELS)],
+            'women_only' => 'nullable|boolean',
+        ]);
+
+        if (isset($validated['date_time'])) {
+            try {
+                $matchDate = Carbon::parse($validated['date_time']);
+                if ($matchDate->isPast() && $matchDate->diffInHours(Carbon::now(), false) > 2) {
+                    return response()->json([
+                        'message' => 'Cannot update a match to a past date.'
+                    ], 422);
+                }
+            } catch (\Exception $e) {
                 return response()->json([
-                    'message' => 'Cannot update a match to a past date.'
+                    'message' => 'Invalid date or time format.'
                 ], 422);
             }
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Invalid date or time format.'
-            ], 422);
         }
 
-        $participantsCount = $match->participants()->count();
-        $availableSlots = max(0, $maxSlots - $participantsCount);
-        $status = $availableSlots <= 0 ? 'full' : 'open';
-
-        $match->update([
-            'title' => $request->title,
-            'sport_type' => $sportType,
-            'location' => $request->location,
-            'date_time' => $dateTime,
-            'max_slots' => $maxSlots,
-            'available_slots' => $availableSlots,
-            'skill_level' => $skillLevel,
-            'women_only' => $womenOnly,
-            'status' => $status,
-        ]);
-
-        return response()->json($match->load(['user', 'participants']));
-    }
-
-    public function join(SportsMatch $match)
-    {
-        $user = auth()->user();
-        
-        if ($match->women_only && strtolower($user->gender) !== 'female') {
-            return response()->json(['message' => 'This match is restricted to women only.'], 403);
-        }
-
-        if ($match->participants()->where('user_id', $user->id)->exists()) {
-            return response()->json(['message' => 'You have already joined this match.'], 400);
-        }
-
-        if ($match->available_slots <= 0) {
-            return response()->json(['message' => 'This match is already full.'], 400);
-        }
-
-        \Illuminate\Support\Facades\DB::transaction(function () use ($match, $user) {
-            $match->participants()->attach($user->id);
-            $match->decrement('available_slots');
-            if ($match->available_slots <= 0) {
-                $match->update(['status' => 'full']);
+        if ($request->has('women_only')) {
+            $womenOnly = $request->boolean('women_only');
+            if ($womenOnly && $request->user()->gender !== 'female') {
+                return response()->json([
+                    'message' => 'Only female players can set women-only matches.',
+                    'error_code' => 'FEMALE_ONLY_MATCH_RESTRICTION',
+                ], 403);
             }
-
-            // Log activity
-            Activity::create([
-                'user_id' => $user->id,
-                'type' => 'match_joined',
-                'message' => "{$user->name} joined the {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
-                'meta' => [
-                    'title' => $match->title,
-                    'location' => $match->location,
-                    'match_id' => $match->id,
-                    'sport_type' => $match->sport_type
-                ]
-            ]);
-        });
-
-        return response()->json([
-            'message' => 'Successfully joined the match!',
-            'match' => $match->fresh(['user', 'participants'])
-        ]);
-    }
-
-    public function leave(SportsMatch $match)
-    {
-        $user = auth()->user();
-        
-        if (!$match->participants()->where('user_id', $user->id)->exists()) {
-            return response()->json(['message' => 'You are not joined to this match.'], 400);
+            $validated['women_only'] = $womenOnly;
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($match, $user) {
-            $match->participants()->detach($user->id);
-            $match->increment('available_slots');
-            $match->update(['status' => 'open']);
+        if (array_key_exists('available_slots', $validated)) {
+            $match = $this->slotService->updateOpenSlots(
+                $match,
+                (int) $validated['available_slots'],
+            );
+            unset($validated['available_slots']);
+        }
 
-            // Log activity
-            Activity::create([
-                'user_id' => $user->id,
-                'type' => 'match_left',
-                'message' => "{$user->name} left the {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
-                'meta' => [
-                    'title' => $match->title,
-                    'location' => $match->location,
-                    'match_id' => $match->id,
-                    'sport_type' => $match->sport_type
-                ]
-            ]);
-        });
+        if (! empty($validated)) {
+            $match->update($validated);
+            $match = $match->load(['user', 'participants']);
+        }
 
-        return response()->json([
-            'message' => 'Successfully left the match!',
-            'match' => $match->fresh(['user', 'participants'])
-        ]);
-    }
-
-    public function userMatches(Request $request)
-    {
-        $user = auth()->user();
-        
-        // Fetch matches hosted by the user
-        $hostedMatches = SportsMatch::where('creator_id', $user->id)->get();
-        
-        // Fetch matches the user joined
-        $joinedMatches = $user->joinedMatches()->get();
-        
-        // Combine them and ensure no duplicates
-        $allMatches = $hostedMatches->merge($joinedMatches)->unique('id')->values();
-
-        return response()->json($allMatches);
+        return response()->json($match);
     }
 
     public function destroy(SportsMatch $match)
@@ -268,7 +209,62 @@ class MatchController extends Controller
             Activity::where('message', 'like', "%{$match->title}%")->delete();
         });
 
-        return response()->json(['message' => 'Match deleted successfully!']);
+        return response()->noContent();
+    }
+
+    public function join(SportsMatch $match)
+    {
+        $user = auth()->user();
+        if ($match->women_only && $user->gender !== 'female') {
+            return response()->json([
+                'message' => 'This match is restricted to women only.',
+                'error_code' => 'FEMALE_ONLY_MATCH_RESTRICTION',
+            ], 403);
+        }
+
+        $result = $this->slotService->join($match, $user);
+
+        if (isset($result['error'])) {
+            return response()->json(['message' => $result['error']], $result['status']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Successfully joined the match!',
+            'match' => $result['match'],
+        ]);
+    }
+
+    public function leave(SportsMatch $match)
+    {
+        $user = auth()->user();
+        $result = $this->slotService->leave($match, $user);
+
+        if (isset($result['error'])) {
+            return response()->json(['message' => $result['error']], $result['status']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Successfully left the match!',
+            'match' => $result['match'],
+        ]);
+    }
+
+    public function userMatches(Request $request)
+    {
+        $user = auth()->user();
+        
+        // Fetch matches hosted by the user
+        $hostedMatches = SportsMatch::where('creator_id', $user->id)->get();
+        
+        // Fetch matches the user joined
+        $joinedMatches = $user->joinedMatches()->get();
+        
+        // Combine them and ensure no duplicates
+        $allMatches = $hostedMatches->merge($joinedMatches)->unique('id')->values();
+
+        return response()->json($allMatches);
     }
 
     /**

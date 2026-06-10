@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\SportMatch;
+use App\Models\SportsMatch;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,13 +24,13 @@ class MatchControllerTest extends TestCase
         return User::factory()->create($attrs);
     }
 
-    private function createMatch(User $creator, array $attrs = []): SportMatch
+    private function createMatch(User $creator, array $attrs = []): SportsMatch
     {
-        $match = SportMatch::factory()->create(array_merge(
+        $match = SportsMatch::factory()->create(array_merge(
             ['creator_id' => $creator->id],
             $attrs,
         ));
-        $match->users()->attach($creator->id);
+        $match->participants()->attach($creator->id);
         $match->syncAvailableSlots();
 
         return $match;
@@ -44,10 +44,10 @@ class MatchControllerTest extends TestCase
     // ─── Index (paginated) ─────────────────────────────────────────────────────
 
     /** @test */
-    public function index_returns_paginated_json_structure(): void
+    public function test_index_returns_paginated_json_structure(): void
     {
         $user = $this->actingAsUser();
-        SportMatch::factory()->count(3)->create();
+        SportsMatch::factory()->count(3)->create();
 
         $response = $this->actingAs($user)
             ->getJson('/api/matches', $this->jsonHeaders());
@@ -61,11 +61,11 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function index_filters_by_sport_type(): void
+    public function test_index_filters_by_sport_type(): void
     {
         $user = $this->actingAsUser();
-        SportMatch::factory()->create(['sport_type' => 'Football']);
-        SportMatch::factory()->create(['sport_type' => 'Cricket']);
+        SportsMatch::factory()->create(['sport_type' => 'Football']);
+        SportsMatch::factory()->create(['sport_type' => 'Cricket']);
 
         $response = $this->actingAs($user)
             ->getJson('/api/matches?sport_type=Football', $this->jsonHeaders());
@@ -79,11 +79,11 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function index_excludes_past_matches(): void
+    public function test_index_excludes_past_matches(): void
     {
         $user = $this->actingAsUser();
-        SportMatch::factory()->create(['date_time' => now()->subDay()]);
-        SportMatch::factory()->create(['date_time' => now()->addDay()]);
+        SportsMatch::factory()->create(['date_time' => now()->subDay()]);
+        SportsMatch::factory()->create(['date_time' => now()->addDay()]);
 
         $response = $this->actingAs($user)
             ->getJson('/api/matches', $this->jsonHeaders());
@@ -94,7 +94,7 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function unauthenticated_user_cannot_list_matches(): void
+    public function test_unauthenticated_user_cannot_list_matches(): void
     {
         $this->getJson('/api/matches', $this->jsonHeaders())
             ->assertUnauthorized()
@@ -104,7 +104,7 @@ class MatchControllerTest extends TestCase
     // ─── Join ──────────────────────────────────────────────────────────────────
 
     /** @test */
-    public function authenticated_user_can_join_a_match(): void
+    public function test_authenticated_user_can_join_a_match(): void
     {
         $creator = $this->actingAsUser();
         $joiner  = $this->actingAsUser();
@@ -124,7 +124,7 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function joining_returns_updated_slot_count(): void
+    public function test_joining_returns_updated_slot_count(): void
     {
         $creator = $this->actingAsUser();
         $joiner  = $this->actingAsUser();
@@ -139,7 +139,7 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function joining_a_full_match_returns_409(): void
+    public function test_joining_a_full_match_returns_409(): void
     {
         $creator = $this->actingAsUser();
         $joiner  = $this->actingAsUser();
@@ -152,7 +152,7 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function joining_twice_returns_409(): void
+    public function test_joining_twice_returns_409(): void
     {
         $creator = $this->actingAsUser();
         $joiner  = $this->actingAsUser();
@@ -167,7 +167,7 @@ class MatchControllerTest extends TestCase
     // ─── Women-Only Restriction ────────────────────────────────────────────────
 
     /** @test */
-    public function male_user_cannot_join_women_only_match(): void
+    public function test_male_user_cannot_join_women_only_match(): void
     {
         $creator = $this->actingAsUser(['gender' => 'female']);
         $male    = $this->actingAsUser(['gender' => 'male']);
@@ -180,7 +180,7 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function female_user_can_join_women_only_match(): void
+    public function test_female_user_can_join_women_only_match(): void
     {
         $creator = $this->actingAsUser(['gender' => 'female']);
         $female  = $this->actingAsUser(['gender' => 'female']);
@@ -195,12 +195,12 @@ class MatchControllerTest extends TestCase
     // ─── Leave ─────────────────────────────────────────────────────────────────
 
     /** @test */
-    public function participant_can_leave_a_match(): void
+    public function test_participant_can_leave_a_match(): void
     {
         $creator = $this->actingAsUser();
         $joiner  = $this->actingAsUser();
         $match   = $this->createMatch($creator, ['max_slots' => 4]);
-        $match->users()->attach($joiner->id);
+        $match->participants()->attach($joiner->id);
         $match->syncAvailableSlots();
 
         $this->actingAs($joiner)
@@ -215,7 +215,7 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function creator_cannot_leave_their_own_match(): void
+    public function test_creator_cannot_leave_their_own_match(): void
     {
         $creator = $this->actingAsUser();
         $match   = $this->createMatch($creator);
@@ -229,7 +229,7 @@ class MatchControllerTest extends TestCase
     // ─── Store ─────────────────────────────────────────────────────────────────
 
     /** @test */
-    public function authenticated_user_can_create_a_match(): void
+    public function test_authenticated_user_can_create_a_match(): void
     {
         $user = $this->actingAsUser();
 
@@ -252,7 +252,7 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function creating_a_match_with_invalid_sport_type_returns_422(): void
+    public function test_creating_a_match_with_invalid_sport_type_returns_422(): void
     {
         $user = $this->actingAsUser();
 
@@ -270,7 +270,7 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function male_user_cannot_create_women_only_match(): void
+    public function test_male_user_cannot_create_women_only_match(): void
     {
         $user = $this->actingAsUser(['gender' => 'male']);
 
@@ -291,7 +291,7 @@ class MatchControllerTest extends TestCase
     // ─── Delete ────────────────────────────────────────────────────────────────
 
     /** @test */
-    public function creator_can_delete_their_match(): void
+    public function test_creator_can_delete_their_match(): void
     {
         $creator = $this->actingAsUser();
         $match   = $this->createMatch($creator);
@@ -304,7 +304,7 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function non_creator_cannot_delete_a_match(): void
+    public function test_non_creator_cannot_delete_a_match(): void
     {
         $creator  = $this->actingAsUser();
         $attacker = $this->actingAsUser();
