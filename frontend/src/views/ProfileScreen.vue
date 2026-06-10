@@ -910,12 +910,15 @@ onMounted(() => {
       <Transition name="fade">
         <div v-if="showLogoutConfirm" class="logout-confirm-backdrop" @click="showLogoutConfirm = false">
           <div class="logout-confirm-card animate-slide-up" @click.stop>
-            <div class="logout-confirm-icon">🚪</div>
+            <div class="logout-confirm-handle"></div>
+            <div class="logout-confirm-icon-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="logout-svg"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </div>
             <h3 class="logout-confirm-title">Sign Out?</h3>
-            <p class="logout-confirm-desc">Are you sure you want to sign out of your account?</p>
+            <p class="logout-confirm-desc">You will need to log in again.</p>
             <div class="logout-confirm-actions">
-              <button class="logout-btn-no" @click="showLogoutConfirm = false">No, Stay</button>
-              <button class="logout-btn-yes" @click="() => { showLogoutConfirm = false; showSettingsModal = false; handleLogout(); }">Yes, Sign Out</button>
+              <button class="logout-btn-no" @click="showLogoutConfirm = false">Cancel</button>
+              <button class="logout-btn-yes" @click="() => { showLogoutConfirm = false; showSettingsModal = false; handleLogout(); }">Sign Out</button>
             </div>
           </div>
         </div>
@@ -1947,86 +1950,118 @@ input:checked + .toggle-slider:before {
 .logout-confirm-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 9999;
-  padding: 24px;
+}
+
+@media (min-width: 768px) {
+  .logout-confirm-backdrop {
+    align-items: center;
+    padding: 24px;
+  }
 }
 
 .logout-confirm-card {
   background: #ffffff;
-  border-radius: 24px;
-  padding: 32px 28px 24px;
-  max-width: 320px;
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  padding: 16px 24px 32px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.08);
 }
 
-.logout-confirm-icon {
-  font-size: 2.4rem;
-  margin-bottom: 12px;
+@media (min-width: 768px) {
+  .logout-confirm-card {
+    border-radius: var(--radius-lg);
+    max-width: 380px;
+    padding: 24px 28px 32px;
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.logout-confirm-handle {
+  width: 40px;
+  height: 4px;
+  background-color: var(--outline-variant);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.logout-confirm-icon-wrap {
+  width: 56px;
+  height: 56px;
+  background-color: #fee2e2;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 16px;
+}
+
+.logout-svg {
+  display: flex;
+  align-items: center;
 }
 
 .logout-confirm-title {
   font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #0f172a;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--on-surface);
   margin-bottom: 8px;
 }
 
 .logout-confirm-desc {
-  font-size: 0.88rem;
-  color: #64748b;
-  line-height: 1.5;
+  font-size: 0.95rem;
+  color: var(--on-surface-variant);
   margin-bottom: 24px;
 }
 
 .logout-confirm-actions {
   display: flex;
-  gap: 12px;
+  gap: 16px;
+  width: 100%;
 }
 
 .logout-btn-no {
   flex: 1;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 2px solid #e2e8f0;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--outline-variant);
   background: #ffffff;
-  color: #0f172a;
-  font-size: 0.9rem;
+  color: var(--on-surface-variant);
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s;
 }
 
 .logout-btn-no:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background-color: var(--surface-dim);
 }
 
 .logout-btn-yes {
   flex: 1;
-  padding: 12px 16px;
-  border-radius: 14px;
+  padding: 14px;
+  border-radius: var(--radius-md);
   border: none;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: #b91c1c;
   color: #ffffff;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  transition: background-color 0.2s;
+  box-shadow: var(--shadow-sm);
 }
 
 .logout-btn-yes:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+  background: #991b1b;
 }
 
 .fade-enter-active,
