@@ -43,115 +43,133 @@ const handleMarkRead = async (item) => {
 </script>
 
 <template>
-  <div v-if="show" class="modal-backdrop" @click="emit('close')">
-    <div class="modal-sheet animate-slide-up" @click.stop>
-      <!-- Header -->
-      <div class="modal-header">
-        <button class="back-btn" @click="emit('close')">✕</button>
-        <h2 class="modal-title">Notifications</h2>
-        <button class="read-all-btn" @click="handleMarkAllRead">All Read</button>
-      </div>
-
-      <!-- List -->
-      <div class="modal-body scrollable-y">
-        <div v-if="notificationList.length === 0" class="empty-state">
-          <div class="empty-icon">🔔</div>
-          <span class="empty-title">All caught up!</span>
-          <span class="empty-desc">No new notifications at this time.</span>
+  <Transition name="drawer">
+    <div v-if="show" class="modal-backdrop" @click="emit('close')">
+      <div class="modal-sheet" @click.stop>
+        <!-- Header -->
+        <div class="modal-header">
+          <button class="back-btn" @click="emit('close')" aria-label="Go back">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="back-arrow"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          </button>
+          <h2 class="modal-title">Notifications</h2>
+          <button v-if="notificationList.length > 0" class="read-all-btn" @click="handleMarkAllRead">All Read</button>
         </div>
 
-        <div v-else class="notifications-group">
-          <div 
-            v-for="item in notificationList" 
-            :key="item.id"
-            class="notification-card"
-            :class="{ unread: !item.read }"
-            @click="handleMarkRead(item)"
-          >
-            <div class="card-icon-wrap" :class="getIconClass(item.title)">
-              {{ getIcon(item.title) }}
+        <!-- List / Body -->
+        <div class="modal-body scrollable-y">
+          <div v-if="notificationList.length === 0" class="empty-state">
+            <div class="empty-bell-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3f51b5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="empty-bell-svg">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
             </div>
-            
-            <div class="card-content">
-              <div class="card-header-row">
-                <span class="card-title">{{ item.title }}</span>
-                <span class="card-time">{{ item.time }}</span>
-              </div>
-              <p class="card-body-text">{{ item.body }}</p>
-            </div>
+            <h3 class="empty-title">No Notifications Yet</h3>
+            <p class="empty-desc">You will get notified here when other players join or interact with your matches!</p>
+          </div>
 
-            <div v-if="!item.read" class="unread-dot"></div>
+          <div v-else class="notifications-group">
+            <div 
+              v-for="item in notificationList" 
+              :key="item.id"
+              class="notification-card"
+              :class="{ unread: !item.read }"
+              @click="handleMarkRead(item)"
+            >
+              <div class="card-icon-wrap" :class="getIconClass(item.title)">
+                {{ getIcon(item.title) }}
+              </div>
+              
+              <div class="card-content">
+                <div class="card-header-row">
+                  <span class="card-title">{{ item.title }}</span>
+                  <span class="card-time">{{ item.time }}</span>
+                </div>
+                <p class="card-body-text">{{ item.body }}</p>
+              </div>
+
+              <div v-if="!item.read" class="unread-dot"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <style scoped>
 .modal-backdrop {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   background-color: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(4px);
-  z-index: 1000;
+  z-index: 9999;
   display: flex;
-  align-items: flex-end;
-}
-
-@media (min-width: 768px) {
-  .modal-backdrop {
-    align-items: center;
-    justify-content: center;
-  }
+  justify-content: flex-end;
+  align-items: stretch;
 }
 
 .modal-sheet {
   width: 100%;
-  height: 80%;
+  height: 100%;
   background-color: var(--scaffold-bg);
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.08);
 }
 
 @media (min-width: 768px) {
   .modal-sheet {
-    width: 100%;
-    max-width: 520px;
-    height: auto;
-    max-height: 80vh;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    width: 400px;
+    border-top-left-radius: var(--radius-xl);
+    border-bottom-left-radius: var(--radius-xl);
   }
 }
 
 .modal-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--outline-variant);
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--outline-variant);
   background-color: var(--surface);
+  flex-shrink: 0;
+  height: 64px;
 }
 
 .modal-title {
-  font-size: 1.15rem;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--on-surface);
+  margin: 0;
+  pointer-events: none;
 }
 
 .back-btn {
   background: none;
   border: none;
-  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--on-surface);
   cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  z-index: 2;
+}
+
+.back-btn:hover {
+  background-color: var(--scaffold-bg);
 }
 
 .read-all-btn {
@@ -159,40 +177,68 @@ const handleMarkRead = async (item) => {
   border: none;
   color: var(--primary);
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 12px;
+  transition: background-color 0.2s;
+  z-index: 2;
+}
+
+.read-all-btn:hover {
+  background-color: rgba(46, 125, 50, 0.08);
 }
 
 .modal-body {
-  padding: 16px;
+  padding: 24px 20px;
   flex: 1;
+  overflow-y: auto;
 }
 
+/* Empty State Styling (matching screenshot) */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
-  padding-top: 80px;
+  height: 80%;
+  padding: 40px 20px;
 }
 
-.empty-icon {
-  font-size: 3.5rem;
-  margin-bottom: 16px;
-  opacity: 0.6;
+.empty-bell-wrap {
+  width: 90px;
+  height: 90px;
+  background-color: #f1f1fe; /* Soft violet/indigo tint */
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.empty-bell-svg {
+  display: flex;
+  align-items: center;
 }
 
 .empty-title {
-  font-size: 1.1rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
   font-weight: 700;
-  margin-bottom: 4px;
+  color: #0f172a;
+  margin: 0 0 12px;
 }
 
 .empty-desc {
-  font-size: 0.85rem;
-  color: var(--on-surface-variant);
+  font-size: 0.92rem;
+  color: #64748b;
+  line-height: 1.5;
+  max-width: 280px;
+  margin: 0;
 }
 
+/* Notifications List styling */
 .notifications-group {
   display: flex;
   flex-direction: column;
@@ -208,16 +254,18 @@ const handleMarkRead = async (item) => {
   gap: 14px;
   position: relative;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .notification-card:hover {
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .notification-card.unread {
-  background-color: rgba(26, 35, 126, 0.02);
-  border-color: rgba(26, 35, 126, 0.1);
+  background-color: rgba(46, 125, 50, 0.02); /* slight primary tint */
+  border-color: rgba(46, 125, 50, 0.1);
 }
 
 .card-icon-wrap {
@@ -231,7 +279,6 @@ const handleMarkRead = async (item) => {
   flex-shrink: 0;
 }
 
-/* Color classes for card icon */
 .card-icon-wrap.reminder {
   background-color: rgba(26, 35, 126, 0.08);
 }
@@ -283,5 +330,42 @@ const handleMarkRead = async (item) => {
   height: 8px;
   border-radius: 50%;
   background-color: var(--primary);
+}
+
+/* Drawer Transition (Backdrop fade + Sheet slide left/right) */
+.drawer-enter-active,
+.drawer-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.drawer-enter-active .modal-sheet {
+  animation: slideLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.drawer-leave-active .modal-sheet {
+  animation: slideRight 0.25s ease-in forwards;
+}
+
+.drawer-enter-from,
+.drawer-leave-to {
+  opacity: 0;
+}
+
+@keyframes slideLeft {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideRight {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 </style>
