@@ -108,25 +108,36 @@ const handleMarkRead = async (item) => {
   backdrop-filter: blur(4px);
   z-index: 9999;
   display: flex;
-  justify-content: flex-end;
-  align-items: stretch;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .modal-sheet {
   width: 100%;
-  height: 100%;
+  height: 80%;
   background-color: var(--scaffold-bg);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.08);
 }
 
 @media (min-width: 768px) {
+  .modal-backdrop {
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 24px;
+  }
+
   .modal-sheet {
-    width: 400px;
-    border-top-left-radius: var(--radius-xl);
-    border-bottom-left-radius: var(--radius-xl);
+    width: 100%;
+    max-width: 520px;
+    height: auto;
+    max-height: 80vh;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
   }
 }
 
@@ -332,23 +343,53 @@ const handleMarkRead = async (item) => {
   background-color: var(--primary);
 }
 
-/* Drawer Transition (Backdrop fade + Sheet slide left/right) */
+/* Drawer Transition (Backdrop fade + Responsive Slide-in) */
 .drawer-enter-active,
 .drawer-leave-active {
   transition: opacity 0.3s ease;
 }
 
-.drawer-enter-active .modal-sheet {
-  animation: slideLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.drawer-leave-active .modal-sheet {
-  animation: slideRight 0.25s ease-in forwards;
-}
-
 .drawer-enter-from,
 .drawer-leave-to {
   opacity: 0;
+}
+
+/* Mobile (default): Slide up/down */
+.drawer-enter-active .modal-sheet {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+.drawer-leave-active .modal-sheet {
+  animation: slideDown 0.25s ease-in forwards;
+}
+
+/* Desktop (min-width: 768px): Slide left/right */
+@media (min-width: 768px) {
+  .drawer-enter-active .modal-sheet {
+    animation: slideLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .drawer-leave-active .modal-sheet {
+    animation: slideRight 0.25s ease-in forwards;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
 }
 
 @keyframes slideLeft {
