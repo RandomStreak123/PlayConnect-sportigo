@@ -86,8 +86,8 @@ const init = async () => {
       state.currentUser = userData
       localStorage.setItem('sportigo_user', JSON.stringify(userData))
     }
-    if (Array.isArray(matchesData)) {
-      state.matches = matchesData
+    if (matchesData) {
+      state.matches = Array.isArray(matchesData) ? matchesData : (matchesData.data || [])
     }
     if (Array.isArray(activitiesData)) {
       state.activities = activitiesData
