@@ -11,6 +11,8 @@ class UserModel {
   final String? themePreference;
   final String? primarySport;
   final String? skillTier;
+  final String? bio;
+  final String? email;
 
   UserModel({
     required this.id,
@@ -23,6 +25,8 @@ class UserModel {
     this.themePreference = 'system',
     this.primarySport,
     this.skillTier,
+    this.bio,
+    this.email,
   });
 
   UserModel copyWith({
@@ -36,6 +40,8 @@ class UserModel {
     String? themePreference,
     String? primarySport,
     String? skillTier,
+    String? bio,
+    String? email,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -48,6 +54,8 @@ class UserModel {
       themePreference: themePreference ?? this.themePreference,
       primarySport: primarySport ?? this.primarySport,
       skillTier: skillTier ?? this.skillTier,
+      bio: bio ?? this.bio,
+      email: email ?? this.email,
     );
   }
 
@@ -75,6 +83,8 @@ class UserModel {
       themePreference: json['theme_preference'] ?? 'system',
       primarySport: json['primary_sport'],
       skillTier: json['skill_tier'],
+      bio: json['bio'],
+      email: json['email'],
     );
   }
 
@@ -90,6 +100,8 @@ class UserModel {
       'theme_preference': themePreference,
       'primary_sport': primarySport,
       'skill_tier': skillTier,
+      'bio': bio,
+      'email': email,
     };
   }
 }

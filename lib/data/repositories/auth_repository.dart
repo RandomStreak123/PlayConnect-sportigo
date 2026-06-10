@@ -265,6 +265,11 @@ class AuthRepository {
     String? phoneNumber,
     bool? hidePhone,
     String? themePreference,
+    String? bio,
+    String? email,
+    String? primarySport,
+    String? skillTier,
+    String? gender,
   }) async {
     final token = await _getToken();
     if (token == null) throw Exception('User not authenticated');
@@ -274,6 +279,11 @@ class AuthRepository {
     if (phoneNumber != null) body['phone_number'] = phoneNumber;
     if (hidePhone != null) body['hide_phone'] = hidePhone;
     if (themePreference != null) body['theme_preference'] = themePreference;
+    if (bio != null) body['bio'] = bio;
+    if (email != null) body['email'] = email;
+    if (primarySport != null) body['primary_sport'] = primarySport;
+    if (skillTier != null) body['skill_tier'] = skillTier;
+    if (gender != null) body['gender'] = gender;
 
     final response = await http.put(
       Uri.parse('${ApiConstants.baseUrl}/profile'),

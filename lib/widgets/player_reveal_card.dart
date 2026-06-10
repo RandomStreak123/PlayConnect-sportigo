@@ -40,31 +40,20 @@ class PlayerRevealCard extends StatelessWidget {
     final headerGradient = _getGradientForSport(sportType);
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.65,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Top visual pull bar (inside the sheet)
-          const SizedBox(height: 10),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          
-          // Header + Profile Pic overlap
+          // Header + Profile Pic overlap (positioned at the absolute top of the card)
           Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.bottomCenter,
             children: [
               Container(
-                height: 130,
+                height: 140,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: headerGradient,
@@ -88,10 +77,26 @@ class PlayerRevealCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // Centered top visual pull bar
+                    Positioned(
+                      top: 10,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
                     // Elegant top-right close circle button
                     Positioned(
                       right: 16,
-                      top: 16,
+                      top: 20,
                       child: CircleAvatar(
                         backgroundColor: Colors.black.withValues(alpha: 0.25),
                         radius: 18,
@@ -246,7 +251,7 @@ class PlayerRevealCard extends StatelessWidget {
             ),
           ),
           
-          const Spacer(),
+          const SizedBox(height: 24),
           
           // Interactive Action Buttons
           Padding(
