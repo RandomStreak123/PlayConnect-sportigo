@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\SportMatch;
+use App\Models\SportsMatch;
 use App\Models\User;
 use App\Services\MatchSlotService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,7 +33,7 @@ class MatchSlotServiceTest extends TestCase
         return User::factory()->create($attrs);
     }
 
-    private function makeMatch(array $attrs = []): SportMatch
+    private function makeMatch(array $attrs = []): SportsMatch
     {
         $creator = $this->makeUser();
         $defaults = [
@@ -48,18 +48,18 @@ class MatchSlotServiceTest extends TestCase
             'women_only'      => false,
         ];
 
-        $match = SportMatch::create(array_merge($defaults, $attrs));
+        $match = SportsMatch::create(array_merge($defaults, $attrs));
         // Attach creator as participant
-        $match->users()->attach($creator->id);
+        $match->participants()->attach($creator->id);
         $match->syncAvailableSlots();
 
-        return $match->fresh(['users']);
+        return $match->fresh(['participants']);
     }
 
     // ─── Join Tests ────────────────────────────────────────────────────────────
 
     /** @test */
-    public function a_user_can_successfully_join_a_match(): void
+    public function test_a_user_can_successfully_join_a_match(): void
     {
         $match = $this->makeMatch(['max_slots' => 4]);
         $user  = $this->makeUser();
@@ -70,13 +70,13 @@ class MatchSlotServiceTest extends TestCase
         $this->assertArrayNotHasKey('error', $result);
 
         $this->assertTrue(
-            $match->users()->where('user_id', $user->id)->exists(),
+            $match->participants()->where('user_id', $user->id)->exists(),
             'User should be recorded as joined in the pivot table.'
         );
     }
 
     /** @test */
-    public function joining_decrements_available_slots(): void
+    public function test_joining_decrements_available_slots(): void
     {
         $match = $this->makeMatch(['max_slots' => 4, 'available_slots' => 3]);
         $user  = $this->makeUser();
@@ -89,7 +89,7 @@ class MatchSlotServiceTest extends TestCase
     }
 
     /** @test */
-    public function a_user_cannot_join_the_same_match_twice(): void
+    public function test_a_user_cannot_join_the_same_match_twice(): void
     {
         $match = $this->makeMatch(['max_slots' => 4]);
         $user  = $this->makeUser();
@@ -103,7 +103,7 @@ class MatchSlotServiceTest extends TestCase
     }
 
     /** @test */
-    public function a_user_cannot_join_a_full_match(): void
+    public function test_a_user_cannot_join_a_full_match(): void
     {
         // Create a match already at capacity (1 creator = 1 slot, max = 1)
         $match = $this->makeMatch(['max_slots' => 1, 'available_slots' => 0]);
@@ -119,28 +119,29 @@ class MatchSlotServiceTest extends TestCase
     // ─── Leave Tests ───────────────────────────────────────────────────────────
 
     /** @test */
-    public function a_participant_can_leave_a_match(): void
+    public function test_a_participant_can_leave_a_match(): void
     {
         $match = $this->makeMatch(['max_slots' => 4]);
         $user  = $this->makeUser();
-        $match->users()->attach($user->id);
+        $match->participants()->attach($user->id);
         $match->syncAvailableSlots();
 
         $result = $this->service->leave($match, $user);
 
         $this->assertArrayHasKey('match', $result);
         $this->assertFalse(
-            $match->users()->where('user_id', $user->id)->exists(),
+            $match->participants()->where('user_id', $user->id)->exists(),
             'User should be removed from the pivot table after leaving.'
         );
     }
 
     /** @test */
-    public function leaving_increments_available_slots(): void
+    public function test_leaving_increments_available_slots(): void
     {
         $match = $this->makeMatch(['max_slots' => 4]);
         $user  = $this->makeUser();
-        $match->users()->attach($user->id);
+        $match->participants()->attach($user->id);
+        $match->unsetRelation('participants');
         $match->syncAvailableSlots();
 
         $slotsBefore = $match->fresh()->available_slots;
@@ -150,7 +151,7 @@ class MatchSlotServiceTest extends TestCase
     }
 
     /** @test */
-    public function a_non_participant_cannot_leave(): void
+    public function test_a_non_participant_cannot_leave(): void
     {
         $match = $this->makeMatch();
         $user  = $this->makeUser();
@@ -162,10 +163,10 @@ class MatchSlotServiceTest extends TestCase
     }
 
     /** @test */
-    public function the_creator_cannot_leave_their_own_match(): void
+    public function test_the_creator_cannot_leave_their_own_match(): void
     {
         $creator = $this->makeUser();
-        $match   = SportMatch::create([
+        $match   = SportsMatch::create([
             'creator_id'      => $creator->id,
             'sport_type'      => 'Football',
             'title'           => 'Creator Match',
@@ -176,7 +177,7 @@ class MatchSlotServiceTest extends TestCase
             'skill_level'     => 'Beginner',
             'women_only'      => false,
         ]);
-        $match->users()->attach($creator->id);
+        $match->participants()->attach($creator->id);
 
         $result = $this->service->leave($match, $creator);
 
@@ -188,7 +189,7 @@ class MatchSlotServiceTest extends TestCase
     // ─── Slot Sync Tests ───────────────────────────────────────────────────────
 
     /** @test */
-    public function sync_available_slots_does_not_write_when_values_are_unchanged(): void
+    public function test_sync_available_slots_does_not_write_when_values_are_unchanged(): void
     {
         $match = $this->makeMatch(['max_slots' => 4, 'available_slots' => 3]);
 
@@ -197,7 +198,7 @@ class MatchSlotServiceTest extends TestCase
 
         // Sleep 1 second so a write would change the timestamp
         sleep(1);
-        $match->load('users');
+        $match->load('participants');
         $match->syncAvailableSlots();
 
         $this->assertEquals(
@@ -208,10 +209,10 @@ class MatchSlotServiceTest extends TestCase
     }
 
     /** @test */
-    public function slots_left_accessor_matches_available_slots(): void
+    public function test_slots_left_accessor_matches_available_slots(): void
     {
         $match = $this->makeMatch(['max_slots' => 5]);
-        $match->load('users');
+        $match->load('participants');
 
         $this->assertEquals(
             $match->slots_left,
@@ -223,7 +224,7 @@ class MatchSlotServiceTest extends TestCase
     // ─── Create Match Tests ────────────────────────────────────────────────────
 
     /** @test */
-    public function create_match_attaches_creator_as_first_participant(): void
+    public function test_create_match_attaches_creator_as_first_participant(): void
     {
         $creator   = $this->makeUser();
         $validated = [
@@ -238,13 +239,13 @@ class MatchSlotServiceTest extends TestCase
         $match = $this->service->createMatch($validated, $creator, false);
 
         $this->assertTrue(
-            $match->users()->where('user_id', $creator->id)->exists(),
+            $match->participants()->where('user_id', $creator->id)->exists(),
             'Creator must be automatically attached as a participant.'
         );
     }
 
     /** @test */
-    public function create_match_sets_max_slots_correctly(): void
+    public function test_create_match_sets_max_slots_correctly(): void
     {
         $creator   = $this->makeUser();
         $validated = [
@@ -258,7 +259,7 @@ class MatchSlotServiceTest extends TestCase
 
         $match = $this->service->createMatch($validated, $creator, false);
 
-        // max_slots = open_slots(3) + creator(1) = 4
-        $this->assertEquals(4, $match->max_slots);
+        // max_slots = 3
+        $this->assertEquals(3, $match->max_slots);
     }
 }

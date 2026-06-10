@@ -6,11 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class StorageSync extends Model
 {
-    protected $primaryKey = 'key';
     public $incrementing = false;
-    protected $keyType = 'string';
 
     protected $fillable = [
+        'user_id',
         'key',
         'value',
     ];

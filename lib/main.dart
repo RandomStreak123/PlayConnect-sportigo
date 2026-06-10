@@ -17,6 +17,7 @@ import 'logic/blocs/notification/notification_event.dart';
 import 'core/constants/colors.dart';
 import 'core/utils/sport_image_helper.dart';
 import 'widgets/app_loading_indicator.dart';
+import 'services/deep_link_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +38,8 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
   late final ActivityRepository _activityRepository;
   late final NotificationRepository _notificationRepository;
   late final ThemeManager _themeManager;
+  late final GlobalKey<NavigatorState> _navigatorKey;
+  late final DeepLinkService _deepLinkService;
 
   @override
   void initState() {
@@ -46,12 +49,15 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
     _activityRepository = ActivityRepository();
     _notificationRepository = NotificationRepository();
     _themeManager = ThemeManager();
+    _navigatorKey = GlobalKey<NavigatorState>();
+    _deepLinkService = DeepLinkService(navigatorKey: _navigatorKey)..initialize();
   }
 
   @override
   void dispose() {
     _authRepository.dispose();
     _themeManager.dispose();
+    _deepLinkService.dispose();
     super.dispose();
   }
 
@@ -84,7 +90,7 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
               ),
             ),
           ],
-          child: const AppView(),
+          child: AppView(navigatorKey: _navigatorKey),
         ),
       ),
     );
@@ -92,7 +98,9 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
 }
 
 class AppView extends StatelessWidget {
-  const AppView({super.key});
+  final GlobalKey<NavigatorState> navigatorKey;
+
+  const AppView({super.key, required this.navigatorKey});
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +109,7 @@ class AppView extends StatelessWidget {
 
     return MaterialApp(
       title: 'PlayConnect',
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: theme,
       builder: (context, child) {
@@ -126,7 +135,9 @@ class AppView extends StatelessWidget {
             BlocListener<AuthBloc, AuthState>(
               listenWhen: (previous, current) {
                 if (previous.user?.gender != current.user?.gender ||
-                    previous.user?.themePreference != current.user?.themePreference) return true;
+                    previous.user?.themePreference != current.user?.themePreference) {
+                  return true;
+                }
                 return previous.status != AuthStatus.authenticated &&
                     current.status == AuthStatus.authenticated;
               },

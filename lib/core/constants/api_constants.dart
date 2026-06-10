@@ -2,7 +2,7 @@ class ApiConstants {
   /// Override at build time: flutter run --dart-define=API_BASE_URL=http://YOUR_IP:8000/api
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api'
+    defaultValue: 'http://10.123.220.204:8000/api'
   );
 
   /// Base URL for storage assets (without /api suffix).

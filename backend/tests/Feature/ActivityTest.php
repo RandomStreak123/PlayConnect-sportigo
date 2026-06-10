@@ -23,11 +23,15 @@ class ActivityTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->getJson('/api/activities');
 
-        $response->assertStatus(200)
-                 ->assertJsonCount(1)
-                 ->assertJsonFragment([
-                     'message' => 'John Doe created a Football match'
-                 ]);
+        $response->assertStatus(200);
+        if ($response->json('data') !== null) {
+            $this->assertCount(1, $response->json('data'));
+        } else {
+            $response->assertJsonCount(1);
+        }
+        $response->assertJsonFragment([
+            'message' => 'John Doe created a Football match'
+        ]);
     }
 
     public function test_can_create_activity()

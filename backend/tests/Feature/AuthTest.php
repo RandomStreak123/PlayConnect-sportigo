@@ -14,6 +14,7 @@ class AuthTest extends TestCase
     public function test_user_can_register()
     {
         $response = $this->postJson('/api/register', [
+            'name' => 'Lionel Messi',
             'username' => 'messi',
             'password' => 'password123',
         ]);
@@ -33,6 +34,7 @@ class AuthTest extends TestCase
     public function test_user_cannot_register_with_short_password()
     {
         $response = $this->postJson('/api/register', [
+            'name' => 'Lionel Messi',
             'username' => 'messi',
             'password' => '123',
         ]);

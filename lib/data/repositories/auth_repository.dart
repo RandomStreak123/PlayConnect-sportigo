@@ -88,7 +88,7 @@ class AuthRepository {
       }),
     );
 
-    if (response.statusCode == 201) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       final data = _decodeJsonBody(response.body);
       if (data == null) throw Exception('Invalid server response');
       final user = UserModel.fromJson(data['user']);

@@ -12,9 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('storage_syncs', function (Blueprint $table) {
-            $table->string('key')->primary();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('key');
             $table->longText('value')->nullable();
             $table->timestamps();
+
+            $table->primary(['user_id', 'key']);
         });
     }
 

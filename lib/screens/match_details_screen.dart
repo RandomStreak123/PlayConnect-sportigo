@@ -11,14 +11,18 @@ import '../core/utils/avatar_image_helper.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_icon_size.dart';
 import '../core/theme/app_radius.dart';
+import '../data/repositories/match_repository.dart';
+import 'package:share_plus/share_plus.dart';
 
 class MatchDetailsScreen extends StatefulWidget {
-  final MatchModel match;
+  final MatchModel? match;
+  final String? matchId;
 
   const MatchDetailsScreen({
     super.key,
-    required this.match,
-  });
+    this.match,
+    this.matchId,
+  }) : assert(match != null || matchId != null, 'Either match or matchId must be provided');
 
   @override
   State<MatchDetailsScreen> createState() => _MatchDetailsScreenState();
@@ -26,16 +30,51 @@ class MatchDetailsScreen extends StatefulWidget {
 
 class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
   late MatchModel _match;
+  bool _isInitialized = false;
+  bool _isLoading = false;
+  String? _errorMessage;
   bool _isSubmitting = false;
   String? _pendingAction;
 
   @override
   void initState() {
     super.initState();
-    _match = widget.match;
+    if (widget.match != null) {
+      _match = widget.match!;
+      _isInitialized = true;
+    } else if (widget.matchId != null) {
+      _loadMatchDetails();
+    }
+  }
+
+  void _loadMatchDetails() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final repo = context.read<MatchRepository>();
+      final match = await repo.getMatch(widget.matchId!);
+      if (mounted) {
+        setState(() {
+          _match = match;
+          _isInitialized = true;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   MatchModel? _findUpdatedMatch(MatchState state) {
+    if (!_isInitialized) return null;
     for (final m in [...state.matches, ...state.myMatches]) {
       if (m.id == _match.id) return m;
     }
@@ -44,6 +83,51 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: _isLoading
+              ? const AppLoadingIndicator()
+              : Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        color: Theme.of(context).colorScheme.error,
+                        size: 64,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _errorMessage ?? 'Failed to load match details.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: _loadMatchDetails,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      );
+    }
+
     return BlocListener<MatchBloc, MatchState>(
       listenWhen: (previous, current) => current.message != null,
       listener: (context, state) {
@@ -124,11 +208,10 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                   child: IconButton(
                     icon: Icon(Icons.share, color: Theme.of(context).colorScheme.onSurface),
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Share feature coming soon!'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                      final shareUrl = 'https://sportigo.com/matches/${_match.id}';
+                      Share.share(
+                        'Join my ${_match.sportType} match "${_match.title}" at ${_match.location}! $shareUrl',
+                        subject: 'Join my Sportigo match!',
                       );
                     },
                   ),

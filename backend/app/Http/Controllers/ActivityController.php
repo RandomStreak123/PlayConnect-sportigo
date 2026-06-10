@@ -28,6 +28,10 @@ class ActivityController extends Controller
     
     public function update(Request $request, Activity $activity)
     {
+        if ($activity->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'message' => 'required|string'
         ]);

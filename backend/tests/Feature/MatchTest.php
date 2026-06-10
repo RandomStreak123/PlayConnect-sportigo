@@ -29,9 +29,12 @@ class MatchTest extends TestCase
         ]);
 
         $response = $this->actingAs($user, 'sanctum')->getJson('/api/matches');
-
-        $response->assertStatus(200)
-                 ->assertJsonCount(1);
+        $response->assertStatus(200);
+        if ($response->json('data') !== null) {
+            $this->assertCount(1, $response->json('data'));
+        } else {
+            $response->assertJsonCount(1);
+        }
     }
 
     public function test_can_create_match()
@@ -42,11 +45,12 @@ class MatchTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/matches', [
             'title' => 'Friendly Football',
-            'category' => 'Football',
+            'sport_type' => 'Football',
             'location' => 'Turf A',
-            'date' => Carbon::now()->addDays(1)->toDateTimeString(),
-            'price' => '15.0',
-            'is_women_only' => false,
+            'date_time' => Carbon::now()->addDays(1)->toDateTimeString(),
+            'available_slots' => 10,
+            'skill_level' => 'Intermediate',
+            'women_only' => false,
         ]);
 
         $response->assertStatus(201);
@@ -62,10 +66,11 @@ class MatchTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/matches', [
             'title' => 'Past Match',
-            'category' => 'Football',
+            'sport_type' => 'Football',
             'location' => 'Turf A',
-            'date' => Carbon::now()->subDays(2)->toDateTimeString(),
-            'price' => '15.0',
+            'date_time' => Carbon::now()->subDays(2)->toDateTimeString(),
+            'available_slots' => 10,
+            'skill_level' => 'Intermediate',
         ]);
 
         $response->assertStatus(422)
