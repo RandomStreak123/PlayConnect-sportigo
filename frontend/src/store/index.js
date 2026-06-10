@@ -75,9 +75,10 @@ const init = async () => {
     const headers = getAuthHeaders()
 
     // Fetch user details, matches, activities, and notifications in parallel
-    const [userData, matchesData, activitiesData, notificationsData] = await Promise.all([
+    const [userData, matchesData, mineMatchesData, activitiesData, notificationsData] = await Promise.all([
       safeFetch(`${API_URL}/user`, { headers }),
       safeFetch(`${API_URL}/matches`, { headers }),
+      safeFetch(`${API_URL}/matches/mine`, { headers }),
       safeFetch(`${API_URL}/activities`, { headers }),
       safeFetch(`${API_URL}/notifications`, { headers })
     ])
@@ -87,7 +88,16 @@ const init = async () => {
       localStorage.setItem('sportigo_user', JSON.stringify(userData))
     }
     if (matchesData) {
-      state.matches = Array.isArray(matchesData) ? matchesData : (matchesData.data || [])
+      const allMatches = Array.isArray(matchesData) ? matchesData : (matchesData.data || [])
+      const mineMatches = Array.isArray(mineMatchesData) ? mineMatchesData : (mineMatchesData || [])
+      
+      const combined = [...allMatches]
+      mineMatches.forEach(m => {
+        if (!combined.some(existing => existing.id === m.id)) {
+          combined.push(m)
+        }
+      })
+      state.matches = combined
     }
     if (Array.isArray(activitiesData)) {
       state.activities = activitiesData
