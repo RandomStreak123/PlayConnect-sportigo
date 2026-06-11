@@ -53,11 +53,12 @@ export const getPlayerAvatar = (profilePicture, gender) => {
   const cleaned = cleanAvatarUrl(profilePicture)
   
   if (cleaned) {
-    const isLocal = cleaned.includes('profile-images/') || 
-                    cleaned.includes('/storage/') || 
-                    cleaned.includes('localhost') || 
-                    cleaned.includes('127.0.0.1') || 
-                    cleaned.includes('ddev.site')
+    const isLocal = !cleaned.includes('supabase.co') &&
+                    (cleaned.includes('profile-images/') || 
+                     cleaned.includes('/storage/') || 
+                     cleaned.includes('localhost') || 
+                     cleaned.includes('127.0.0.1') || 
+                     cleaned.includes('ddev.site'))
 
     if (!isLocal && cleaned.startsWith('http')) {
       return cleaned
