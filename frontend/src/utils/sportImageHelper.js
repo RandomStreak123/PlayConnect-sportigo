@@ -51,12 +51,31 @@ export const fixImageUrl = (url) => {
 
 export const getPlayerAvatar = (profilePicture, gender) => {
   const cleaned = cleanAvatarUrl(profilePicture)
-  // If it's already a real remote absolute URL (e.g. AWS S3 bucket), use it directly
-  if (cleaned && cleaned.startsWith('http') && 
-      !cleaned.includes('ddev.site') && 
-      !cleaned.includes('localhost') && 
-      !cleaned.includes('127.0.0.1')) {
-    return cleaned
+  
+  if (cleaned) {
+    const isLocal = cleaned.includes('profile-images/') || 
+                    cleaned.includes('/storage/') || 
+                    cleaned.includes('localhost') || 
+                    cleaned.includes('127.0.0.1') || 
+                    cleaned.includes('ddev.site')
+
+    if (!isLocal && cleaned.startsWith('http')) {
+      return cleaned
+    }
+
+    if (isLocal) {
+      const match = cleaned.match(/(profile-images\/.*)/)
+      if (match) {
+        return `/storage/${match[1]}`
+      }
+      if (cleaned.includes('/storage/')) {
+        const index = cleaned.indexOf('/storage/')
+        return cleaned.substring(index)
+      }
+      if (cleaned.startsWith('/')) {
+        return cleaned
+      }
+    }
   }
 
   // Otherwise, use high-quality seeded random portraits from randomuser.me.

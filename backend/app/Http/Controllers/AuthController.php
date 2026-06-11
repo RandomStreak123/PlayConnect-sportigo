@@ -88,7 +88,7 @@ class AuthController extends Controller
         $credential = $request->credential;
 
         try {
-            $response = \Illuminate\Support\Facades\Http::get('https://oauth2.googleapis.com/tokeninfo', [
+            $response = \Illuminate\Support\Facades\Http::withoutVerifying()->get('https://oauth2.googleapis.com/tokeninfo', [
                 'id_token' => $credential,
             ]);
 
