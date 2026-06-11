@@ -90,9 +90,13 @@ const handleComment = (e, act) => {
 
         <!-- Description body -->
         <p class="activity-msg">
-          <span class="user-bold">{{ act.userName }}</span> 
-          {{ act.action }}:
-          <span class="match-name-highlight">"{{ act.matchTitle }}"</span>
+          <span class="user-bold">{{ act.userName }}</span>&nbsp;
+          <template v-if="act.type === 'follow'">
+            {{ act.action }}&nbsp;<span class="match-name-highlight">{{ Number(act.meta?.followed_id) === Number(store.state.currentUser?.id) ? 'you' : (act.meta?.followed_name || 'Player') }}</span>
+          </template>
+          <template v-else>
+            {{ act.action }}:&nbsp;<span class="match-name-highlight">"{{ act.matchTitle }}"</span>
+          </template>
         </p>
 
         <!-- Dynamic Action triggers -->

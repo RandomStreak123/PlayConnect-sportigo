@@ -160,7 +160,7 @@ const profileStats = computed(() => {
     winRate: 0,
     streak: 0,
     playStyle: 'All-Rounder',
-    globalRank: '#1000 Kochi',
+    averageRating: 0.0,
     totalGames: 0
   }
 })
@@ -515,15 +515,15 @@ onMounted(() => {
         <div class="stat-card-value">{{ profileStats.totalGames }} {{ t('played') }}</div>
       </div>
 
-      <!-- Card 4: Global Rank -->
+      <!-- Card 4: Average Rating -->
       <div class="new-stat-card">
         <div class="stat-header">
-          <span class="stat-card-title">{{ t('globalRank') }}</span>
+          <span class="stat-card-title">{{ t('averageRating') }}</span>
           <span class="stat-svg-container">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </span>
         </div>
-        <div class="stat-card-value">{{ profileStats.globalRank }}</div>
+        <div class="stat-card-value">{{ Number(profileStats.averageRating || 0).toFixed(1) }} ⭐</div>
       </div>
     </div>
 

@@ -66,6 +66,7 @@ class Activity extends Model
             'match_joined' => 'joined the match',
             'match_created' => 'created a match',
             'match_left' => 'left the match',
+            'follow' => 'started following',
         ];
         return $map[$this->type] ?? $this->type;
     }
