@@ -42,3 +42,15 @@ final class MatchCreated extends MatchEvent {
   const MatchCreated(this.match);
   final MatchModel match;
 }
+
+final class MatchResultsRecorded extends MatchEvent {
+  const MatchResultsRecorded({required this.matchId, required this.results});
+  final String matchId;
+  final List<Map<String, dynamic>> results;
+}
+
+final class MatchRatingsSubmitted extends MatchEvent {
+  const MatchRatingsSubmitted({required this.matchId, required this.ratings});
+  final String matchId;
+  final List<Map<String, dynamic>> ratings;
+}

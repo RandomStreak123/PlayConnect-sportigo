@@ -210,4 +210,77 @@ class MatchRepository {
       throw Exception(_extractErrorMessage(response, 'Failed to load match details'));
     }
   }
+
+  Future<MatchModel> recordResults(String matchId, List<Map<String, dynamic>> results) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('Unauthorized');
+
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/matches/$matchId/result'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'results': results}),
+    );
+
+    if (response.statusCode == 200) {
+      try {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final matchJson = data['match'];
+        if (matchJson is Map<String, dynamic>) {
+          return MatchModel.fromJson(matchJson);
+        }
+        throw Exception('Invalid server response');
+      } catch (e) {
+        if (e is Exception) rethrow;
+        throw Exception('Invalid server response');
+      }
+    } else {
+      throw Exception(_extractErrorMessage(response, 'Failed to record results'));
+    }
+  }
+
+  Future<void> submitRatings(String matchId, List<Map<String, dynamic>> ratings) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('Unauthorized');
+
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/matches/$matchId/ratings'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'ratings': ratings}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(_extractErrorMessage(response, 'Failed to submit ratings'));
+    }
+  }
+
+  Future<List<dynamic>> getRatings(String matchId) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('Unauthorized');
+
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/matches/$matchId/ratings'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      try {
+        return jsonDecode(response.body) as List<dynamic>;
+      } catch (_) {
+        throw Exception('Invalid server response');
+      }
+    } else {
+      throw Exception(_extractErrorMessage(response, 'Failed to load ratings'));
+    }
+  }
 }

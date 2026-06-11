@@ -493,6 +493,67 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
               );
             }
 
+            if (_match.isPast) {
+              if (isCreator) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showRecordResultsBottomSheet(context),
+                        icon: const Icon(Icons.emoji_events, size: 20),
+                        label: const Text('Update Results', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2E7D32),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showRatePlayersBottomSheet(context),
+                        icon: const Icon(Icons.star, size: 20),
+                        label: const Text('Rate Players', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.warmOrange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                return SizedBox(
+                  height: 52,
+                  width: double.infinity,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'MATCH COMPLETED',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+            }
+
             if (isJoined && !isCreator) {
               return OutlinedButton(
                 onPressed: () {
@@ -776,9 +837,481 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                 ],
               ),
             ),
+            if (participant.result != null) ...[
+              const SizedBox(width: AppSpacing.sm),
+              _buildResultBadge(context, participant.result!),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildResultBadge(BuildContext context, String result) {
+    Color bgColor;
+    Color textColor;
+    String label;
+
+    switch (result.toLowerCase()) {
+      case 'win':
+        bgColor = const Color(0xFFE8F5E9); // light green
+        textColor = const Color(0xFF2E7D32); // dark green
+        label = 'Win';
+        break;
+      case 'loss':
+        bgColor = const Color(0xFFFFEBEE); // light red
+        textColor = const Color(0xFFC62828); // dark red
+        label = 'Loss';
+        break;
+      case 'draw':
+        bgColor = const Color(0xFFECEFF1); // light grey/blue-grey
+        textColor = const Color(0xFF37474F); // dark grey/blue-grey
+        label = 'Draw';
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xxs),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: textColor.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleChip({
+    required String label,
+    required bool selected,
+    required Color selectedColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? selectedColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? selectedColor : Colors.grey.shade300,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.grey.shade600,
+            fontWeight: FontWeight.w600,
+            fontSize: 11,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRecordResultsBottomSheet(BuildContext context) {
+    final Map<int, String> playerResults = {
+      for (var p in _match.participants) p.id: p.result ?? '',
+    };
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppRadius.lg),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                top: AppSpacing.lg,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      const Text(
+                        '🏆',
+                        style: TextStyle(fontSize: 24),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        'Record Match Results',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Tap Win, Loss, or Draw for each player. Tap again to deselect.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.4,
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: _match.participants.length,
+                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final p = _match.participants[index];
+                        final currentResult = playerResults[p.id] ?? '';
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                          child: Row(
+                            children: [
+                              AvatarImageHelper.circleAvatar(
+                                path: p.profilePicture,
+                                radius: 20,
+                                backgroundColor: Theme.of(context).colorScheme.surfaceDim,
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Text(
+                                  p.name,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildToggleChip(
+                                    label: 'Win',
+                                    selected: currentResult == 'win',
+                                    selectedColor: const Color(0xFF2E7D32),
+                                    onTap: () {
+                                      setModalState(() {
+                                        playerResults[p.id] = currentResult == 'win' ? '' : 'win';
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                  _buildToggleChip(
+                                    label: 'Loss',
+                                    selected: currentResult == 'loss',
+                                    selectedColor: const Color(0xFFC62828),
+                                    onTap: () {
+                                      setModalState(() {
+                                        playerResults[p.id] = currentResult == 'loss' ? '' : 'loss';
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                  _buildToggleChip(
+                                    label: 'Draw',
+                                    selected: currentResult == 'draw',
+                                    selectedColor: const Color(0xFF546E7A),
+                                    onTap: () {
+                                      setModalState(() {
+                                        playerResults[p.id] = currentResult == 'draw' ? '' : 'draw';
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            final resultsPayload = playerResults.entries
+                                .where((e) => e.value.isNotEmpty)
+                                .map((e) => {'user_id': e.key, 'result': e.value})
+                                .toList();
+
+                            setState(() {
+                              _isSubmitting = true;
+                              _pendingAction = 'recordResults';
+                            });
+
+                            context.read<MatchBloc>().add(
+                                  MatchResultsRecorded(
+                                    matchId: _match.id,
+                                    results: resultsPayload,
+                                  ),
+                                );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2E7D32),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
+                          ),
+                          child: const Text('Save Results'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showRatePlayersBottomSheet(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    final userId = authState.user?.id;
+    final rateableParticipants = _match.participants.where((p) => p.id != userId).toList();
+
+    final Map<int, int> playerRatings = {};
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppRadius.lg),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                top: AppSpacing.lg,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      const Text(
+                        '⭐',
+                        style: TextStyle(fontSize: 24),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        'Rate Players',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Rate each player from 1 to 5 stars. You earn +10 XP per player rated!',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  if (rateableParticipants.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+                      child: Center(
+                        child: Text(
+                          'No other players to rate.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    )
+                  else
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.4,
+                      ),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: rateableParticipants.length,
+                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final p = rateableParticipants[index];
+                          final currentRating = playerRatings[p.id] ?? 0;
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                            child: Row(
+                              children: [
+                                AvatarImageHelper.circleAvatar(
+                                  path: p.profilePicture,
+                                  radius: 20,
+                                  backgroundColor: Theme.of(context).colorScheme.surfaceDim,
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: Text(
+                                    p.name,
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: List.generate(5, (starIndex) {
+                                    final starVal = starIndex + 1;
+                                    final isSelected = currentRating >= starVal;
+                                    return GestureDetector(
+                                      onTap: () {
+                                        setModalState(() {
+                                          playerRatings[p.id] = starVal;
+                                        });
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                        child: Icon(
+                                          isSelected ? Icons.star : Icons.star_border,
+                                          color: isSelected ? Colors.amber : Colors.grey.shade300,
+                                          size: 28,
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: AppSpacing.xl),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: rateableParticipants.isEmpty
+                              ? null
+                              : () {
+                                  Navigator.pop(context);
+                                  final ratingsPayload = playerRatings.entries
+                                      .where((e) => e.value > 0)
+                                      .map((e) => {'user_id': e.key, 'rating': e.value})
+                                      .toList();
+
+                                  setState(() {
+                                    _isSubmitting = true;
+                                    _pendingAction = 'submitRatings';
+                                  });
+
+                                  context.read<MatchBloc>().add(
+                                        MatchRatingsSubmitted(
+                                          matchId: _match.id,
+                                          ratings: ratingsPayload,
+                                        ),
+                                      );
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.warmOrange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
+                          ),
+                          child: const Text('Submit Ratings'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -4,18 +4,22 @@ class MatchParticipant {
   final int id;
   final String name;
   final String? profilePicture;
+  final String? result;
 
   const MatchParticipant({
     required this.id,
     required this.name,
     this.profilePicture,
+    this.result,
   });
 
   factory MatchParticipant.fromJson(Map<String, dynamic> json) {
+    final pivot = json['pivot'] as Map<String, dynamic>?;
     return MatchParticipant(
       id: json['id'] as int,
       name: json['name'] as String,
       profilePicture: json['profile_picture'] as String?,
+      result: (pivot != null ? pivot['result'] : json['result']) as String?,
     );
   }
 }
@@ -41,6 +45,10 @@ class MatchModel {
 
   DateTime get parsedDateTime {
     return DateTime.tryParse(dateTime) ?? DateTime.now();
+  }
+
+  bool get isPast {
+    return parsedDateTime.isBefore(DateTime.now());
   }
 
   bool isJoinedBy(int? userId) {

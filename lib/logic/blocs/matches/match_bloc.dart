@@ -15,6 +15,8 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     on<MatchJoined>(_onMatchJoined);
     on<MatchLeft>(_onMatchLeft);
     on<MatchCreated>(_onMatchCreated);
+    on<MatchResultsRecorded>(_onMatchResultsRecorded);
+    on<MatchRatingsSubmitted>(_onMatchRatingsSubmitted);
   }
 
   final MatchRepository _matchRepository;
@@ -372,6 +374,70 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
       ));
     } catch (_) {
       emit(state.copyWith(myMatchesStatus: MatchStatus.failure));
+    }
+  }
+
+  Future<void> _onMatchResultsRecorded(
+    MatchResultsRecorded event,
+    Emitter<MatchState> emit,
+  ) async {
+    _cache.clear();
+    _cacheCursors.clear();
+    _cacheTimestamps.clear();
+    emit(state.copyWith(clearMessage: true));
+    try {
+      final updated = await _matchRepository.recordResults(event.matchId, event.results);
+      final matches = _upsertMatch(state.matches, updated);
+      final trending = _upsertMatch(state.trendingMatches, updated);
+      final myMatches = _upsertMatch(state.myMatches, updated);
+      emit(state.copyWith(
+        status: MatchStatus.success,
+        myMatchesStatus: MatchStatus.success,
+        matches: matches,
+        trendingMatches: trending,
+        myMatches: myMatches,
+        message: 'Match results recorded successfully!',
+        isActionSuccess: true,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: MatchStatus.success,
+        message: e.toString().replaceAll('Exception: ', ''),
+        isActionSuccess: false,
+      ));
+    }
+  }
+
+  Future<void> _onMatchRatingsSubmitted(
+    MatchRatingsSubmitted event,
+    Emitter<MatchState> emit,
+  ) async {
+    _cache.clear();
+    _cacheCursors.clear();
+    _cacheTimestamps.clear();
+    emit(state.copyWith(clearMessage: true));
+    try {
+      await _matchRepository.submitRatings(event.matchId, event.ratings);
+      final updated = await _matchRepository.getMatch(event.matchId);
+      final matches = _upsertMatch(state.matches, updated);
+      final trending = _upsertMatch(state.trendingMatches, updated);
+      final myMatches = _upsertMatch(state.myMatches, updated);
+      
+      emit(state.copyWith(
+        status: MatchStatus.success,
+        myMatchesStatus: MatchStatus.success,
+        matches: matches,
+        trendingMatches: trending,
+        myMatches: myMatches,
+        message: 'Ratings submitted successfully!',
+        isActionSuccess: true,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: MatchStatus.success,
+        message: e.toString().replaceAll('Exception: ', ''),
+        isActionSuccess: false,
+      ));
     }
   }
 }
