@@ -278,11 +278,15 @@ const createMatch = async (sportType, title, dateTime, location, maxSlots, skill
     headers: getAuthHeaders(),
     body: JSON.stringify({
       title,
+      sport_type: sportType,
       category: sportType,
       location,
+      date_time: dateTime.replace('T', ' ').substring(0, 16),
       date: dateTime.replace('T', ' ').substring(0, 16),
       price: String(price || 0),
+      women_only: Boolean(womenOnly),
       is_women_only: Boolean(womenOnly),
+      available_slots: Number(maxSlots),
       max_slots: Number(maxSlots),
       skill_level: skillLevel
     })
