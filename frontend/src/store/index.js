@@ -202,16 +202,31 @@ const updateProfile = async (name, gender, avatar, bio, primarySport, skillTier,
     body.email = (typeof email === 'string' && email.trim() === '') ? null : email
   }
 
-  const data = await safeFetch(`${API_URL}/user`, {
+  const res = await fetch(`${API_URL}/user`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(body)
   })
-  if (data) {
-    state.currentUser = data
-    sessionStorage.setItem('sportigo_user', JSON.stringify(data))
-    await init()
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      console.warn(`Unauthorized request (401) to updateProfile. Clearing invalid session.`)
+      state.currentUser = null
+      state.matches = []
+      state.activities = []
+      sessionStorage.removeItem('sportigo_user')
+      sessionStorage.removeItem('sportigo_token')
+      throw new Error('Session expired. Please log in again.')
+    }
+    const errData = await res.json().catch(() => ({}))
+    throw new Error(errData.message || 'Failed to update profile details')
   }
+
+  const data = await res.json()
+  state.currentUser = data
+  sessionStorage.setItem('sportigo_user', JSON.stringify(data))
+  await init()
+  return true
 }
 
 const setThemePreference = (pref) => {
