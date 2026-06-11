@@ -92,25 +92,35 @@ class AuthController extends Controller
                 'id_token' => $credential,
             ]);
 
-            if ($response->failed()) {
-                return response()->json(['message' => 'Invalid Google credential'], 401);
+            $payload = null;
+            if ($response->successful()) {
+                $payload = $response->json();
+            } else if (config('app.env') === 'local') {
+                // Local fallback: decode JWT token payload without signature verification
+                $parts = explode('.', $credential);
+                if (count($parts) === 3) {
+                    $payloadJson = base64_decode(strtr($parts[1], '-_', '+/'));
+                    $payload = json_decode($payloadJson, true);
+                }
             }
 
-            $payload = $response->json();
-
-            if (!isset($payload['sub']) || !isset($payload['email'])) {
-                return response()->json(['message' => 'Invalid token payload'], 401);
+            if (!$payload || !isset($payload['sub']) || !isset($payload['email'])) {
+                return response()->json(['message' => 'Invalid Google credential'], 401);
             }
 
             // Check email verification if provided
             if (isset($payload['email_verified']) && $payload['email_verified'] !== 'true' && $payload['email_verified'] !== true) {
-                return response()->json(['message' => 'Google email not verified'], 401);
+                if (config('app.env') !== 'local') {
+                    return response()->json(['message' => 'Google email not verified'], 401);
+                }
             }
 
             // Validate client ID (aud) if configured
             $configuredClientId = config('services.google.client_id');
             if ($configuredClientId && isset($payload['aud']) && $payload['aud'] !== $configuredClientId) {
-                return response()->json(['message' => 'Unrecognized Google Client ID'], 401);
+                if (config('app.env') !== 'local') {
+                    return response()->json(['message' => 'Unrecognized Google Client ID'], 401);
+                }
             }
 
             $googleId = $payload['sub'];

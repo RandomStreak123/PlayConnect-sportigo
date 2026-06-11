@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { store } from '../store'
 
 const emit = defineEmits(['auth-success'])
@@ -101,12 +101,73 @@ const handleSignUp = async () => {
 const googleSdkReady = ref(false)
 const hasClientId = ref(!!import.meta.env.VITE_GOOGLE_CLIENT_ID)
 
-const handleFallbackGoogleClick = () => {
-  const msg = 'Google Client ID is not configured. Please add VITE_GOOGLE_CLIENT_ID to your frontend .env file.'
+const isLocalDev = computed(() => {
+  if (typeof window === 'undefined') return false
+  return window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' || 
+         window.location.hostname.includes('ddev.site')
+})
+
+const triggerMockGoogleLogin = async () => {
+  // Generate a mock base64url-encoded JWT token
+  const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }))
+    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+  
+  // Log in as Ajith by default for local testing
+  const mockEmail = activeTab.value === 'signup' ? 'newplayer.google.mock@playconnect.com' : 'ajith@playconnect.com'
+  const mockName = activeTab.value === 'signup' ? 'New Google Player' : 'Ajith'
+  const mockSub = activeTab.value === 'signup' ? 'google-mock-999999' : 'google-mock-10'
+  
+  const payloadObj = {
+    sub: mockSub,
+    email: mockEmail,
+    name: mockName,
+    picture: "https://randomuser.me/api/portraits/men/10.jpg",
+    email_verified: true,
+    aud: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'mock-client-id'
+  }
+  
+  const payload = btoa(JSON.stringify(payloadObj))
+    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+    
+  const mockToken = `${header}.${payload}.mock_signature`
+  
   if (activeTab.value === 'signup') {
-    signupError.value = msg
+    signupLoading.value = true
+    signupError.value = ''
   } else {
-    loginError.value = msg
+    loginLoading.value = true
+    loginError.value = ''
+  }
+  
+  try {
+    const success = await store.loginWithGoogle(mockToken)
+    if (success) {
+      emit('auth-success')
+    }
+  } catch (error) {
+    const msg = error.message || 'Mock Google authentication failed'
+    if (activeTab.value === 'signup') {
+      signupError.value = msg
+    } else {
+      loginError.value = msg
+    }
+  } finally {
+    loginLoading.value = false
+    signupLoading.value = false
+  }
+}
+
+const handleFallbackGoogleClick = () => {
+  if (isLocalDev.value) {
+    triggerMockGoogleLogin()
+  } else {
+    const msg = 'Google Client ID is not configured. Please add VITE_GOOGLE_CLIENT_ID to your frontend .env file.'
+    if (activeTab.value === 'signup') {
+      signupError.value = msg
+    } else {
+      loginError.value = msg
+    }
   }
 }
 
@@ -318,6 +379,13 @@ watch(activeTab, () => {
           <span>Google</span>
         </button>
       </div>
+
+      <!-- Mock Google login link for local development troubleshooting -->
+      <div v-if="isLocalDev" class="mock-google-login-wrapper" style="text-align: center; margin-top: 12px;">
+        <a href="#" @click.prevent="triggerMockGoogleLogin" style="font-size: 0.85rem; color: var(--accent-color, #4f46e5); text-decoration: underline;">
+          Trouble with Google Auth? Use Mock Google Sign-In
+        </a>
+      </div>
     </div>
 
     <!-- Sign Up Panel -->
@@ -423,6 +491,13 @@ watch(activeTab, () => {
           </svg>
           <span>Google</span>
         </button>
+      </div>
+
+      <!-- Mock Google login link for local development troubleshooting -->
+      <div v-if="isLocalDev" class="mock-google-login-wrapper" style="text-align: center; margin-top: 12px;">
+        <a href="#" @click.prevent="triggerMockGoogleLogin" style="font-size: 0.85rem; color: var(--accent-color, #4f46e5); text-decoration: underline;">
+          Trouble with Google Auth? Use Mock Google Sign-In
+        </a>
       </div>
     </div>
   </div>
