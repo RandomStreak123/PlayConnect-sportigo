@@ -12,12 +12,6 @@ Route::middleware('throttle:5,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/auth/google', [AuthController::class, 'googleLogin']);
-    Route::get('/auth/google/users', function () {
-        if (config('app.env') !== 'local') {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-        return \App\Models\User::select('id', 'name', 'email', 'avatar', 'gender')->whereNotNull('email')->get();
-    });
 });
 
 Route::middleware('auth:sanctum')->group(function () {
