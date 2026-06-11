@@ -24,21 +24,7 @@ onMounted(() => {
   loadPlayers()
 })
 
-const playerSearchQuery = ref('')
-let searchTimeout = null
-const handlePlayerSearch = () => {
-  if (searchTimeout) clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(async () => {
-    isLoadingPlayers.value = true
-    try {
-      await store.fetchPlayers(playerSearchQuery.value.trim())
-    } catch (e) {
-      console.error('Failed to search players:', e)
-    } finally {
-      isLoadingPlayers.value = false
-    }
-  }, 300)
-}
+// Filter and sort matches nearby
 
 const upcomingMatches = computed(() => {
   const now = new Date()
@@ -108,28 +94,12 @@ const handleDragEnd = (e) => {
     <!-- Header -->
     <div class="explore-header">
       <h2 class="title">{{ t('explore') }}</h2>
-      <button class="refresh-btn" :disabled="isLoadingPlayers" @click="loadPlayers">
-        <svg v-if="isLoadingPlayers" class="spinner-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-        <svg v-else class="refresh-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
-      </button>
-    </div>
-
-    <!-- Player Search Bar -->
-    <div class="search-box">
-      <span class="search-icon">🔍</span>
-      <input 
-        v-model="playerSearchQuery"
-        type="text" 
-        :placeholder="t('searchPlayersPlaceholder') || 'Search players by name or sport...'" 
-        class="search-input"
-        @input="handlePlayerSearch"
-      />
     </div>
 
     <!-- Nearby Players -->
     <div class="section-row">
       <h3 class="section-title">{{ t('nearbyPlayers') }}</h3>
-      <button class="refresh-txt-btn" @click="loadPlayers">{{ t('refreshList') }}</button>
+      <button class="refresh-txt-btn" @click="loadPlayers">{{ t('refreshList') || 'Refresh list' }}</button>
     </div>
 
     <div 
@@ -155,7 +125,7 @@ const handleDragEnd = (e) => {
       >
         <img :src="getPlayerAvatar(player.avatar || player.profile_photo || player.profile_picture, player.gender)" class="player-avatar" />
         <span class="player-name">{{ player.name }}</span>
-        <span class="player-sport">{{ (player.primary_sport || 'Football').toUpperCase() }}</span>
+        <span class="player-gender">{{ (player.gender || 'player').toUpperCase() }}</span>
         <span class="player-distance">Proximity Enabled</span>
       </div>
     </div>
@@ -234,6 +204,15 @@ const handleDragEnd = (e) => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.refresh-txt-btn {
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
 }
 
 .section-row {
@@ -357,17 +336,21 @@ const handleDragEnd = (e) => {
   margin-bottom: 2px;
 }
 
-.player-sport {
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: var(--primary);
+.player-gender {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #3f51b5; /* Premium Indigo */
   letter-spacing: 0.5px;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .player-distance {
   font-size: 0.65rem;
   color: var(--on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 .trending-header {

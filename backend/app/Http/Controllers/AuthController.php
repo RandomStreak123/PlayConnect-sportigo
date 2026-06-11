@@ -86,39 +86,65 @@ class AuthController extends Controller
         ]);
 
         $credential = $request->credential;
+        \Illuminate\Support\Facades\Log::info('Google login initiated', ['token_length' => strlen($credential)]);
 
         try {
             $response = \Illuminate\Support\Facades\Http::withoutVerifying()->get('https://oauth2.googleapis.com/tokeninfo', [
                 'id_token' => $credential,
             ]);
 
+            \Illuminate\Support\Facades\Log::info('Google tokeninfo response status: ' . $response->status());
+
             $payload = null;
             if ($response->successful()) {
                 $payload = $response->json();
-            } else if (config('app.env') === 'local') {
-                // Local fallback: decode JWT token payload without signature verification
-                $parts = explode('.', $credential);
-                if (count($parts) === 3) {
-                    $payloadJson = base64_decode(strtr($parts[1], '-_', '+/'));
-                    $payload = json_decode($payloadJson, true);
+                \Illuminate\Support\Facades\Log::info('Google tokeninfo verified successfully via API', ['payload_keys' => array_keys($payload)]);
+            } else {
+                \Illuminate\Support\Facades\Log::warning('Google tokeninfo verification failed', ['response_body' => $response->body()]);
+                if (config('app.env') === 'local') {
+                    // Local fallback: decode JWT token payload without signature verification
+                    \Illuminate\Support\Facades\Log::info('Using local JWT payload decode fallback');
+                    $parts = explode('.', $credential);
+                    if (count($parts) === 3) {
+                        $payloadJson = base64_decode(strtr($parts[1], '-_', '+/'));
+                        $payload = json_decode($payloadJson, true);
+                    }
                 }
             }
 
-            if (!$payload || !isset($payload['sub']) || !isset($payload['email'])) {
-                return response()->json(['message' => 'Invalid Google credential'], 401);
+            if (!$payload) {
+                \Illuminate\Support\Facades\Log::error('Google login failed: Decoded payload is null');
+                return response()->json(['message' => 'Invalid Google credential (empty payload)'], 401);
+            }
+
+            \Illuminate\Support\Facades\Log::info('Google payload details', [
+                'sub' => $payload['sub'] ?? 'missing',
+                'email' => $payload['email'] ?? 'missing',
+                'email_verified' => $payload['email_verified'] ?? 'missing',
+                'aud' => $payload['aud'] ?? 'missing',
+            ]);
+
+            if (!isset($payload['sub']) || !isset($payload['email'])) {
+                return response()->json(['message' => 'Invalid Google credential (sub or email missing)'], 401);
             }
 
             // Check email verification if provided
             if (isset($payload['email_verified']) && $payload['email_verified'] !== 'true' && $payload['email_verified'] !== true) {
                 if (config('app.env') !== 'local') {
+                    \Illuminate\Support\Facades\Log::warning('Email verification check failed');
                     return response()->json(['message' => 'Google email not verified'], 401);
                 }
             }
 
             // Validate client ID (aud) if configured
             $configuredClientId = config('services.google.client_id');
+            \Illuminate\Support\Facades\Log::info('Client ID validation', [
+                'configured' => $configuredClientId,
+                'payload_aud' => $payload['aud'] ?? null
+            ]);
             if ($configuredClientId && isset($payload['aud']) && $payload['aud'] !== $configuredClientId) {
                 if (config('app.env') !== 'local') {
+                    \Illuminate\Support\Facades\Log::error('Client ID mismatch');
                     return response()->json(['message' => 'Unrecognized Google Client ID'], 401);
                 }
             }
@@ -130,10 +156,12 @@ class AuthController extends Controller
 
             // 1. Try to find user by google_id
             $user = User::where('google_id', $googleId)->first();
+            \Illuminate\Support\Facades\Log::info('Find user by google_id query', ['found' => !is_null($user)]);
 
             if (!$user) {
                 // 2. Try to find user by email
                 $user = User::where('email', $email)->first();
+                \Illuminate\Support\Facades\Log::info('Find user by email query', ['email' => $email, 'found' => !is_null($user)]);
 
                 if ($user) {
                     // Update user's google_id if not set
@@ -142,29 +170,12 @@ class AuthController extends Controller
                         $user->avatar = $picture;
                     }
                     $user->save();
+                    \Illuminate\Support\Facades\Log::info('Associated user successfully', ['user_id' => $user->id]);
                 } else {
-                    // 3. Create a new user
-                    // Generate unique username
-                    $baseUsername = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode('@', $email)[0]));
-                    if (strlen($baseUsername) < 3) {
-                        $baseUsername = 'user_' . $baseUsername;
-                    }
-                    $username = $baseUsername;
-                    $counter = 1;
-                    while (User::where('username', $username)->exists()) {
-                        $username = $baseUsername . $counter;
-                        $counter++;
-                    }
-
-                    $user = User::create([
-                        'name' => $name,
-                        'username' => $username,
-                        'email' => $email,
-                        'google_id' => $googleId,
-                        'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(24)),
-                        'role' => 'athlete',
-                        'avatar' => $picture,
-                    ]);
+                    // Do not auto-create a new user. Return unauthorized.
+                    return response()->json([
+                        'message' => 'This Google account is not associated with any registered user. Please add this email to your profile first.'
+                    ], 401);
                 }
             }
 

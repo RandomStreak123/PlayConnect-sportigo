@@ -124,13 +124,14 @@ const init = async () => {
 init()
 
 const login = async (username, password) => {
-  const data = await safeFetch(`${API_URL}/login`, {
+  const res = await fetch(`${API_URL}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify({ username, password })
   })
 
-  if (data && data.access_token) {
+  const data = await res.json().catch(() => null)
+  if (res.ok && data && data.access_token) {
     state.currentUser = data.user
     sessionStorage.setItem('sportigo_user', JSON.stringify(data.user))
     sessionStorage.setItem('sportigo_token', data.access_token)
@@ -142,13 +143,14 @@ const login = async (username, password) => {
 }
 
 const loginWithGoogle = async (credential) => {
-  const data = await safeFetch(`${API_URL}/auth/google`, {
+  const res = await fetch(`${API_URL}/auth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify({ credential })
   })
 
-  if (data && data.access_token) {
+  const data = await res.json().catch(() => null)
+  if (res.ok && data && data.access_token) {
     state.currentUser = data.user
     sessionStorage.setItem('sportigo_user', JSON.stringify(data.user))
     sessionStorage.setItem('sportigo_token', data.access_token)
@@ -160,13 +162,14 @@ const loginWithGoogle = async (credential) => {
 }
 
 const register = async (name, username, password, gender) => {
-  const data = await safeFetch(`${API_URL}/register`, {
+  const res = await fetch(`${API_URL}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify({ name, username, password, gender })
   })
 
-  if (data && data.access_token) {
+  const data = await res.json().catch(() => null)
+  if (res.ok && data && data.access_token) {
     state.currentUser = data.user
     sessionStorage.setItem('sportigo_user', JSON.stringify(data.user))
     sessionStorage.setItem('sportigo_token', data.access_token)

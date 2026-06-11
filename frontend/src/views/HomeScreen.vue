@@ -96,9 +96,9 @@ const nearbyMatches = computed(() => {
     if (selectedCategory.value !== 'All' && match.sportType !== selectedCategory.value) {
       return false
     }
-    // Filter out past matches (more than 2 hours ago)
+    // Filter out past matches
     const matchTime = new Date(match.dateTime.replace(' ', 'T'))
-    return matchTime >= new Date(now.getTime() - 2 * 60 * 60 * 1000)
+    return matchTime >= now
   })
   
   // Sort chronologically (closest first)
@@ -111,7 +111,7 @@ const trendingMatches = computed(() => {
   const now = new Date()
   let filtered = store.state.matches.filter(match => {
     const matchTime = new Date(match.dateTime.replace(' ', 'T'))
-    return matchTime >= new Date(now.getTime() - 2 * 60 * 60 * 1000)
+    return matchTime >= now
   })
   
   // Sort by popularity (joinedCount) and chronologically
