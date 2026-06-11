@@ -227,7 +227,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   SizedBox(
-                    height: 140,
+                    height: 150,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: _searchResultsPlayers.length,
@@ -622,7 +622,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                   ? Icon(Icons.person, color: Theme.of(context).colorScheme.primaryContainer)
                   : null,
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               player.name,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(

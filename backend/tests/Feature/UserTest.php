@@ -29,6 +29,7 @@ class UserTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/user/update', [
             'name' => 'Updated Name',
+            'email' => 'updated@example.com',
             'phone' => '+1234567890',
             'bio' => 'A new custom bio',
             'primary_sport' => 'Football',
@@ -41,11 +42,31 @@ class UserTest extends TestCase
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
             'name' => 'Updated Name',
+            'email' => 'updated@example.com',
             'phone' => '+1234567890',
             'bio' => 'A new custom bio',
             'primary_sport' => 'Football',
             'skill_tier' => 'Elite',
             'gender' => 'male',
+        ]);
+    }
+
+    public function test_can_update_user_profile_with_null_email()
+    {
+        $user = User::factory()->create([
+            'email' => 'old@example.com',
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/user/update', [
+            'name' => 'Updated Name',
+            'email' => null,
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => null,
         ]);
     }
 

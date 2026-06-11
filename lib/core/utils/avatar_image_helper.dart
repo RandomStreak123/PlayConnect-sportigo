@@ -6,8 +6,20 @@ class AvatarImageHelper {
     if (path == null || path.isEmpty) return null;
     if (path.startsWith('assets/')) return null;
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      final baseHost = Uri.parse(ApiConstants.assetBaseUrl).host;
-      return path.replaceAll('localhost', baseHost);
+      try {
+        final uri = Uri.parse(path);
+        if (uri.host == 'localhost' || uri.host == '127.0.0.1') {
+          final baseUri = Uri.parse(ApiConstants.assetBaseUrl);
+          return uri.replace(
+            host: baseUri.host,
+            port: baseUri.hasPort ? baseUri.port : null,
+          ).toString();
+        }
+      } catch (_) {
+        final baseHost = Uri.parse(ApiConstants.assetBaseUrl).host;
+        return path.replaceAll('localhost', baseHost).replaceAll('127.0.0.1', baseHost);
+      }
+      return path;
     }
     return '${ApiConstants.assetBaseUrl}/storage/$path';
   }
@@ -25,15 +37,46 @@ class AvatarImageHelper {
     double radius = 20,
     Color? backgroundColor,
   }) {
-    final hasImage = resolveUrl(path) != null;
+    final url = resolveUrl(path);
+    if (url != null) {
+      return Container(
+        width: radius * 2,
+        height: radius * 2,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: backgroundColor ?? Colors.grey.shade300,
+        ),
+        child: ClipOval(
+          child: Image.network(
+            url,
+            width: radius * 2,
+            height: radius * 2,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Icon(Icons.person, size: radius, color: Colors.white70);
+            },
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: SizedBox(
+                  width: radius,
+                  height: radius,
+                  child: const CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white30),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
     return CircleAvatar(
       radius: radius,
       backgroundColor: backgroundColor,
-      backgroundImage: hasImage ? provider(path) : null,
-      onBackgroundImageError: hasImage ? (_, _) {} : null,
-      child: !hasImage
-          ? Icon(Icons.person, size: radius, color: Colors.white70)
-          : null,
+      child: Icon(Icons.person, size: radius, color: Colors.white70),
     );
   }
 }

@@ -14,6 +14,8 @@ class UserModel {
   final String? bio;
   final String? email;
 
+  final UserStats? stats;
+
   UserModel({
     required this.id,
     required this.name,
@@ -27,6 +29,7 @@ class UserModel {
     this.skillTier,
     this.bio,
     this.email,
+    this.stats,
   });
 
   UserModel copyWith({
@@ -42,6 +45,7 @@ class UserModel {
     String? skillTier,
     String? bio,
     String? email,
+    UserStats? stats,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -56,6 +60,7 @@ class UserModel {
       skillTier: skillTier ?? this.skillTier,
       bio: bio ?? this.bio,
       email: email ?? this.email,
+      stats: stats ?? this.stats,
     );
   }
 
@@ -65,8 +70,20 @@ class UserModel {
       return null;
     }
     if (profilePicture!.startsWith('http://') || profilePicture!.startsWith('https://')) {
-      final baseHost = Uri.parse(ApiConstants.assetBaseUrl).host;
-      return profilePicture!.replaceAll('localhost', baseHost);
+      try {
+        final uri = Uri.parse(profilePicture!);
+        if (uri.host == 'localhost' || uri.host == '127.0.0.1') {
+          final baseUri = Uri.parse(ApiConstants.assetBaseUrl);
+          return uri.replace(
+            host: baseUri.host,
+            port: baseUri.hasPort ? baseUri.port : null,
+          ).toString();
+        }
+      } catch (_) {
+        final baseHost = Uri.parse(ApiConstants.assetBaseUrl).host;
+        return profilePicture!.replaceAll('localhost', baseHost).replaceAll('127.0.0.1', baseHost);
+      }
+      return profilePicture;
     }
     return '${ApiConstants.assetBaseUrl}/storage/$profilePicture';
   }
@@ -85,6 +102,7 @@ class UserModel {
       skillTier: json['skill_tier'],
       bio: json['bio'],
       email: json['email'],
+      stats: json['stats'] != null ? UserStats.fromJson(json['stats']) : null,
     );
   }
 
@@ -102,6 +120,63 @@ class UserModel {
       'skill_tier': skillTier,
       'bio': bio,
       'email': email,
+      'stats': stats?.toJson(),
+    };
+  }
+}
+
+class UserStats {
+  final int xp;
+  final int level;
+  final int currentLevelXp;
+  final int nextLevelXp;
+  final int progressPct;
+  final int winRate;
+  final int streak;
+  final String playStyle;
+  final String globalRank;
+  final int totalGames;
+
+  UserStats({
+    required this.xp,
+    required this.level,
+    required this.currentLevelXp,
+    required this.nextLevelXp,
+    required this.progressPct,
+    required this.winRate,
+    required this.streak,
+    required this.playStyle,
+    required this.globalRank,
+    required this.totalGames,
+  });
+
+  factory UserStats.fromJson(Map<String, dynamic> json) {
+    return UserStats(
+      xp: json['xp'] ?? 0,
+      level: json['level'] ?? 1,
+      currentLevelXp: json['currentLevelXp'] ?? 0,
+      nextLevelXp: json['nextLevelXp'] ?? 1000,
+      progressPct: json['progressPct'] ?? 0,
+      winRate: json['winRate'] ?? 0,
+      streak: json['streak'] ?? 0,
+      playStyle: json['playStyle'] ?? 'All-Rounder',
+      globalRank: json['globalRank'] ?? '#1000 Kochi',
+      totalGames: json['totalGames'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'xp': xp,
+      'level': level,
+      'currentLevelXp': currentLevelXp,
+      'nextLevelXp': nextLevelXp,
+      'progressPct': progressPct,
+      'winRate': winRate,
+      'streak': streak,
+      'playStyle': playStyle,
+      'globalRank': globalRank,
+      'totalGames': totalGames,
     };
   }
 }

@@ -334,7 +334,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       final photoUrl = widget.isCurrentUser 
                           ? state.user?.profilePhotoUrl 
                           : widget.profilePicture;
-                      final ImageProvider? imageProvider = AvatarImageHelper.provider(photoUrl);
 
                       return Stack(
                         alignment: Alignment.center,
@@ -384,17 +383,23 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                 height: 126,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  image: imageProvider != null
-                                      ? DecorationImage(
-                                          image: imageProvider,
-                                          fit: BoxFit.cover,
-                                          onError: (exception, stackTrace) {},
-                                        )
-                                      : null,
+                                  color: Theme.of(context).colorScheme.surfaceDim,
                                 ),
-                                child: AvatarImageHelper.resolveUrl(photoUrl) == null
-                                    ? const Icon(Icons.person, size: 60, color: Colors.white70)
-                                    : null,
+                                child: (photoUrl != null && AvatarImageHelper.resolveUrl(photoUrl) != null)
+                                    ? ClipOval(
+                                        child: Image.network(
+                                          AvatarImageHelper.resolveUrl(photoUrl)!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return const Icon(Icons.person, size: 60, color: Colors.white70);
+                                          },
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return const Center(child: AppLoadingIndicator());
+                                          },
+                                        ),
+                                      )
+                                    : const Icon(Icons.person, size: 60, color: Colors.white70),
                               ),
                             ),
                           ),
@@ -546,135 +551,164 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildLevelSection(BuildContext context, Color sportColor) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final user = state.user;
+        final stats = widget.isCurrentUser ? user?.stats : null;
+
+        final level = stats?.level ?? 24;
+        final xp = stats?.currentLevelXp ?? 750;
+        final nextXp = stats?.nextLevelXp ?? 1000;
+        final progressPct = stats?.progressPct ?? 75;
+        final streak = stats?.streak ?? 7;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.bolt_rounded, color: sportColor),
-                  const SizedBox(width: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.bolt_rounded, color: sportColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Level $level Player',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
                   Text(
-                    'Level 24 Player',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
+                    '$xp / $nextXp XP',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
-              Text(
-                '750 / 1000 XP',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // XP linear progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Stack(
-              children: [
-                Container(
-                  height: 10,
-                  color: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.4),
-                ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeOutCubic,
-                  height: 10,
-                  width: MediaQuery.of(context).size.width * 0.68,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [sportColor, AppColors.electricCyan],
+              const SizedBox(height: 12),
+              // XP linear progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Stack(
+                  children: [
+                    Container(
+                      height: 10,
+                      color: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.4),
                     ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Completion meter helper text
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Progress to Level 25: 75%',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 12,
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 800),
+                          curve: Curves.easeOutCubic,
+                          height: 10,
+                          width: constraints.maxWidth * (progressPct / 100.0),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [sportColor, AppColors.electricCyan],
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        );
+                      }
+                    ),
+                  ],
                 ),
               ),
-              const Text(
-                '🔥 7 Match Winning Streak',
-                style: TextStyle(
-                  color: AppColors.warmOrange,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+              const SizedBox(height: 12),
+              // Completion meter helper text
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Progress to Level ${level + 1}: $progressPct%',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    '🔥 $streak Match Winning Streak',
+                    style: const TextStyle(
+                      color: AppColors.warmOrange,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      }
     );
   }
 
   Widget _buildStatGrid(BuildContext context, Color sportColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.6,
-        children: [
-          _buildGlassStatCard(
-            context,
-            'Win Rate',
-            '72%',
-            Icons.emoji_events_rounded,
-            Colors.amber,
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final user = state.user;
+        final stats = widget.isCurrentUser ? user?.stats : null;
+
+        final winRate = stats?.winRate ?? 72;
+        final playStyle = stats?.playStyle ?? 'All-Rounder';
+        final totalGames = stats?.totalGames ?? 120;
+        final globalRank = stats?.globalRank ?? '#128 Kochi';
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.6,
+            children: [
+              _buildGlassStatCard(
+                context,
+                'Win Rate',
+                '$winRate%',
+                Icons.emoji_events_rounded,
+                Colors.amber,
+              ),
+              _buildGlassStatCard(
+                context,
+                'Play Style',
+                playStyle,
+                Icons.insights,
+                AppColors.electricCyan,
+              ),
+              _buildGlassStatCard(
+                context,
+                'Total Games',
+                '$totalGames Played',
+                Icons.sports_soccer,
+                sportColor,
+              ),
+              _buildGlassStatCard(
+                context,
+                'Global Rank',
+                globalRank,
+                Icons.public_rounded,
+                Colors.indigo,
+              ),
+            ],
           ),
-          _buildGlassStatCard(
-            context,
-            'Play Style',
-            'All-Rounder',
-            Icons.insights,
-            AppColors.electricCyan,
-          ),
-          _buildGlassStatCard(
-            context,
-            'Total Games',
-            '120 Played',
-            Icons.sports_soccer,
-            sportColor,
-          ),
-          _buildGlassStatCard(
-            context,
-            'Global Rank',
-            '#128 Kochi',
-            Icons.public_rounded,
-            Colors.indigo,
-          ),
-        ],
-      ),
+        );
+      }
     );
   }
 

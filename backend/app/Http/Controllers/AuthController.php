@@ -59,7 +59,7 @@ class AuthController extends Controller
         }
 
         // Revoke all existing tokens to prevent simultaneous logins
-        // $user->tokens()->delete();
+        $user->tokens()->delete();
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -77,5 +77,99 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Successfully logged out'
         ]);
+    }
+
+    public function googleLogin(Request $request)
+    {
+        $request->validate([
+            'credential' => 'required|string',
+        ]);
+
+        $credential = $request->credential;
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::get('https://oauth2.googleapis.com/tokeninfo', [
+                'id_token' => $credential,
+            ]);
+
+            if ($response->failed()) {
+                return response()->json(['message' => 'Invalid Google credential'], 401);
+            }
+
+            $payload = $response->json();
+
+            if (!isset($payload['sub']) || !isset($payload['email'])) {
+                return response()->json(['message' => 'Invalid token payload'], 401);
+            }
+
+            // Check email verification if provided
+            if (isset($payload['email_verified']) && $payload['email_verified'] !== 'true' && $payload['email_verified'] !== true) {
+                return response()->json(['message' => 'Google email not verified'], 401);
+            }
+
+            // Validate client ID (aud) if configured
+            $configuredClientId = config('services.google.client_id');
+            if ($configuredClientId && isset($payload['aud']) && $payload['aud'] !== $configuredClientId) {
+                return response()->json(['message' => 'Unrecognized Google Client ID'], 401);
+            }
+
+            $googleId = $payload['sub'];
+            $email = $payload['email'];
+            $name = $payload['name'] ?? 'Google User';
+            $picture = $payload['picture'] ?? null;
+
+            // 1. Try to find user by google_id
+            $user = User::where('google_id', $googleId)->first();
+
+            if (!$user) {
+                // 2. Try to find user by email
+                $user = User::where('email', $email)->first();
+
+                if ($user) {
+                    // Update user's google_id if not set
+                    $user->google_id = $googleId;
+                    if (!$user->avatar && $picture) {
+                        $user->avatar = $picture;
+                    }
+                    $user->save();
+                } else {
+                    // 3. Create a new user
+                    // Generate unique username
+                    $baseUsername = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode('@', $email)[0]));
+                    if (strlen($baseUsername) < 3) {
+                        $baseUsername = 'user_' . $baseUsername;
+                    }
+                    $username = $baseUsername;
+                    $counter = 1;
+                    while (User::where('username', $username)->exists()) {
+                        $username = $baseUsername . $counter;
+                        $counter++;
+                    }
+
+                    $user = User::create([
+                        'name' => $name,
+                        'username' => $username,
+                        'email' => $email,
+                        'google_id' => $googleId,
+                        'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(24)),
+                        'role' => 'athlete',
+                        'avatar' => $picture,
+                    ]);
+                }
+            }
+
+            // Revoke other tokens and create new one
+            $user->tokens()->delete();
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return response()->json([
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'user' => $user,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Authentication failed: ' . $e->getMessage()], 500);
+        }
     }
 }
