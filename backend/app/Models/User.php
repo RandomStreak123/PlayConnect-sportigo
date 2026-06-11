@@ -96,7 +96,7 @@ class User extends Authenticatable
             ->unique('id')
             ->filter(function($m) {
                 $time = $m->date_time ?? $m->date;
-                return $time ? new \DateTime($time) < now() : false;
+                return $time ? new \DateTime($time) < now()->addHours(24) : false;
             });
 
         $xp = 0;

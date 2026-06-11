@@ -10,10 +10,13 @@ class ActivityController extends Controller
 {
     public function index()
     {
-        $activities = Activity::with('user:id,name,profile_picture,profile_photo,gender')
+        $paginated = Activity::with('user:id,name,profile_picture,profile_photo,gender')
             ->latest()
-            ->get();
+            ->paginate(15);
 
-        return response()->json($activities);
+        return response()->json([
+            'data' => $paginated->items(),
+            'next_page' => $paginated->hasMorePages() ? $paginated->currentPage() + 1 : null,
+        ]);
     }
 }
