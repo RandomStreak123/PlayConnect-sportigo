@@ -280,9 +280,9 @@ class MatchController extends Controller
             return response()->json(['message' => 'Only the match organizer can record results.'], 403);
         }
 
-        // Match must be in the past (using a 24-hour buffer to handle client-server timezone difference)
+        // Match must be in the past
         $matchDate = Carbon::parse($match->date_time);
-        if ($matchDate->subHours(24)->isFuture()) {
+        if ($matchDate->isFuture()) {
             return response()->json(['message' => 'Cannot record results for a match that has not yet been played.'], 422);
         }
 
@@ -324,9 +324,9 @@ class MatchController extends Controller
             return response()->json(['message' => 'You must be a participant in this match to submit ratings.'], 403);
         }
 
-        // Match must be in the past (using a 24-hour buffer to handle client-server timezone difference)
+        // Match must be in the past
         $matchDate = Carbon::parse($match->date_time);
-        if ($matchDate->subHours(24)->isFuture()) {
+        if ($matchDate->isFuture()) {
             return response()->json(['message' => 'Cannot submit ratings for a match that has not yet been played.'], 422);
         }
 
