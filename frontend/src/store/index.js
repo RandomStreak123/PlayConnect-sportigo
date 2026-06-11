@@ -1,7 +1,7 @@
 import { reactive, computed } from 'vue'
 
 const state = reactive({
-  currentUser: JSON.parse(localStorage.getItem('sportigo_user')) || null,
+  currentUser: JSON.parse(sessionStorage.getItem('sportigo_user')) || null,
   themePreference: localStorage.getItem('sportigo_theme_pref') || 'system',
   language: localStorage.getItem('sportigo_language') || 'en',
   matches: [],
@@ -24,7 +24,7 @@ const API_URL = '/api'
 
 // Helper to get headers with Bearer token
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('sportigo_token')
+  const token = sessionStorage.getItem('sportigo_token')
   return token
     ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json' }
     : { 'Content-Type': 'application/json', 'Accept': 'application/json' }
@@ -38,8 +38,8 @@ const safeFetch = async (url, options = {}) => {
       state.currentUser = null
       state.matches = []
       state.activities = []
-      localStorage.removeItem('sportigo_user')
-      localStorage.removeItem('sportigo_token')
+      sessionStorage.removeItem('sportigo_user')
+      sessionStorage.removeItem('sportigo_token')
       return null
     }
     if (!res.ok) return null
@@ -68,7 +68,7 @@ const formatRelativeTime = (dateStr) => {
 
 // Initialize state from database
 const init = async () => {
-  const token = localStorage.getItem('sportigo_token')
+  const token = sessionStorage.getItem('sportigo_token')
   if (!token) return // Not logged in
 
   state.isLoading = true
@@ -86,7 +86,7 @@ const init = async () => {
 
     if (userData) {
       state.currentUser = userData
-      localStorage.setItem('sportigo_user', JSON.stringify(userData))
+      sessionStorage.setItem('sportigo_user', JSON.stringify(userData))
     }
     if (matchesData) {
       const allMatches = Array.isArray(matchesData) ? matchesData : (matchesData.data || [])
@@ -132,8 +132,8 @@ const login = async (username, password) => {
 
   if (data && data.access_token) {
     state.currentUser = data.user
-    localStorage.setItem('sportigo_user', JSON.stringify(data.user))
-    localStorage.setItem('sportigo_token', data.access_token)
+    sessionStorage.setItem('sportigo_user', JSON.stringify(data.user))
+    sessionStorage.setItem('sportigo_token', data.access_token)
     await init()
     return true
   }
@@ -150,8 +150,8 @@ const loginWithGoogle = async (credential) => {
 
   if (data && data.access_token) {
     state.currentUser = data.user
-    localStorage.setItem('sportigo_user', JSON.stringify(data.user))
-    localStorage.setItem('sportigo_token', data.access_token)
+    sessionStorage.setItem('sportigo_user', JSON.stringify(data.user))
+    sessionStorage.setItem('sportigo_token', data.access_token)
     await init()
     return true
   }
@@ -168,8 +168,8 @@ const register = async (name, username, password, gender) => {
 
   if (data && data.access_token) {
     state.currentUser = data.user
-    localStorage.setItem('sportigo_user', JSON.stringify(data.user))
-    localStorage.setItem('sportigo_token', data.access_token)
+    sessionStorage.setItem('sportigo_user', JSON.stringify(data.user))
+    sessionStorage.setItem('sportigo_token', data.access_token)
     await init()
     return true
   }
@@ -187,8 +187,8 @@ const logout = async () => {
   state.currentUser = null
   state.matches = []
   state.activities = []
-  localStorage.removeItem('sportigo_user')
-  localStorage.removeItem('sportigo_token')
+  sessionStorage.removeItem('sportigo_user')
+  sessionStorage.removeItem('sportigo_token')
 }
 
 const updateProfile = async (name, gender, avatar, bio, primarySport, skillTier, email) => {
@@ -209,7 +209,7 @@ const updateProfile = async (name, gender, avatar, bio, primarySport, skillTier,
   })
   if (data) {
     state.currentUser = data
-    localStorage.setItem('sportigo_user', JSON.stringify(data))
+    sessionStorage.setItem('sportigo_user', JSON.stringify(data))
     await init()
   }
 }

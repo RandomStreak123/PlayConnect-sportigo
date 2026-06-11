@@ -40,7 +40,7 @@ const loadUserProfile = async () => {
   try {
     const res = await fetch(`/api/users/${props.userId}`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('sportigo_token')}`,
+        'Authorization': `Bearer ${sessionStorage.getItem('sportigo_token')}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       }

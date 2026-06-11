@@ -8,7 +8,7 @@ class UserController extends Controller
 {
     public function show(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json($request->user()->append('stats'));
     }
 
     public function update(Request $request)
@@ -29,7 +29,7 @@ class UserController extends Controller
         $user = $request->user();
         $user->update($validated);
 
-        return response()->json($user->fresh());
+        return response()->json($user->fresh()->append('stats'));
     }
 
     public function publicProfile($id)

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { store } from './store'
 import { getPlayerAvatar } from './utils/sportImageHelper'
 import { t } from './utils/i18n'
@@ -69,6 +69,12 @@ const isAuthenticated = computed(() => {
   return store.state.currentUser !== null
 })
 
+watch(isAuthenticated, (newVal) => {
+  if (!newVal) {
+    currentTab.value = 'home'
+  }
+})
+
 const currentUser = computed(() => {
   return store.state.currentUser || { name: 'Champ', gender: 'male', profilePhotoUrl: null }
 })
@@ -110,7 +116,7 @@ const handlePendingShareMatch = async () => {
     } else {
       const res = await fetch(`/api/matches/${matchId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('sportigo_token')}`,
+          'Authorization': `Bearer ${sessionStorage.getItem('sportigo_token')}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
