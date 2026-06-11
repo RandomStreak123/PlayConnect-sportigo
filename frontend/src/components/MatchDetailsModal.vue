@@ -125,8 +125,47 @@ const saveResults = async () => {
 
 // sendChat removed
 
-const handleShare = () => {
-  emit('action-success', 'Share link copied to clipboard! 📋')
+const handleShare = async () => {
+  const shareUrl = `${window.location.origin}/?match=${props.match.id}`
+  
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: props.match.title,
+        text: `Join this match: "${props.match.title}" on PlayConnect! ⚡`,
+        url: shareUrl
+      })
+      return
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return // User dismissed share dialog
+      }
+      console.warn('Native share failed, falling back to clipboard copy:', err)
+    }
+  }
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        emit('action-success', 'Share link copied to clipboard! 📋')
+      })
+      .catch(() => {
+        emit('action-success', `Failed to copy link ❌`)
+      })
+  } else {
+    // Fallback for browsers/environments without clipboard API
+    const textArea = document.createElement("textarea")
+    textArea.value = shareUrl
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      emit('action-success', 'Share link copied to clipboard! 📋')
+    } catch (err) {
+      emit('action-success', `Failed to copy link ❌`)
+    }
+    document.body.removeChild(textArea)
+  }
 }
 
 // Player Rating Logic

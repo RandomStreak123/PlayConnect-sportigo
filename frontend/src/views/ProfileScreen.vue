@@ -146,99 +146,20 @@ const hasRealResult = (match, uid) => {
 }
 
 const profileStats = computed(() => {
-  const matches = playedMatches.value
-  const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
-
-  // XP Rules (per Sportigo Profile Feature Roadmap)
-  // Join Match: 5 XP | Complete Match: 15 XP | Create Match: 20 XP | Win Match: 25 XP | Rate Player: 10 XP each
-  let xp = 0
-  let wins = 0
-  let recordedMatchCount = 0
-  let createdCount = 0
-
-  matches.forEach(m => {
-    const isCreator = Number(m.creator_id || m.user_id) === Number(uid)
-    const result = isMatchWin(m, uid) // true = win, false = loss/draw, null = unrecorded
-
-    // Create Match (20 XP) or Join Match (5 XP)
-    if (isCreator) {
-      xp += 20
-      createdCount++
-    } else {
-      xp += 5
-    }
-
-    // Complete Match: 15 XP (all past matches are completed)
-    xp += 15
-
-    // Win Match: 25 XP (only for real recorded wins)
-    if (result === true) {
-      xp += 25
-      wins++
-      recordedMatchCount++
-    } else if (result === false) {
-      recordedMatchCount++
-    }
-    // result === null means unrecorded — does not count toward win rate
-  })
-
-  // Rating XP: 10 XP per player rated
-  xp += totalRatingsGiven.value * 10
-
-  const nextLevelXp = 1000
-  const level = Math.floor(xp / nextLevelXp) + 1
-  const currentLevelXp = xp % nextLevelXp
-  const progressPct = Math.round((currentLevelXp / nextLevelXp) * 100)
-
-  // Win Rate = Wins / Matches with recorded results * 100
-  const winRate = recordedMatchCount > 0 ? Math.round((wins / recordedMatchCount) * 100) : 0
-
-  // Streaks: consecutive wins counting backwards from the most recent recorded match
-  let streak = 0
-  const sortedMatches = [...matches].sort((a, b) => new Date(b.date_time || b.date) - new Date(a.date_time || a.date))
-  for (const m of sortedMatches) {
-    const result = isMatchWin(m, uid)
-    if (result === null) continue // skip unrecorded matches
-    if (result === true) {
-      streak++
-    } else {
-      break
-    }
+  if (currentUser.value && currentUser.value.stats) {
+    return currentUser.value.stats
   }
-
-  // Play Style (per Roadmap)
-  // Organizer: Creates Many Matches (>= 40% created)
-  // Attacker: High Scoring (win rate >= 70%)
-  // Defender: Defensive Focus (plays many but win rate < 50%)
-  // All-Rounder: Balanced Activity (default)
-  let playStyle = 'All-Rounder'
-  if (matches.length > 0) {
-    const createRatio = createdCount / matches.length
-    if (createRatio >= 0.4) {
-      playStyle = 'Organizer'
-    } else if (winRate >= 70) {
-      playStyle = 'Attacker'
-    } else if (winRate < 50 && recordedMatchCount >= 5) {
-      playStyle = 'Defender'
-    }
-  }
-
-  // Global Rank: improves as XP increases
-  const rankNum = Math.max(1, 1000 - Math.floor(xp / 5))
-  const globalRank = `#${rankNum} Kochi`
-
   return {
-    xp,
-    level,
-    currentLevelXp,
-    nextLevelXp,
-    progressPct,
-    winRate,
-    streak,
-    playStyle,
-    globalRank,
-    totalGames: matches.length,
-    recordedGames: recordedMatchCount
+    xp: 0,
+    level: 1,
+    currentLevelXp: 0,
+    nextLevelXp: 1000,
+    progressPct: 0,
+    winRate: 0,
+    streak: 0,
+    playStyle: 'All-Rounder',
+    globalRank: '#1000 Kochi',
+    totalGames: 0
   }
 })
 
@@ -493,7 +414,8 @@ onMounted(() => {
     class="profile-container scrollable-y animate-fade-in"
     :style="{ background: `linear-gradient(180deg, ${currentSportColor}2E 0%, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)` }"
   >
-    <!-- Custom Header -->
+    <div class="profile-content-wrap">
+      <!-- Custom Header -->
     <div class="profile-header">
       <h2 class="title">{{ t('playerProfile') }}</h2>
       <button v-if="isCurrentUser" class="settings-nav-btn" @click="showSettingsModal = true">
@@ -812,6 +734,8 @@ onMounted(() => {
       </div>
     </Transition>
 
+    </div>
+
     <!-- Edit Profile Modal -->
     <Teleport to="body">
       <div v-if="showEditModal" class="modal-backdrop" :class="{ 'theme-women': store.isWomenMode.value }" @click="showEditModal = false">
@@ -927,6 +851,13 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.profile-content-wrap {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  position: relative;
+}
+
 .profile-container {
   padding: 56px 20px 80px;
   transition: background 0.6s ease;

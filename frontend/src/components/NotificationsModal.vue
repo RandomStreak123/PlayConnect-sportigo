@@ -48,8 +48,8 @@ const handleMarkRead = async (item) => {
       <div class="modal-sheet" @click.stop>
         <!-- Header -->
         <div class="modal-header">
-          <button class="back-btn" @click="emit('close')" aria-label="Go back">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="back-arrow"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          <button class="back-btn" @click="emit('close')" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="close-icon"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
           <h2 class="modal-title">Notifications</h2>
           <button v-if="notificationList.length > 0" class="read-all-btn" @click="handleMarkAllRead">All Read</button>
@@ -126,18 +126,20 @@ const handleMarkRead = async (item) => {
 
 @media (min-width: 768px) {
   .modal-backdrop {
-    align-items: center;
+    align-items: stretch;
     justify-content: flex-end;
-    padding-right: 24px;
+    padding-right: 0;
   }
 
   .modal-sheet {
     width: 100%;
-    max-width: 520px;
-    height: auto;
-    max-height: 80vh;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    max-width: 480px;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    border-top-left-radius: var(--radius-xl);
+    border-bottom-left-radius: var(--radius-xl);
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
   }
 }
 

@@ -52,6 +52,7 @@ class UserController extends Controller
             'primary_sport' => $user->primary_sport,
             'skill_tier' => $user->skill_tier,
             'matches' => $allMatches,
+            'stats' => $user->stats,
             'tournaments' => $user->tournaments,
             'created_at' => $user->created_at,
         ]);

@@ -39,6 +39,7 @@ class User extends Authenticatable
     protected $appends = [
         'profilePhotoUrl',
         'profilePicture',
+        'stats',
     ];
 
     protected function casts(): array
@@ -82,6 +83,100 @@ class User extends Authenticatable
             return asset('storage/' . $picture);
         }
         return null;
+    }
+
+    public function getStatsAttribute()
+    {
+        $uid = $this->id;
+
+        $joinedMatches = $this->joinedMatches()->with('participants')->get();
+        $hostedMatches = \App\Models\SportsMatch::with('participants')->where('creator_id', $uid)->get();
+        
+        $allPlayedMatches = $hostedMatches->merge($joinedMatches)
+            ->unique('id')
+            ->filter(function($m) {
+                $time = $m->date_time ?? $m->date;
+                return $time ? new \DateTime($time) < now() : false;
+            });
+
+        $xp = 0;
+        $wins = 0;
+        $recordedMatchCount = 0;
+        $createdCount = 0;
+
+        foreach ($allPlayedMatches as $match) {
+            $isCreator = ($match->creator_id ?? $match->user_id) == $uid;
+            
+            if ($isCreator) {
+                $xp += 20;
+                $createdCount++;
+            } else {
+                $xp += 5;
+            }
+
+            $xp += 15;
+
+            $participant = $match->participants->where('id', $uid)->first();
+            $result = $participant ? ($participant->pivot->result ?? null) : null;
+
+            if ($result === 'win') {
+                $xp += 25;
+                $wins++;
+                $recordedMatchCount++;
+            } elseif ($result === 'loss' || $result === 'draw') {
+                $recordedMatchCount++;
+            }
+        }
+
+        $totalRatingsGiven = \App\Models\PlayerRating::where('rater_id', $uid)->count();
+        $xp += $totalRatingsGiven * 10;
+
+        $nextLevelXp = 1000;
+        $level = floor($xp / $nextLevelXp) + 1;
+        $currentLevelXp = $xp % $nextLevelXp;
+        $progressPct = $nextLevelXp > 0 ? round(($currentLevelXp / $nextLevelXp) * 100) : 0;
+
+        $winRate = $recordedMatchCount > 0 ? round(($wins / $recordedMatchCount) * 100) : 0;
+
+        $streak = 0;
+        $sortedMatches = $allPlayedMatches->sortByDesc('date_time');
+        foreach ($sortedMatches as $match) {
+            $participant = $match->participants->where('id', $uid)->first();
+            $result = $participant ? ($participant->pivot->result ?? null) : null;
+            if ($result === 'win') {
+                $streak++;
+            } elseif ($result === 'loss' || $result === 'draw') {
+                break;
+            }
+        }
+
+        $playStyle = 'All-Rounder';
+        $totalGames = $allPlayedMatches->count();
+        if ($totalGames > 0) {
+            $createRatio = $createdCount / $totalGames;
+            if ($createRatio >= 0.4) {
+                $playStyle = 'Organizer';
+            } elseif ($winRate >= 70) {
+                $playStyle = 'Attacker';
+            } elseif ($winRate < 50 && $recordedMatchCount >= 5) {
+                $playStyle = 'Defender';
+            }
+        }
+
+        $rankNum = max(1, 1000 - floor($xp / 5));
+
+        return [
+            'xp' => (int) $xp,
+            'level' => (int) $level,
+            'currentLevelXp' => (int) $currentLevelXp,
+            'nextLevelXp' => (int) $nextLevelXp,
+            'progressPct' => (int) $progressPct,
+            'winRate' => (int) $winRate,
+            'streak' => (int) $streak,
+            'playStyle' => $playStyle,
+            'globalRank' => "#{$rankNum} Kochi",
+            'totalGames' => (int) $totalGames
+        ];
     }
 
     // Mutators for writing using legacy field names

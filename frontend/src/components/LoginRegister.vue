@@ -149,12 +149,10 @@ const renderGoogleButton = () => {
     window.google.accounts.id.renderButton(
       btnContainer,
       { 
-        type: 'standard',
+        type: 'icon',
         theme: 'outline', 
         size: 'large', 
-        text: 'signin_with',
-        shape: 'rectangular',
-        width: 320
+        shape: 'circle'
       }
     )
   }
@@ -165,12 +163,10 @@ const renderGoogleButton = () => {
     window.google.accounts.id.renderButton(
       btnContainerSignup,
       { 
-        type: 'standard',
+        type: 'icon',
         theme: 'outline', 
         size: 'large', 
-        text: 'signup_with',
-        shape: 'rectangular',
-        width: 320
+        shape: 'circle'
       }
     )
   }

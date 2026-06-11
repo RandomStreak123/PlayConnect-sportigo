@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { store } from './store'
 import { getPlayerAvatar } from './utils/sportImageHelper'
 import { t } from './utils/i18n'
@@ -87,10 +87,42 @@ const switchTab = (tabName) => {
 }
 
 const viewUserProfile = (player) => {
-  profileTargetUser.value = player
-  showDetailsModal.value = false
-  currentTab.value = 'profile'
-  store.init()
+  if (player && (player.id === currentUser.value.id || player.name === currentUser.value.name)) {
+    switchTab('profile')
+  } else {
+    profileTargetUser.value = player
+    showDetailsModal.value = false
+    currentTab.value = 'profile'
+    store.init()
+  }
+}
+
+const handlePendingShareMatch = async () => {
+  const matchId = sessionStorage.getItem('pending_share_match')
+  if (!matchId) return
+  sessionStorage.removeItem('pending_share_match')
+  
+  try {
+    await store.init()
+    const match = store.state.matches.find(m => String(m.id) === String(matchId))
+    if (match) {
+      openMatchDetails(match)
+    } else {
+      const res = await fetch(`/api/matches/${matchId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('sportigo_token')}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      })
+      if (res.ok) {
+        const matchData = await res.json()
+        openMatchDetails(matchData)
+      }
+    }
+  } catch (e) {
+    console.error('Failed to open pending shared match:', e)
+  }
 }
 
 const handleAuthSuccess = () => {
@@ -101,13 +133,29 @@ const handleAuthSuccess = () => {
   
   triggerSnackbar(`${greet}, ${currentUser.value.name}! 👋`)
   switchTab('home')
+  handlePendingShareMatch()
 }
+
+onMounted(() => {
+  const params = new URLSearchParams(window.location.search)
+  const matchId = params.get('match')
+  if (matchId) {
+    sessionStorage.setItem('pending_share_match', matchId)
+  }
+  if (store.state.currentUser) {
+    handlePendingShareMatch()
+  }
+})
 
 // Modal actions
 const openPlayerReveal = (player, sport) => {
-  selectedPlayer.value = player
-  selectedPlayerSport.value = sport || 'Football'
-  showPlayerCard.value = true
+  if (player && (player.id === currentUser.value.id || player.name === currentUser.value.name)) {
+    switchTab('profile')
+  } else {
+    selectedPlayer.value = player
+    selectedPlayerSport.value = sport || 'Football'
+    showPlayerCard.value = true
+  }
 }
 
 const openMatchDetails = (match) => {
@@ -244,7 +292,7 @@ const isWomenTheme = computed(() => {
         </nav>
 
         <!-- Sidebar footer/user widget -->
-        <div class="sidebar-footer">
+        <div class="sidebar-footer" @click="switchTab('profile')" style="cursor: pointer;">
           <div class="footer-avatar-wrap">
             <img :src="currentUserAvatar" class="footer-avatar" @error="(e) => e.target.src = '/assets/images/players/download.jpg'" />
             <span class="online-indicator-dot"></span>
@@ -260,7 +308,7 @@ const isWomenTheme = computed(() => {
       <div class="main-viewport-content">
         <!-- Render page based on current tab state -->
         <div class="screen-scroller">
-          <div class="desktop-content-container">
+          <div v-if="currentTab !== 'profile'" class="desktop-content-container">
             <HomeScreen 
               v-if="currentTab === 'home'"
               @open-details="openMatchDetails"
@@ -285,16 +333,16 @@ const isWomenTheme = computed(() => {
               @open-match-details="openMatchDetails"
               @open-player="openPlayerReveal"
             />
-            <ProfileScreen 
-              v-else-if="currentTab === 'profile'"
-              :is-current-user="!profileTargetUser || profileTargetUser.id === currentUser.id"
-              :user-id="profileTargetUser ? profileTargetUser.id : null"
-              :player-name="profileTargetUser ? profileTargetUser.name : ''"
-              :profile-picture="profileTargetUser ? (profileTargetUser.profilePicture || profileTargetUser.profilePhotoUrl || profileTargetUser.avatar) : null"
-              @auth-logout="triggerSnackbar('Successfully signed out.')"
-              @toast-message="triggerSnackbar"
-            />
           </div>
+          <ProfileScreen 
+            v-else-if="currentTab === 'profile'"
+            :is-current-user="!profileTargetUser || profileTargetUser.id === currentUser.id"
+            :user-id="profileTargetUser ? profileTargetUser.id : null"
+            :player-name="profileTargetUser ? profileTargetUser.name : ''"
+            :profile-picture="profileTargetUser ? (profileTargetUser.profilePicture || profileTargetUser.profilePhotoUrl || profileTargetUser.avatar) : null"
+            @auth-logout="triggerSnackbar('Successfully signed out.')"
+            @toast-message="triggerSnackbar"
+          />
         </div>
 
         <!-- Mobile Bottom bar Navigation (Visible only on mobile screen widths) -->
