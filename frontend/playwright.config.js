@@ -8,7 +8,8 @@ export default defineConfig({
   workers: 1, // Keep to 1 worker to prevent concurrent database writes/reads in tests
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'https://localhost:5173',
+    ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },

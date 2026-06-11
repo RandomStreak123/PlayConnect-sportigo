@@ -94,7 +94,7 @@ test.describe('PlayConnect E2E Match Flow', () => {
     } finally {
       // Clean up/Delete the created match
       if (matchId) {
-        const token = await page.evaluate(() => localStorage.getItem('sportigo_token'));
+        const token = await page.evaluate(() => sessionStorage.getItem('sportigo_token') || localStorage.getItem('sportigo_token'));
         if (token) {
           const deleteResponse = await page.request.delete(`/api/matches/${matchId}`, {
             headers: {
