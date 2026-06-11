@@ -115,7 +115,9 @@ const userMatches = computed(() => {
 const playedMatches = computed(() => {
   const now = new Date()
   return userMatches.value.filter(m => {
-    const matchDate = new Date(m.date_time || m.date)
+    const dateStr = m.date_time || m.date
+    if (!dateStr) return false
+    const matchDate = new Date(dateStr.replace(' ', 'T'))
     return matchDate < now
   })
 })
@@ -179,7 +181,7 @@ const getMatchXp = (match) => {
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   try {
-    const d = new Date(dateStr)
+    const d = new Date(dateStr.replace(' ', 'T'))
     if (isNaN(d.getTime())) return dateStr
     return d.toLocaleDateString(store.state.language === 'hi' ? 'hi-IN' : 'en-US', {
       month: 'short',
