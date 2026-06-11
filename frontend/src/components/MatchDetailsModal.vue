@@ -38,7 +38,8 @@ const isJoined = computed(() => {
 
 const isCreator = computed(() => {
   if (!store.state.currentUser) return false
-  return props.match.creatorId === store.state.currentUser.id
+  const matchCreatorId = props.match.creatorId ?? props.match.creator_id
+  return Number(matchCreatorId) === Number(store.state.currentUser.id)
 })
 
 const isRestricted = computed(() => {
