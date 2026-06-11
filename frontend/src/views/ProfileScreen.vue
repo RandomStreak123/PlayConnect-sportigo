@@ -344,7 +344,6 @@ const onFileSelected = async (event) => {
 
   try {
     isUploading.value = true
-    emit('toast-message', 'Uploading avatar to Supabase Storage... ⏳')
 
     // 1. Prepare file path
     const fileExt = file.name.split('.').pop()
