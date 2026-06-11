@@ -60,6 +60,35 @@ class User extends Authenticatable
         return $this->belongsToMany(Tournament::class, 'tournament_user')->withPivot('team_name')->withTimestamps();
     }
 
+    public function followers()
+    {
+        return $this->belongsToMany(User::class, 'follows', 'followed_id', 'follower_id')->withTimestamps();
+    }
+
+    public function following()
+    {
+        return $this->belongsToMany(User::class, 'follows', 'follower_id', 'followed_id')->withTimestamps();
+    }
+
+    public function getFollowersCountAttribute()
+    {
+        return $this->followers()->count();
+    }
+
+    public function getFollowingCountAttribute()
+    {
+        return $this->following()->count();
+    }
+
+    public function getIsFollowedAttribute()
+    {
+        $currentUser = auth('sanctum')->user();
+        if (!$currentUser) {
+            return false;
+        }
+        return $this->followers()->where('follower_id', $currentUser->id)->exists();
+    }
+
     public function getProfilePhotoUrlAttribute()
     {
         $photo = $this->avatar;

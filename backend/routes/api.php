@@ -45,6 +45,10 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Public User Profile
     Route::get('/users/{id}', [UserController::class, 'publicProfile']);
+    Route::get('/users/{id}/followers', [UserController::class, 'followers']);
+    Route::get('/users/{id}/following', [UserController::class, 'following']);
+    Route::post('/users/{id}/follow', [UserController::class, 'follow']);
+    Route::post('/users/{id}/unfollow', [UserController::class, 'unfollow']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
     

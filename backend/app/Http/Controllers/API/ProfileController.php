@@ -107,7 +107,7 @@ class ProfileController extends Controller
         }
 
         $user->save();
-        $user->append('stats');
+        $user->append(['stats', 'followersCount', 'followingCount']);
 
         return response()->json([
             'message' => 'Profile updated successfully',
@@ -130,6 +130,10 @@ class ProfileController extends Controller
         }
 
         $players = $query->latest()->take(15)->get();
+
+        foreach ($players as $player) {
+            $player->append('isFollowed');
+        }
             
         return response()->json([
             'success' => true,

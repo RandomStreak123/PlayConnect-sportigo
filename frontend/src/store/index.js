@@ -471,6 +471,46 @@ const fetchMatches = async (filters = {}) => {
   return { data: [], next_cursor: null, has_more: false }
 }
 
+const followPlayer = async (playerId) => {
+  if (!state.currentUser) return null
+  const data = await safeFetch(`${API_URL}/users/${playerId}/follow`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  })
+  if (data && data.success) {
+    const idx = state.players.findIndex(p => p.id === playerId)
+    if (idx !== -1) {
+      state.players[idx].isFollowed = true
+      state.players[idx].followersCount = data.followersCount
+    }
+    if (state.currentUser && state.currentUser.followingCount !== undefined) {
+      state.currentUser.followingCount++
+    }
+    return data
+  }
+  return null
+}
+
+const unfollowPlayer = async (playerId) => {
+  if (!state.currentUser) return null
+  const data = await safeFetch(`${API_URL}/users/${playerId}/unfollow`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  })
+  if (data && data.success) {
+    const idx = state.players.findIndex(p => p.id === playerId)
+    if (idx !== -1) {
+      state.players[idx].isFollowed = false
+      state.players[idx].followersCount = data.followersCount
+    }
+    if (state.currentUser && state.currentUser.followingCount !== undefined) {
+      state.currentUser.followingCount = Math.max(0, state.currentUser.followingCount - 1)
+    }
+    return data
+  }
+  return null
+}
+
 export const store = {
   state,
   isWomenMode,
@@ -495,5 +535,7 @@ export const store = {
   submitPlayerRatings,
   getMatchRatings,
   fetchPlayers,
-  fetchMatches
+  fetchMatches,
+  followPlayer,
+  unfollowPlayer
 }

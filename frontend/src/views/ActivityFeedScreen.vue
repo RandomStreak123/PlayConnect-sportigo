@@ -37,6 +37,10 @@ const getSportColorClass = (sport) => {
 }
 
 const handleActivityClick = (act) => {
+  if (act.type === 'follow' && act.meta?.followed_id) {
+    emit('open-player', { id: act.meta.followed_id, name: act.meta.followed_name }, act.sportType)
+    return
+  }
   // Find match in store matches
   const match = store.state.matches.find(m => m.title === act.matchTitle)
   if (match) {
@@ -90,12 +94,13 @@ const handleComment = (e, act) => {
 
         <!-- Description body -->
         <p class="activity-msg">
-          <span class="user-bold">{{ act.userName }}</span>&nbsp;
+          <span class="user-bold">{{ act.userName }}</span> 
           <template v-if="act.type === 'follow'">
-            {{ act.action }}&nbsp;<span class="match-name-highlight">{{ Number(act.meta?.followed_id) === Number(store.state.currentUser?.id) ? 'you' : (act.meta?.followed_name || 'Player') }}</span>
+            {{ act.message }}
           </template>
           <template v-else>
-            {{ act.action }}:&nbsp;<span class="match-name-highlight">"{{ act.matchTitle }}"</span>
+            {{ act.action }}:
+            <span class="match-name-highlight">"{{ act.matchTitle }}"</span>
           </template>
         </p>
 

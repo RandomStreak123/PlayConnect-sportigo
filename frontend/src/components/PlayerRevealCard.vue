@@ -17,7 +17,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'view-profile', 'wave-success'])
+const emit = defineEmits(['close', 'view-profile', 'wave-success', 'toggle-follow'])
 
 const avatarUrl = computed(() => {
   return getPlayerAvatar(props.player.profilePicture, props.player.gender || 'male')
@@ -67,6 +67,10 @@ const handleWave = () => {
 const handleViewProfile = () => {
   emit('view-profile', props.player)
   emit('close')
+}
+
+const handleFollowToggle = () => {
+  emit('toggle-follow', props.player)
 }
 </script>
 
@@ -120,6 +124,15 @@ const handleViewProfile = () => {
             Send a Quick Wave
           </button>
           
+          <button 
+            class="action-btn follow-reveal-btn" 
+            :class="{ 'following': player.isFollowed }"
+            @click="handleFollowToggle"
+          >
+            <span v-if="player.isFollowed">✓ Following</span>
+            <span v-else>+ Follow Player</span>
+          </button>
+
           <button class="action-btn profile-btn" @click="handleViewProfile">
             View Full Profile
           </button>
@@ -361,5 +374,27 @@ const handleViewProfile = () => {
 
 .profile-btn:hover {
   background-color: var(--scaffold-bg);
+}
+
+.follow-reveal-btn {
+  background-color: var(--primary);
+  color: #ffffff;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.follow-reveal-btn.following {
+  background: none;
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface);
+}
+
+.follow-reveal-btn.following:hover {
+  background-color: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
+  border-color: #fca5a5;
 }
 </style>

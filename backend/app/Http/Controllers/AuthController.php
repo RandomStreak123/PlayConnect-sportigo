@@ -32,6 +32,7 @@ class AuthController extends Controller
             'role' => $validated['role'] ?? 'athlete',
         ]);
 
+        $user->append(['stats', 'followersCount', 'followingCount']);
         $token = $user->createToken('auth_token')->plainTextToken;
         $user->append('stats');
 
@@ -59,6 +60,10 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Revoke all existing tokens to prevent simultaneous logins
+        $user->tokens()->delete();
+
+        $user->append(['stats', 'followersCount', 'followingCount']);
         $token = $user->createToken('auth_token')->plainTextToken;
         $user->append('stats');
 
@@ -157,6 +162,9 @@ class AuthController extends Controller
                 }
             }
 
+            // Revoke other tokens and create new one
+            $user->tokens()->delete();
+            $user->append(['stats', 'followersCount', 'followingCount']);
             $token = $user->createToken('auth_token')->plainTextToken;
             $user->append('stats');
 

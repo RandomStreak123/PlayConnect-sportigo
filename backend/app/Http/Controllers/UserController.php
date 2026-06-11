@@ -9,7 +9,7 @@ class UserController extends Controller
     public function show(Request $request)
     {
         $user = $request->user();
-        $user->append('stats');
+        $user->append(['stats', 'followersCount', 'followingCount']);
         return response()->json($user);
     }
 
@@ -32,7 +32,7 @@ class UserController extends Controller
         $user->update($validated);
 
         $freshUser = $user->fresh();
-        $freshUser->append('stats');
+        $freshUser->append(['stats', 'followersCount', 'followingCount']);
         return response()->json($freshUser);
     }
 
@@ -62,6 +62,84 @@ class UserController extends Controller
             'activities' => $activities,
             'tournaments' => $user->tournaments,
             'created_at' => $user->created_at,
+            'followersCount' => $user->followersCount,
+            'followingCount' => $user->followingCount,
+            'isFollowed' => $user->isFollowed,
         ]);
+    }
+
+    public function follow($id)
+    {
+        $targetUser = \App\Models\User::findOrFail($id);
+        $currentUser = auth()->user();
+
+        if ($currentUser->id === $targetUser->id) {
+            return response()->json(['message' => 'You cannot follow yourself'], 422);
+        }
+
+        $alreadyFollowing = $currentUser->following()->where('followed_id', $targetUser->id)->exists();
+
+        if (!$alreadyFollowing) {
+            $currentUser->following()->syncWithoutDetaching($targetUser->id);
+
+            // Create notification for B (the target user)
+            \App\Models\Notification::create([
+                'user_id' => $targetUser->id,
+                'type' => 'follow',
+                'title' => 'New Follower',
+                'message' => $currentUser->name . ' started following you!',
+                'meta' => ['follower_id' => $currentUser->id, 'follower_name' => $currentUser->name],
+            ]);
+
+            // Create activity for A (the follower)
+            \App\Models\Activity::create([
+                'user_id' => $currentUser->id,
+                'type' => 'follow',
+                'message' => 'started following ' . $targetUser->name,
+                'meta' => ['followed_id' => $targetUser->id, 'followed_name' => $targetUser->name],
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Followed successfully',
+            'followersCount' => $targetUser->followers()->count(),
+            'isFollowed' => true
+        ]);
+    }
+
+    public function unfollow($id)
+    {
+        $targetUser = \App\Models\User::findOrFail($id);
+        $currentUser = auth()->user();
+
+        $currentUser->following()->detach($targetUser->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Unfollowed successfully',
+            'followersCount' => $targetUser->followers()->count(),
+            'isFollowed' => false
+        ]);
+    }
+
+    public function followers($id)
+    {
+        $user = \App\Models\User::findOrFail($id);
+        $followers = $user->followers()->get();
+        foreach ($followers as $follower) {
+            $follower->append('isFollowed');
+        }
+        return response()->json($followers);
+    }
+
+    public function following($id)
+    {
+        $user = \App\Models\User::findOrFail($id);
+        $following = $user->following()->get();
+        foreach ($following as $followed) {
+            $followed->append('isFollowed');
+        }
+        return response()->json($following);
     }
 }

@@ -18,7 +18,7 @@ const notificationList = computed(() => {
 const getIcon = (title) => {
   const t = String(title || '').toLowerCase()
   if (t.includes('reminder') || t.includes('schedule')) return '📅'
-  if (t.includes('request') || t.includes('join')) return '👤'
+  if (t.includes('request') || t.includes('join') || t.includes('follower') || t.includes('follow')) return '👤'
   if (t.includes('found')) return '🎾'
   return '🔔'
 }
@@ -26,7 +26,7 @@ const getIcon = (title) => {
 const getIconClass = (title) => {
   const t = String(title || '').toLowerCase()
   if (t.includes('reminder')) return 'reminder'
-  if (t.includes('request')) return 'request'
+  if (t.includes('request') || t.includes('follower') || t.includes('follow')) return 'request'
   if (t.includes('found')) return 'found'
   return 'default'
 }

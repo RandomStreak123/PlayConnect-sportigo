@@ -164,6 +164,44 @@ const openPlayerReveal = (player, sport) => {
   }
 }
 
+const showUnfollowConfirm = ref(false)
+const playerToUnfollow = ref(null)
+
+const handleToggleFollow = async (player) => {
+  if (player.isFollowed) {
+    playerToUnfollow.value = player
+    showUnfollowConfirm.value = true
+  } else {
+    try {
+      const res = await store.followPlayer(player.id)
+      if (res && res.success) {
+        player.isFollowed = true
+        player.followersCount = res.followersCount
+        triggerSnackbar(`Following ${player.name}! 🎉`)
+      }
+    } catch (err) {
+      console.error('Follow failed in App:', err)
+    }
+  }
+}
+
+const confirmUnfollow = async () => {
+  if (!playerToUnfollow.value) return
+  showUnfollowConfirm.value = false
+  const player = playerToUnfollow.value
+  
+  try {
+    const res = await store.unfollowPlayer(player.id)
+    if (res && res.success) {
+      player.isFollowed = false
+      player.followersCount = res.followersCount
+      triggerSnackbar(`Unfollowed ${player.name}! 👥`)
+    }
+  } catch (err) {
+    console.error('Unfollow failed in App:', err)
+  }
+}
+
 const openMatchDetails = (match) => {
   selectedMatch.value = match
   showDetailsModal.value = true
@@ -348,6 +386,7 @@ const isWomenTheme = computed(() => {
             :profile-picture="profileTargetUser ? (profileTargetUser.profilePicture || profileTargetUser.profilePhotoUrl || profileTargetUser.avatar) : null"
             @auth-logout="triggerSnackbar('Successfully signed out.')"
             @toast-message="triggerSnackbar"
+            @view-profile="viewUserProfile"
           />
         </div>
 
@@ -423,6 +462,7 @@ const isWomenTheme = computed(() => {
       @view-profile="(p) => { 
         viewUserProfile(p);
       }"
+      @toggle-follow="handleToggleFollow"
     />
 
     <!-- Create Match Modal -->
@@ -465,6 +505,26 @@ const isWomenTheme = computed(() => {
       </div>
       <button class="snackbar-btn" @click="showSnackbar = false">DISMISS</button>
     </div>
+
+    <!-- Unfollow Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showUnfollowConfirm" class="logout-confirm-backdrop" @click="showUnfollowConfirm = false">
+          <div class="logout-confirm-card animate-slide-up" @click.stop>
+            <div class="logout-confirm-handle"></div>
+            <div class="logout-confirm-icon-wrap" style="background-color: #fee2e2;">
+              <span style="font-size: 1.5rem;">💔</span>
+            </div>
+            <h3 class="logout-confirm-title">Unfollow {{ playerToUnfollow?.name }}?</h3>
+            <p class="logout-confirm-desc">Are you sure you want to unfollow this player? You will stop seeing their match activities.</p>
+            <div class="logout-confirm-actions">
+              <button class="logout-btn-no" @click="showUnfollowConfirm = false">Cancel</button>
+              <button class="logout-btn-yes" style="background-color: #dc2626;" @click="confirmUnfollow">Unfollow</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -943,5 +1003,127 @@ const isWomenTheme = computed(() => {
   .theme-women .nav-item.active .nav-svg {
     stroke: var(--primary);
   }
+}
+
+.logout-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 9999;
+}
+
+@media (min-width: 768px) {
+  .logout-confirm-backdrop {
+    align-items: center;
+    padding: 24px;
+  }
+}
+
+.logout-confirm-card {
+  background: #ffffff;
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  padding: 16px 24px 32px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.08);
+}
+
+@media (min-width: 768px) {
+  .logout-confirm-card {
+    border-radius: var(--radius-lg);
+    max-width: 380px;
+    padding: 24px 28px 32px;
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.logout-confirm-handle {
+  width: 40px;
+  height: 4px;
+  background-color: var(--outline-variant);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.logout-confirm-icon-wrap {
+  width: 56px;
+  height: 56px;
+  background-color: #fee2e2;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 16px;
+}
+
+.logout-confirm-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin-bottom: 8px;
+}
+
+.logout-confirm-desc {
+  font-size: 0.95rem;
+  color: var(--on-surface-variant);
+  margin-bottom: 24px;
+}
+
+.logout-confirm-actions {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.logout-btn-no {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--outline-variant);
+  background: #ffffff;
+  color: var(--on-surface-variant);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.logout-btn-no:hover {
+  background-color: var(--surface-dim);
+}
+
+.logout-btn-yes {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: #b91c1c;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.logout-btn-yes:hover {
+  background: #991b1b;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

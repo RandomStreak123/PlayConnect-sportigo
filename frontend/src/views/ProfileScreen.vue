@@ -5,7 +5,7 @@ import { getPlayerAvatar } from '../utils/sportImageHelper'
 import { supabase } from '../utils/supabase'
 import { t } from '../utils/i18n'
 
-const emit = defineEmits(['auth-logout', 'toast-message'])
+const emit = defineEmits(['auth-logout', 'toast-message', 'view-profile'])
 
 const props = defineProps({
   isCurrentUser: {
@@ -651,7 +651,6 @@ const avatarBorderClass = computed(() => {
   if (lvl >= 2) return 'border-silver'
   return 'border-bronze'
 })
-
 const handleThemeChange = (e) => {
   const theme = e.target.value
   selectedTheme.value = theme
@@ -689,6 +688,126 @@ const weekDaysStatus = computed(() => {
   })
 })
 
+const showUnfollowConfirm = ref(false)
+const playerToUnfollow = ref(null)
+const unfollowSource = ref('main') // 'main' or 'list'
+
+const requestUnfollow = (user, source = 'main') => {
+  playerToUnfollow.value = user
+  unfollowSource.value = source
+  showUnfollowConfirm.value = true
+}
+
+const confirmUnfollow = async () => {
+  if (!playerToUnfollow.value) return
+  showUnfollowConfirm.value = false
+  
+  const userId = playerToUnfollow.value.id
+  try {
+    const res = await store.unfollowPlayer(userId)
+    if (res && res.success) {
+      if (unfollowSource.value === 'main') {
+        if (profileUser.value) {
+          profileUser.value.isFollowed = false
+          profileUser.value.followersCount = res.followersCount
+        }
+      } else {
+        const idx = followListUsers.value.findIndex(u => u.id === userId)
+        if (idx !== -1) {
+          followListUsers.value[idx].isFollowed = false
+        }
+        if (!props.isCurrentUser && profileUser.value && userId === store.state.currentUser?.id) {
+          profileUser.value.isFollowed = false
+          profileUser.value.followersCount = res.followersCount
+        }
+      }
+      emit('toast-message', `Unfollowed ${playerToUnfollow.value.name}! 👥`)
+    }
+  } catch (err) {
+    console.error('Failed to unfollow:', err)
+  }
+}
+
+const handleFollowToggle = async () => {
+  if (props.isCurrentUser) return
+  try {
+    if (currentUser.value.isFollowed) {
+      requestUnfollow(currentUser.value, 'main')
+    } else {
+      const res = await store.followPlayer(props.userId)
+      if (res && res.success) {
+        if (profileUser.value) {
+          profileUser.value.isFollowed = true
+          profileUser.value.followersCount = res.followersCount
+        }
+        emit('toast-message', `Following ${currentUser.value.name}! 🎉`)
+      }
+    }
+  } catch (err) {
+    console.error('Failed to toggle follow status:', err)
+    emit('toast-message', 'Failed to update follow status ❌')
+  }
+}
+
+const showFollowListModal = ref(false)
+const followListType = ref('followers') // 'followers' or 'following'
+const followListUsers = ref([])
+const loadingFollowList = ref(false)
+
+const openFollowModal = async (type) => {
+  followListType.value = type
+  showFollowListModal.value = true
+  loadingFollowList.value = true
+  followListUsers.value = []
+  
+  const userId = props.isCurrentUser ? store.state.currentUser?.id : props.userId
+  if (!userId) {
+    loadingFollowList.value = false
+    return
+  }
+
+  try {
+    const res = await fetch(`/api/users/${userId}/${type}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('sportigo_token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+    if (res.ok) {
+      followListUsers.value = await res.json()
+    }
+  } catch (err) {
+    console.error(`Failed to load ${type}:`, err)
+  } finally {
+    loadingFollowList.value = false
+  }
+}
+
+const navigateToPlayerProfile = (player) => {
+  showFollowListModal.value = false
+  emit('view-profile', player)
+}
+
+const handleListFollowToggle = async (user) => {
+  try {
+    if (user.isFollowed) {
+      requestUnfollow(user, 'list')
+    } else {
+      const res = await store.followPlayer(user.id)
+      if (res && res.success) {
+        user.isFollowed = true
+        if (!props.isCurrentUser && profileUser.value && user.id === store.state.currentUser?.id) {
+          profileUser.value.isFollowed = true
+          profileUser.value.followersCount = res.followersCount
+        }
+        emit('toast-message', `Following ${user.name}! 🎉`)
+      }
+    }
+  } catch (err) {
+    console.error('Failed to toggle follow in list:', err)
+  }
+}
 
 </script>
 
@@ -812,7 +931,35 @@ const weekDaysStatus = computed(() => {
       </div>
     </div>
 
-
+    <!-- Followers & Share Card -->
+    <div class="friends-card">
+      <div class="friends-left">
+        <div class="stat-follow-block" style="cursor: pointer;" @click="openFollowModal('followers')">
+          <span class="follow-num">{{ currentUser.followersCount || 0 }}</span>
+          <span class="follow-label">Followers</span>
+        </div>
+        <div class="follow-divider"></div>
+        <div class="stat-follow-block" style="cursor: pointer;" @click="openFollowModal('following')">
+          <span class="follow-num">{{ currentUser.followingCount || 0 }}</span>
+          <span class="follow-label">Following</span>
+        </div>
+      </div>
+      <div class="profile-actions-row">
+        <button 
+          v-if="!isCurrentUser" 
+          class="follow-btn" 
+          :class="{ 'following': currentUser.isFollowed }"
+          @click="handleFollowToggle"
+        >
+          <span v-if="currentUser.isFollowed">✓ Following</span>
+          <span v-else>+ Follow</span>
+        </button>
+        <button class="share-pill-btn" @click="handleShareProfile">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="share-icon-svg"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          {{ t('share') }}
+        </button>
+      </div>
+    </div>
 
     <!-- Favorite Sports Interests -->
     <div class="sports-rating-section">
@@ -1231,6 +1378,86 @@ const weekDaysStatus = computed(() => {
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Followers / Following Modal -->
+    <Teleport to="body">
+      <div v-if="showFollowListModal" class="modal-backdrop" :class="{ 'theme-women': store.isWomenMode.value }" @click="showFollowListModal = false">
+        <div class="modal-sheet animate-slide-up" @click.stop>
+          <div class="modal-header">
+            <h2 class="modal-title">{{ followListType === 'followers' ? 'Followers' : 'Following' }}</h2>
+            <button class="close-btn" @click="showFollowListModal = false">✕</button>
+          </div>
+
+          <div class="modal-body scrollable-y">
+            <div v-if="loadingFollowList" class="loading-state" style="text-align: center; padding: 32px 0; color: var(--outline);">
+              <span>⏳ Loading list...</span>
+            </div>
+            <div v-else-if="followListUsers.length === 0" class="empty-state" style="text-align: center; padding: 48px 16px; color: #64748b;">
+              <span style="font-size: 2.5rem; display: block; margin-bottom: 12px;">👥</span>
+              <h3 style="font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">No users found</h3>
+              <p style="font-size: 0.82rem; color: #64748b; margin: 0;">This list is currently empty.</p>
+            </div>
+            <div v-else class="follow-list-group" style="display: flex; flex-direction: column; gap: 14px;">
+              <div 
+                v-for="user in followListUsers" 
+                :key="user.id" 
+                class="follow-user-row"
+                style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--outline-variant);"
+              >
+                <!-- User Profile info -->
+                <div 
+                  class="follow-user-info" 
+                  style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;"
+                  @click="navigateToPlayerProfile(user)"
+                >
+                  <img 
+                    :src="getPlayerAvatar(user.avatar || user.profile_picture || user.profile_photo, user.gender)" 
+                    class="follow-user-avatar" 
+                    style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover;"
+                    @error="(e) => e.target.src = '/assets/images/players/download.jpg'"
+                  />
+                  <div style="display: flex; flex-direction: column;">
+                    <span style="font-size: 0.9rem; font-weight: 700; color: var(--on-surface);">{{ user.name }}</span>
+                    <span style="font-size: 0.75rem; color: #64748b;">@{{ user.username }}</span>
+                  </div>
+                </div>
+
+                <!-- Follow toggle button -->
+                <button 
+                  v-if="store.state.currentUser && user.id !== store.state.currentUser.id"
+                  class="list-follow-btn"
+                  :class="{ 'following': user.isFollowed }"
+                  style="padding: 6px 14px; border-radius: 16px; font-size: 0.78rem; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s ease;"
+                  @click="handleListFollowToggle(user)"
+                >
+                  {{ user.isFollowed ? '✓ Following' : '+ Follow' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Unfollow Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showUnfollowConfirm" class="logout-confirm-backdrop" @click="showUnfollowConfirm = false">
+          <div class="logout-confirm-card animate-slide-up" @click.stop>
+            <div class="logout-confirm-handle"></div>
+            <div class="logout-confirm-icon-wrap" style="background-color: #fee2e2;">
+              <span style="font-size: 1.5rem;">💔</span>
+            </div>
+            <h3 class="logout-confirm-title">Unfollow {{ playerToUnfollow?.name }}?</h3>
+            <p class="logout-confirm-desc">Are you sure you want to unfollow this player? You will stop seeing their match activities.</p>
+            <div class="logout-confirm-actions">
+              <button class="logout-btn-no" @click="showUnfollowConfirm = false">Cancel</button>
+              <button class="logout-btn-yes" style="background-color: #dc2626;" @click="confirmUnfollow">Unfollow</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -1574,6 +1801,74 @@ const weekDaysStatus = computed(() => {
 .share-icon-svg {
   display: flex;
   align-items: center;
+}
+
+.stat-follow-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 12px;
+}
+
+.follow-num {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.follow-label {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.follow-divider {
+  width: 1px;
+  height: 24px;
+  background-color: #cbd5e1;
+  margin: 0 4px;
+}
+
+.profile-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.follow-btn {
+  background-color: var(--primary);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 24px;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.15);
+  transition: all 0.2s ease;
+}
+
+.follow-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.follow-btn.following {
+  background-color: transparent;
+  border: 1.5px solid var(--outline-variant);
+  color: var(--on-surface-variant);
+  box-shadow: none;
+}
+
+.follow-btn.following:hover {
+  background-color: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
+  border-color: #fca5a5;
 }
 
 /* Sports ratings selection */
@@ -2744,5 +3039,26 @@ input:checked + .toggle-slider:before {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--on-surface-variant);
+}
+
+.list-follow-btn {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.list-follow-btn:hover {
+  filter: brightness(1.1);
+}
+
+.list-follow-btn.following {
+  background-color: transparent;
+  border: 1px solid var(--outline-variant) !important;
+  color: var(--on-surface-variant);
+}
+
+.list-follow-btn.following:hover {
+  background-color: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
+  border-color: #fca5a5 !important;
 }
 </style>
