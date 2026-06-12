@@ -181,17 +181,21 @@ const register = async (name, username, password, gender) => {
 }
 
 const logout = async () => {
-  try {
-    await fetch(`${API_URL}/logout`, {
-      method: 'POST',
-      headers: getAuthHeaders()
-    })
-  } catch (e) { /* ignore */ }
+  const headers = getAuthHeaders()
+  
   state.currentUser = null
   state.matches = []
   state.activities = []
   sessionStorage.removeItem('sportigo_user')
   sessionStorage.removeItem('sportigo_token')
+
+  // Fire-and-forget: perform backend logout in the background without awaiting
+  fetch(`${API_URL}/logout`, {
+    method: 'POST',
+    headers
+  }).catch(e => {
+    console.warn('Backend logout call failed:', e.message)
+  })
 }
 
 const updateProfile = async (name, gender, avatar, bio, primarySport, skillTier, email) => {

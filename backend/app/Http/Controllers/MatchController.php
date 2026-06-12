@@ -319,11 +319,6 @@ class MatchController extends Controller
     {
         $user = auth()->user();
 
-        // User must be a participant in the match
-        if (!$match->participants()->where('user_id', $user->id)->exists()) {
-            return response()->json(['message' => 'You must be a participant in this match to submit ratings.'], 403);
-        }
-
         // Match must be in the past (using a 24-hour buffer to handle client-server timezone difference)
         $matchDate = Carbon::parse($match->date_time);
         if ($matchDate->subHours(24)->isFuture()) {
@@ -343,6 +338,11 @@ class MatchController extends Controller
 
             // User can't rate themselves
             if ($ratedUserId === (int) $user->id) {
+                continue;
+            }
+
+            // User being rated must be a participant in the match
+            if (!$match->participants()->where('users.id', $ratedUserId)->exists()) {
                 continue;
             }
 

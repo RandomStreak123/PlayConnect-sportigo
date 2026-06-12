@@ -176,7 +176,8 @@ class User extends Authenticatable
             'streak' => (int) $streak,
             'playStyle' => $playStyle,
             'averageRating' => (float) $averageRating,
-            'totalGames' => (int) $totalGames
+            'totalGames' => (int) $totalGames,
+            'totalRatingsGiven' => (int) $totalRatingsGiven
         ];
     }
 

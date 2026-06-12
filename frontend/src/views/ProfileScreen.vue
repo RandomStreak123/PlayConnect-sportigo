@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { store } from '../store'
 import { getPlayerAvatar } from '../utils/sportImageHelper'
 import { supabase } from '../utils/supabase'
@@ -384,29 +384,8 @@ const onFileSelected = async (event) => {
 
 
 // Track total ratings given by the user
-const totalRatingsGiven = ref(0)
-
-const loadRatingsCounts = async () => {
-  const matches = playedMatches.value
-  if (matches.length === 0) return
-  
-  let totalRated = 0
-  for (const match of matches) {
-    try {
-      const data = await store.getMatchRatings(match.id)
-      if (data && Array.isArray(data)) {
-        const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
-        totalRated += data.filter(r => Number(r.rater_id) === Number(uid)).length
-      }
-    } catch (e) {
-      // skip
-    }
-  }
-  totalRatingsGiven.value = totalRated
-}
-
-onMounted(() => {
-  loadRatingsCounts()
+const totalRatingsGiven = computed(() => {
+  return profileStats.value.totalRatingsGiven || 0
 })
 </script>
 

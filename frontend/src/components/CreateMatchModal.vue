@@ -81,7 +81,7 @@ const formatDisplayDateTime = (dtStr) => {
 const openCustomPicker = () => {
   try {
     if (dateTime.value) {
-      const currentVal = new Date(dateTime.value.replace('T', ' '))
+      const currentVal = new Date(dateTime.value)
       if (!isNaN(currentVal.getTime())) {
         selectedDay.value = currentVal.getDate()
         selectedMonth.value = currentVal.getMonth()
@@ -303,7 +303,7 @@ const submitForm = async () => {
     return
   }
   
-  const selectedDate = new Date(dateTime.value.replace('T', ' '))
+  const selectedDate = new Date(dateTime.value)
   if (selectedDate < new Date()) {
     formError.value = t('futureDateError')
     return

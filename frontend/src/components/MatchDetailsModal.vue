@@ -28,38 +28,46 @@ const existingRatings = ref(null) // ratings already submitted by this user
 const hasRatedAlready = ref(false)
 
 const slotsLeft = computed(() => {
-  return Math.max(0, props.match.maxSlots - props.match.joinedCount)
+  const maxSlots = props.match.maxSlots ?? props.match.max_slots ?? 0
+  const joinedCount = props.match.joinedCount ?? props.match.joined_count ?? props.match.participants?.length ?? 0
+  return Math.max(0, maxSlots - joinedCount)
 })
 
 const isJoined = computed(() => {
   if (!store.state.currentUser) return false
-  return props.match.participants.some(p => p.id === store.state.currentUser.id)
+  const participants = props.match.participants || []
+  return participants.some(p => p.id === store.state.currentUser.id)
 })
 
 const isCreator = computed(() => {
   if (!store.state.currentUser) return false
-  const matchCreatorId = props.match.creatorId ?? props.match.creator_id
+  const matchCreatorId = props.match.creatorId ?? props.match.creator_id ?? props.match.user_id
   return Number(matchCreatorId) === Number(store.state.currentUser.id)
 })
 
 const isRestricted = computed(() => {
-  if (!props.match.womenOnly) return false
+  const womenOnly = props.match.womenOnly ?? props.match.women_only ?? props.match.is_women_only
+  if (!womenOnly) return false
   return store.state.currentUser?.gender !== 'female'
 })
 
 const isPastMatch = computed(() => {
   try {
-    const dt = new Date(props.match.dateTime?.replace(' ', 'T'))
+    const dateStr = props.match.dateTime || props.match.date_time || props.match.date
+    if (!dateStr) return false
+    const dt = new Date(dateStr.replace(' ', 'T'))
     return dt < new Date()
   } catch { return false }
 })
 
 const hasRecordedResults = computed(() => {
-  return props.match.participants.some(p => p.pivot?.result)
+  const participants = props.match.participants || []
+  return participants.some(p => p.pivot?.result)
 })
 
 const imageSrc = computed(() => {
-  const raw = getSportImage(props.match.sportType, props.match.id)
+  const sportType = props.match.sportType || props.match.sport_type || props.match.category || 'Football'
+  const raw = getSportImage(sportType, props.match.id)
   if (!raw) return ''
   return raw.split('/').map(s => encodeURIComponent(s)).join('/')
 })
@@ -87,7 +95,8 @@ const handleLeave = () => {
 
 const openResultsPanel = () => {
   const existing = {}
-  props.match.participants.forEach(p => {
+  const participants = props.match.participants || []
+  participants.forEach(p => {
     existing[p.id] = p.pivot?.result || null
   })
   pendingResults.value = existing
@@ -172,14 +181,15 @@ const handleShare = async () => {
 // Player Rating Logic
 const otherParticipants = computed(() => {
   if (!store.state.currentUser) return []
-  return props.match.participants.filter(p => p.id !== store.state.currentUser.id)
+  const participants = props.match.participants || []
+  return participants.filter(p => Number(p.id) !== Number(store.state.currentUser.id))
 })
 
 const openRatingPanel = async () => {
   // Initialize all ratings to 0 (not rated yet)
   const ratings = {}
   otherParticipants.value.forEach(p => {
-    ratings[p.id] = 0
+    ratings[String(p.id)] = 0
   })
   pendingRatings.value = ratings
   hasRatedAlready.value = false
@@ -189,12 +199,13 @@ const openRatingPanel = async () => {
     const data = await store.getMatchRatings(props.match.id)
     if (data && Array.isArray(data)) {
       const myId = store.state.currentUser.id
-      const myRatings = data.filter(r => r.rater_id === myId)
+      const myRatings = data.filter(r => Number(r.rater_id) === Number(myId))
       if (myRatings.length > 0) {
         hasRatedAlready.value = true
         myRatings.forEach(r => {
-          if (ratings[r.rated_id] !== undefined) {
-            ratings[r.rated_id] = r.rating
+          const ratedId = String(r.rated_id)
+          if (ratings[ratedId] !== undefined) {
+            ratings[ratedId] = r.rating
           }
         })
         pendingRatings.value = { ...ratings }
@@ -432,57 +443,58 @@ const saveRatings = async () => {
           <span class="loader"></span>
         </div>
         <div v-else>
-          <!-- Joined but not creator: Leave button -->
-          <button 
-            v-if="isJoined && !isCreator && !isPastMatch" 
-            class="action-btn leave-btn"
-            @click="handleLeave"
-          >
-            {{ t('leaveMatch') }}
-          </button>
-          
-          <!-- Creator + past match: Record Results + Rate Players -->
-          <div v-else-if="isCreator && isPastMatch && !showResultsPanel && !showRatingPanel" class="action-btn-group">
-            <button class="action-btn record-results-btn" @click="openResultsPanel">
+          <!-- Past match controls -->
+          <div v-if="isPastMatch && !showResultsPanel && !showRatingPanel" class="action-btn-group">
+            <button v-if="isCreator" class="action-btn record-results-btn" @click="openResultsPanel">
               🏆 {{ hasRecordedResults ? 'Update Results' : 'Record Results' }}
             </button>
-            <button class="action-btn rate-players-btn" @click="openRatingPanel">
+            <button v-if="otherParticipants.length > 0" class="action-btn rate-players-btn" @click="openRatingPanel">
               ⭐ Rate Players
             </button>
+            <div v-else-if="!isCreator" class="status-indicator-box">
+              ✅ Match Completed
+            </div>
           </div>
 
-          <!-- Creator indicator (future match) -->
-          <div v-else-if="isCreator && !isPastMatch" class="status-indicator-box">
-            {{ t('createdMatchStatus') }}
-          </div>
-          
-          <!-- Joined normal user indicator -->
-          <div v-else-if="isJoined && isPastMatch" class="status-indicator-box">
-            ✅ Match Completed
-          </div>
+          <template v-else-if="!isPastMatch">
+            <!-- Joined but not creator: Leave button -->
+            <button 
+              v-if="isJoined && !isCreator" 
+              class="action-btn leave-btn"
+              @click="handleLeave"
+            >
+              {{ t('leaveMatch') }}
+            </button>
+            
+            <!-- Creator indicator (future match) -->
+            <div v-else-if="isCreator" class="status-indicator-box">
+              {{ t('createdMatchStatus') }}
+            </div>
 
-          <div v-else-if="isJoined" class="status-indicator-box">
-            {{ t('joinedMatchStatus') }}
-          </div>
+            <!-- Joined normal user indicator -->
+            <div v-else-if="isJoined" class="status-indicator-box">
+              {{ t('joinedMatchStatus') }}
+            </div>
 
-          <!-- Restricted to gender -->
-          <div v-else-if="isRestricted" class="restricted-box">
-            {{ t('womenOnlyMatchRestricted') }}
-          </div>
+            <!-- Restricted to gender -->
+            <div v-else-if="isRestricted" class="restricted-box">
+              {{ t('womenOnlyMatchRestricted') }}
+            </div>
 
-          <!-- Full match -->
-          <div v-else-if="slotsLeft === 0" class="full-box">
-            {{ t('matchFullStatus') }}
-          </div>
+            <!-- Full match -->
+            <div v-else-if="slotsLeft === 0" class="full-box">
+              {{ t('matchFullStatus') }}
+            </div>
 
-          <!-- Available: Join button -->
-          <button 
-            v-else 
-            class="action-btn join-btn"
-            @click="handleJoin"
-          >
-            {{ t('joinMatchSpots') }} ({{ slotsLeft }} {{ t('spotsLeftSuffix') }})
-          </button>
+            <!-- Available: Join button -->
+            <button 
+              v-else 
+              class="action-btn join-btn"
+              @click="handleJoin"
+            >
+              {{ t('joinMatchSpots') }} ({{ slotsLeft }} {{ t('spotsLeftSuffix') }})
+            </button>
+          </template>
         </div>
       </div>
     </div>
