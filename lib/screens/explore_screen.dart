@@ -116,6 +116,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             final player = _players[index];
                             return _buildPlayerCard(
                               context,
+                              player.id,
                               player.name,
                               player.gender?.toUpperCase() ?? 'PLAYER',
                               'Proximity Enabled',
@@ -190,6 +191,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Widget _buildPlayerCard(
     BuildContext context,
+    int? userId,
     String name,
     String sport,
     String distance,
@@ -204,6 +206,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
           builder: (context) => PlayerRevealCard(
+            userId: userId,
             playerName: name,
             sportType: sport,
             profilePicture: photoUrl,

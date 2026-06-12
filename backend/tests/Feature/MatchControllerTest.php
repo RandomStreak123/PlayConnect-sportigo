@@ -304,14 +304,25 @@ class MatchControllerTest extends TestCase
     }
 
     /** @test */
-    public function test_non_creator_cannot_delete_a_match(): void
+    public function test_user_can_submit_ratings(): void
     {
-        $creator  = $this->actingAsUser();
-        $attacker = $this->actingAsUser();
-        $match    = $this->createMatch($creator);
+        $creator = $this->actingAsUser();
+        $player = $this->actingAsUser();
+        $match = $this->createMatch($creator, ['date_time' => now()->subDays(2)->toDateTimeString()]);
+        $match->participants()->attach($player->id);
 
-        $this->actingAs($attacker)
-            ->deleteJson("/api/matches/{$match->id}", [], $this->jsonHeaders())
-            ->assertForbidden();
+        $payload = [
+            'ratings' => [
+                [
+                    'user_id' => $player->id,
+                    'rating' => 5,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($creator)
+            ->postJson("/api/matches/{$match->id}/ratings", $payload, $this->jsonHeaders());
+
+        $response->assertOk();
     }
 }

@@ -14,7 +14,8 @@ final class AuthLogoutRequested extends AuthEvent {
 }
 
 final class AuthCheckRequested extends AuthEvent {
-  const AuthCheckRequested();
+  const AuthCheckRequested({this.forceRefresh = false});
+  final bool forceRefresh;
 }
 
 final class AuthUserUpdated extends AuthEvent {

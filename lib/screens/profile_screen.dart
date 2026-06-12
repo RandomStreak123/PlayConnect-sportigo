@@ -7,6 +7,9 @@ import '../logic/blocs/auth/auth_bloc.dart';
 import '../data/repositories/auth_repository.dart';
 import '../core/utils/avatar_image_helper.dart';
 import 'profile_settings_screen.dart';
+import '../logic/blocs/matches/match_bloc.dart';
+import '../data/models/match_model.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isCurrentUser;
@@ -46,6 +49,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     {'name': 'Padel', 'icon': '🏓'},
   ];
 
+  bool _isLoadingPublicProfile = false;
+  Map<String, dynamic>? _publicProfileData;
+  String? _publicProfileError;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +61,38 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       duration: const Duration(milliseconds: 1000),
     )..forward();
     _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.isCurrentUser) {
+        context.read<MatchBloc>().add(const MyMatchesFetched());
+      } else {
+        _loadPublicProfile();
+      }
+    });
+  }
+
+  Future<void> _loadPublicProfile() async {
+    if (widget.userId == null) return;
+    setState(() {
+      _isLoadingPublicProfile = true;
+      _publicProfileError = null;
+    });
+    try {
+      final authRepository = context.read<AuthRepository>();
+      final data = await authRepository.getPublicProfile(widget.userId!);
+      if (mounted) {
+        setState(() {
+          _publicProfileData = data;
+          _isLoadingPublicProfile = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _publicProfileError = e.toString().replaceAll('Exception: ', '');
+          _isLoadingPublicProfile = false;
+        });
+      }
+    }
   }
 
   @override
@@ -196,6 +235,45 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingPublicProfile) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: const BackButton(),
+        ),
+        body: const Center(child: AppLoadingIndicator()),
+      );
+    }
+
+    if (_publicProfileError != null) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: const BackButton(),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Failed to load profile',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(_publicProfileError!),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadPublicProfile,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final sportColor = _getSportColor(context, _selectedSport);
     
     return Scaffold(
@@ -333,7 +411,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     builder: (context, state) {
                       final photoUrl = widget.isCurrentUser 
                           ? state.user?.profilePhotoUrl 
-                          : widget.profilePicture;
+                          : (_publicProfileData?['avatar'] as String? ?? 
+                             _publicProfileData?['profile_picture'] as String? ?? 
+                             _publicProfileData?['profile_photo'] as String? ?? 
+                             widget.profilePicture);
 
                       return Stack(
                         alignment: Alignment.center,
@@ -477,7 +558,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   builder: (context, state) {
                     final userName = widget.isCurrentUser 
                         ? (state.user?.name ?? 'Sportigo Champ')
-                        : (widget.playerName ?? 'Player');
+                        : (_publicProfileData?['name'] as String? ?? widget.playerName ?? 'Player');
                     return Column(
                       children: [
                         Row(
@@ -510,7 +591,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              '🔥 PRO PLAYER',
+                              widget.isCurrentUser 
+                                  ? ((state.user?.skillTier == 'Professional' || state.user?.skillTier == 'Advanced') ? '🔥 PRO PLAYER' : '🔥 PLAYER')
+                                  : (((_publicProfileData?['skill_tier'] as String?) == 'Professional' || (_publicProfileData?['skill_tier'] as String?) == 'Advanced') ? '🔥 PRO PLAYER' : '🔥 PLAYER'),
                               style: TextStyle(
                                 color: sportColor,
                                 fontWeight: FontWeight.bold,
@@ -554,13 +637,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final user = state.user;
-        final stats = widget.isCurrentUser ? user?.stats : null;
-
-        final level = stats?.level ?? 24;
-        final xp = stats?.currentLevelXp ?? 750;
-        final nextXp = stats?.nextLevelXp ?? 1000;
-        final progressPct = stats?.progressPct ?? 75;
-        final streak = stats?.streak ?? 7;
+        final level = widget.isCurrentUser
+            ? (user?.stats?.level ?? 24)
+            : (_publicProfileData?['stats']?['level'] as int? ?? 1);
+        final xp = widget.isCurrentUser
+            ? (user?.stats?.currentLevelXp ?? 750)
+            : (_publicProfileData?['stats']?['currentLevelXp'] as int? ?? 0);
+        final nextXp = widget.isCurrentUser
+            ? (user?.stats?.nextLevelXp ?? 1000)
+            : (_publicProfileData?['stats']?['nextLevelXp'] as int? ?? 1000);
+        final progressPct = widget.isCurrentUser
+            ? (user?.stats?.progressPct ?? 75)
+            : (_publicProfileData?['stats']?['progressPct'] as int? ?? 0);
+        final streak = widget.isCurrentUser
+            ? (user?.stats?.streak ?? 7)
+            : (_publicProfileData?['stats']?['streak'] as int? ?? 0);
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -660,12 +751,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final user = state.user;
-        final stats = widget.isCurrentUser ? user?.stats : null;
-
-        final winRate = stats?.winRate ?? 72;
-        final playStyle = stats?.playStyle ?? 'All-Rounder';
-        final totalGames = stats?.totalGames ?? 120;
-        final globalRank = stats?.globalRank ?? '#128 Kochi';
+        final winRate = widget.isCurrentUser
+            ? (user?.stats?.winRate ?? 72)
+            : (_publicProfileData?['stats']?['winRate'] as int? ?? 0);
+        final playStyle = widget.isCurrentUser
+            ? (user?.stats?.playStyle ?? 'All-Rounder')
+            : (_publicProfileData?['stats']?['playStyle'] as String? ?? 'All-Rounder');
+        final totalGames = widget.isCurrentUser
+            ? (user?.stats?.totalGames ?? 120)
+            : (_publicProfileData?['stats']?['totalGames'] as int? ?? 0);
+        final globalRank = widget.isCurrentUser
+            ? (user?.stats?.globalRank ?? '#128 Kochi')
+            : (_publicProfileData?['stats']?['globalRank'] as String? ?? '#1000 Kochi');
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -1008,110 +1105,203 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildActiveTabContent(Color sportColor) {
-    switch (_activeActivityTab) {
-      case 0:
-        return ListView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          children: [
-            _buildTimelineActivity(
-              title: 'Won Football Tournament',
-              subtitle: 'Kochi Arena • 2 hours ago',
-              xpReward: '+24 XP',
-              sportEmoji: '⚽',
-              sportColor: AppColors.sportsGreen,
-            ),
-            _buildTimelineActivity(
-              title: 'Joined Cricket friendly match',
-              subtitle: 'Royal Club Grounds • Yesterday',
-              xpReward: '+10 XP',
-              sportEmoji: '🏏',
-              sportColor: Colors.blue,
-            ),
-            _buildTimelineActivity(
-              title: 'Completed Tennis warm-up drill',
-              subtitle: 'Town Court • 3 days ago',
-              xpReward: '+15 XP',
-              sportEmoji: '🎾',
-              sportColor: Colors.lime.shade700,
-            ),
-          ],
-        );
-      case 1:
-        return GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          crossAxisCount: 3,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 1.0,
-          children: [
-            _buildAchievementBadge('🏆', 'Tournament Champion', 'Gold Badge'),
-            _buildAchievementBadge('⚡', 'Speed Demon', 'Paced 12 matches'),
-            _buildAchievementBadge('🤝', 'Fair Play Star', 'Perfect rating'),
-          ],
-        );
-      case 2:
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return BlocBuilder<MatchBloc, MatchState>(
+      builder: (context, matchState) {
+        // Collect matches
+        final List<MatchModel> matchesList = [];
+        if (widget.isCurrentUser) {
+          matchesList.addAll(matchState.myMatches);
+        } else if (_publicProfileData?['matches'] != null) {
+          final matchesJson = _publicProfileData!['matches'] as List<dynamic>;
+          matchesList.addAll(
+            matchesJson.map((json) => MatchModel.fromJson(json as Map<String, dynamic>))
+          );
+        }
+
+        switch (_activeActivityTab) {
+          case 0:
+            if (widget.isCurrentUser && matchState.myMatchesStatus == MatchStatus.loading) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: AppLoadingIndicator(),
+                ),
+              );
+            }
+
+            final currentUserId = widget.isCurrentUser
+                ? context.read<AuthBloc>().state.user?.id
+                : widget.userId;
+
+            final pastMatches = matchesList.where((m) => m.isPast).toList();
+            pastMatches.sort((a, b) => b.parsedDateTime.compareTo(a.parsedDateTime));
+
+            if (pastMatches.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32.0, horizontal: 16.0),
+                child: Center(
+                  child: Text(
+                    'No matches played yet. Join or organize a match to get started! ⚽',
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: pastMatches.length,
+              itemBuilder: (context, index) {
+                final match = pastMatches[index];
+                final isCreator = match.creatorId == currentUserId;
+                final xp = _getMatchXp(match, currentUserId);
+                final sportEmoji = _getSportEmoji(match.sportType);
+                final dynamicColor = _getSportColor(context, match.sportType);
+                final title = '${isCreator ? 'Organized' : 'Joined'} ${match.sportType} Match';
+                final subtitle = '${match.title} at ${match.location} • ${_formatDateTime(match.dateTime)}';
+
+                return _buildTimelineActivity(
+                  title: title,
+                  subtitle: subtitle,
+                  xpReward: '+$xp XP',
+                  sportEmoji: sportEmoji,
+                  sportColor: dynamicColor,
+                );
+              },
+            );
+
+          case 1:
+            final gamesCount = widget.isCurrentUser
+                ? (context.read<AuthBloc>().state.user?.stats?.totalGames ?? 0)
+                : (_publicProfileData?['stats']?['totalGames'] as int? ?? 0);
+            
+            final targetUserId = widget.isCurrentUser
+                ? context.read<AuthBloc>().state.user?.id
+                : widget.userId;
+
+            final hasHosted = matchesList.any((m) => m.creatorId == targetUserId);
+
+            final List<Widget> badgeWidgets = [
+              _buildAchievementBadge('🤝', 'Fair Play Star', 'Perfect rating'),
+            ];
+            if (gamesCount > 0) {
+              badgeWidgets.add(_buildAchievementBadge('🏅', 'First Match', 'Played 1 match'));
+            }
+            if (gamesCount >= 5) {
+              badgeWidgets.add(_buildAchievementBadge('🔥', '5 Match Veteran', 'Played 5 matches'));
+            }
+            if (gamesCount >= 10) {
+              badgeWidgets.add(_buildAchievementBadge('🏆', 'Decathlete', 'Played 10 matches'));
+            }
+            if (hasHosted) {
+              badgeWidgets.add(_buildAchievementBadge('👑', 'Community Host', 'Organized a match'));
+            }
+            if (badgeWidgets.length < 3) {
+              badgeWidgets.add(_buildAchievementBadge('⚡', 'Speed Demon', 'Paced match'));
+            }
+
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 1.0,
+              ),
+              itemCount: badgeWidgets.length,
+              itemBuilder: (context, index) => badgeWidgets[index],
+            );
+
+          case 2:
+            final streakVal = widget.isCurrentUser
+                ? (context.read<AuthBloc>().state.user?.stats?.streak ?? 0)
+                : (_publicProfileData?['stats']?['streak'] as int? ?? 0);
+
+            // Calculate played weekdays for the current week
+            final playedWeekdays = <int>{};
+            final now = DateTime.now();
+            final currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
+            final currentWeekMonday = DateTime(currentWeekStart.year, currentWeekStart.month, currentWeekStart.day);
+
+            for (final match in matchesList) {
+              if (match.isPast) {
+                final matchDate = match.parsedDateTime.toLocal();
+                if (matchDate.isAfter(currentWeekMonday.subtract(const Duration(seconds: 1))) && 
+                    matchDate.isBefore(now.add(const Duration(minutes: 1)))) {
+                  playedWeekdays.add(matchDate.weekday);
+                }
+              }
+            }
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+                ),
+                child: Column(
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          '🔥 Weekly Play Streak',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '🔥 $streakVal Match Winning Streak',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Play matches this week to keep your streak!',
+                              style: TextStyle(fontSize: 12, color: AppColors.sportsGreen),
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 4),
                         Text(
-                          'Keep playing to multiply your XP gains!',
-                          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          'Streak x${streakVal > 0 ? (1.0 + (streakVal * 0.1)).toStringAsFixed(1) : "1.0"}',
+                          style: TextStyle(color: sportColor, fontWeight: FontWeight.w900),
                         ),
                       ],
                     ),
-                    Text(
-                      'Streak x1.5',
-                      style: TextStyle(color: sportColor, fontWeight: FontWeight.w900),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildStreakDay('M', playedWeekdays.contains(DateTime.monday), sportColor),
+                        _buildStreakDay('T', playedWeekdays.contains(DateTime.tuesday), sportColor),
+                        _buildStreakDay('W', playedWeekdays.contains(DateTime.wednesday), sportColor),
+                        _buildStreakDay('T', playedWeekdays.contains(DateTime.thursday), sportColor),
+                        _buildStreakDay('F', playedWeekdays.contains(DateTime.friday), sportColor),
+                        _buildStreakDay('S', playedWeekdays.contains(DateTime.saturday), sportColor),
+                        _buildStreakDay('S', playedWeekdays.contains(DateTime.sunday), sportColor),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildStreakDay('M', true, sportColor),
-                    _buildStreakDay('T', true, sportColor),
-                    _buildStreakDay('W', true, sportColor),
-                    _buildStreakDay('T', true, sportColor),
-                    _buildStreakDay('F', true, sportColor),
-                    _buildStreakDay('S', false, sportColor),
-                    _buildStreakDay('S', false, sportColor),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      default:
-        return const SizedBox.shrink();
-    }
+              ),
+            );
+
+          default:
+            return const SizedBox.shrink();
+        }
+      },
+    );
   }
 
   Widget _buildTimelineActivity({
@@ -1265,6 +1455,59 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         ),
       ],
     );
+  }
+
+  int _getMatchXp(MatchModel match, int? currentUserId) {
+    if (currentUserId == null) return 0;
+    
+    // Check if user is creator
+    final isCreator = match.creatorId == currentUserId;
+    
+    // Check if result is a win
+    bool isWin = false;
+    try {
+      final participant = match.participants.firstWhere(
+        (p) => p.id == currentUserId,
+      );
+      isWin = participant.result == 'win';
+    } catch (_) {
+      // Participant not found
+    }
+
+    int matchXp = isCreator ? 20 : 5; // Create or Join
+    matchXp += 15; // Complete
+    if (isWin) {
+      matchXp += 25; // Win
+    }
+    return matchXp;
+  }
+
+  String _getSportEmoji(String sport) {
+    switch (sport) {
+      case 'Football':
+        return '⚽';
+      case 'Cricket':
+        return '🏏';
+      case 'Badminton':
+        return '🏸';
+      case 'Basketball':
+        return '🏀';
+      case 'Tennis':
+        return '🎾';
+      case 'Padel':
+        return '🏓';
+      default:
+        return '🏃';
+    }
+  }
+
+  String _formatDateTime(String dateTimeStr) {
+    try {
+      final dt = DateTime.parse(dateTimeStr).toLocal();
+      return DateFormat('MMM d, h:mm a').format(dt);
+    } catch (_) {
+      return dateTimeStr;
+    }
   }
 
 }

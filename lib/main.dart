@@ -129,6 +129,11 @@ class AppView extends StatelessWidget {
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
+                  if (!state.isActionSuccess &&
+                      (state.message!.toLowerCase().contains('unauthenticated') ||
+                          state.message!.toLowerCase().contains('unauthorized'))) {
+                    context.read<AuthBloc>().add(const AuthLogoutRequested());
+                  }
                 }
               },
             ),
@@ -136,6 +141,10 @@ class AppView extends StatelessWidget {
               listenWhen: (previous, current) {
                 if (previous.user?.gender != current.user?.gender ||
                     previous.user?.themePreference != current.user?.themePreference) {
+                  return true;
+                }
+                if (previous.status == AuthStatus.authenticated &&
+                    current.status == AuthStatus.unauthenticated) {
                   return true;
                 }
                 return previous.status != AuthStatus.authenticated &&
@@ -152,6 +161,7 @@ class AppView extends StatelessWidget {
                   context.read<NotificationBloc>().add(const NotificationFetched());
                 } else if (state.status == AuthStatus.unauthenticated) {
                   themeManager.updateUser(null, null);
+                  navigatorKey.currentState?.popUntil((route) => route.isFirst);
                 }
               },
             ),

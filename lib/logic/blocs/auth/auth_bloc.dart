@@ -32,7 +32,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     try {
-      final user = await _authRepository.getUser();
+      final user = await _authRepository.getUser(forceRefresh: event.forceRefresh);
       if (user != null) {
         emit(AuthState.authenticated(user));
       } else {

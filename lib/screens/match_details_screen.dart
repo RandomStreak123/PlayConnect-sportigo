@@ -141,6 +141,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
         }
 
         if (state.isActionSuccess) {
+          if (_pendingAction == 'recordResults' || _pendingAction == 'submitRatings') {
+            context.read<AuthBloc>().add(const AuthCheckRequested(forceRefresh: true));
+          }
           setState(() {
             _isSubmitting = false;
             _pendingAction = null;
@@ -779,6 +782,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
             isScrollControlled: true,
             backgroundColor: Colors.transparent,
             builder: (context) => PlayerRevealCard(
+              userId: participant.id,
               playerName: participant.name,
               sportType: _match.sportType,
               profilePicture: participant.profilePicture,

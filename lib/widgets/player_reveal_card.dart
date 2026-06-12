@@ -5,12 +5,14 @@ import '../core/utils/avatar_image_helper.dart';
 import '../screens/profile_screen.dart';
 
 class PlayerRevealCard extends StatelessWidget {
+  final int? userId;
   final String playerName;
   final String sportType;
   final String? profilePicture;
 
   const PlayerRevealCard({
     super.key,
+    this.userId,
     this.playerName = 'Player',
     this.sportType = 'Sport',
     this.profilePicture,
@@ -305,6 +307,7 @@ class PlayerRevealCard extends StatelessWidget {
                             isCurrentUser: false,
                             playerName: playerName,
                             profilePicture: profilePicture,
+                            userId: userId,
                           ),
                         ),
                       );

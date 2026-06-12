@@ -587,6 +587,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
           builder: (context) => PlayerRevealCard(
+            userId: player.id,
             playerName: player.name,
             sportType: sport,
             profilePicture: photoUrl,

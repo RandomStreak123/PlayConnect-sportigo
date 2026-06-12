@@ -216,14 +216,16 @@ class AuthRepository {
   }
 
   /// Get user — returns local cache or fetches from server.
-  Future<UserModel?> getUser() async {
+  Future<UserModel?> getUser({bool forceRefresh = false}) async {
     final token = await _getToken();
     if (token == null) return null;
 
-    final cachedUser = await _getCachedUser();
-    if (cachedUser != null) {
-      _refreshUserInBackground(token);
-      return cachedUser;
+    if (!forceRefresh) {
+      final cachedUser = await _getCachedUser();
+      if (cachedUser != null) {
+        _refreshUserInBackground(token);
+        return cachedUser;
+      }
     }
 
     return _fetchUserFromServer(token);
@@ -330,6 +332,27 @@ class AuthRepository {
       return playersJson.map((json) => UserModel.fromJson(json)).toList();
     } else {
       throw Exception(_extractErrorMessage(response, 'Failed to fetch players'));
+    }
+  }
+
+  Future<Map<String, dynamic>> getPublicProfile(int userId) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('User not authenticated');
+
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/users/$userId'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = _decodeJsonBody(response.body);
+      if (data == null) throw Exception('Invalid server response');
+      return data;
+    } else {
+      throw Exception(_extractErrorMessage(response, 'Failed to fetch user profile'));
     }
   }
 
