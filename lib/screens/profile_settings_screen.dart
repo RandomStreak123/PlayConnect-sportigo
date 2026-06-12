@@ -7,8 +7,8 @@ import '../data/repositories/auth_repository.dart';
 import '../theme/theme_manager.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_icon_size.dart';
-import '../core/theme/app_radius.dart';
 import '../data/models/user_model.dart';
+
 
 class ProfileSettingsScreen extends StatefulWidget {
   const ProfileSettingsScreen({super.key});
@@ -32,7 +32,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
               title: Text(
-                'Settings & Privacy',
+                'Settings',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -121,264 +121,171 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
           _ => Colors.grey.shade600,
         };
 
-        final cardBorderColor = Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5);
-        final dividerColor = Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3);
-
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Group 1 Header: Personalization
-              Padding(
-                padding: const EdgeInsets.only(left: AppSpacing.xs, bottom: AppSpacing.sm),
-                child: Text(
-                  'Personalization',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
+              // Edit Profile Menu Option
+              _buildMenuTile(
+                context,
+                Icons.edit_outlined,
+                'Edit Profile',
+                'Update display name, bio, and settings',
+                AppColors.warmOrange,
+                () {
+                  _showEditProfileModal(context, user);
+                },
               ),
 
-              // Group 1 Card: Gender Identity, Hide Phone, Lavender Theme
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                  border: Border.all(color: cardBorderColor),
+              // Gender Identity
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                leading: Container(
+                  padding: const EdgeInsets.all(AppSpacing.xs + 2),
+                  decoration: BoxDecoration(
+                    color: genderColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.person_outline, color: genderColor, size: AppIconSize.sm),
                 ),
-                child: Column(
-                  children: [
-                    // Gender Identity
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                      leading: Container(
-                        padding: const EdgeInsets.all(AppSpacing.xs + 2),
-                        decoration: BoxDecoration(
-                          color: genderColor.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.person_outline, color: genderColor, size: AppIconSize.sm),
-                      ),
-                      title: Text(
-                        'Gender Identity',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
-                      ),
-                      subtitle: Text(
-                        genderLabel,
-                        style: TextStyle(fontSize: 12, color: genderColor, fontWeight: FontWeight.w600),
-                      ),
-                      trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: AppIconSize.sm),
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Gender can be updated during registration'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
+                title: Text(
+                  'Gender Identity',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
+                ),
+                subtitle: Text(
+                  genderLabel,
+                  style: TextStyle(fontSize: 12, color: genderColor, fontWeight: FontWeight.w600),
+                ),
+                trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: AppIconSize.sm),
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Gender can be updated during registration'),
+                      behavior: SnackBarBehavior.floating,
                     ),
-                    
-                    Divider(height: 1, thickness: 1, color: dividerColor, indent: 68),
+                  );
+                },
+              ),
 
-                    // Hide Phone Number Toggle
-                    SwitchListTile(
+              if (user.gender == 'female') ...[
+                AnimatedBuilder(
+                  animation: themeManager,
+                  builder: (context, _) {
+                    final isLavender = themeManager.isWomenMode;
+                    return SwitchListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                       secondary: Container(
                         padding: const EdgeInsets.all(AppSpacing.xs + 2),
                         decoration: BoxDecoration(
-                          color: Colors.teal.withValues(alpha: 0.1),
+                          color: isLavender ? const Color(0xFFFF4D8D).withValues(alpha: 0.1) : Colors.grey.shade200,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.phone_disabled_outlined, color: Colors.teal, size: AppIconSize.sm),
+                        child: Icon(
+                          Icons.palette_outlined,
+                          color: isLavender ? Colors.white : Colors.grey.shade600,
+                          size: AppIconSize.sm,
+                        ),
                       ),
-                      title: Text(
-                        'Hide Phone Number',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
+                      title: Row(
+                        children: [
+                          Text(
+                            'Elegant Lavender Theme',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
+                          ),
+                          const SizedBox(width: AppSpacing.xxs + 2),
+                          if (isLavender)
+                            const Text('🌸', style: TextStyle(fontSize: 14)),
+                        ],
                       ),
                       subtitle: Text(
-                        user.hidePhone ? 'Phone hidden from other players' : 'Phone visible to match organizers',
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        isLavender
+                            ? 'Soft pink & lavender experience active'
+                            : 'Switch to elegant lavender palette',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isLavender ? const Color(0xFFFF4D8D) : Colors.grey.shade600,
+                        ),
                       ),
-                      value: user.hidePhone,
-                      activeThumbColor: Colors.teal,
+                      value: isLavender,
+                      activeThumbColor: const Color(0xFFFF4D8D),
                       onChanged: (val) async {
+                        final newPref = val
+                            ? ThemePreference.elegantLavender
+                            : ThemePreference.activeSteelBlue;
+                        
+                        themeManager.setThemePreference(newPref);
+                        
                         try {
                           final authRepo = context.read<AuthRepository>();
-                          final updatedUser = await authRepo.updateProfile(hidePhone: val);
-                          if (context.mounted) {
-                            context.read<AuthBloc>().add(AuthUserUpdated(updatedUser));
-                          }
+                          final authBloc = context.read<AuthBloc>();
+                          
+                          final updatedUser = await authRepo.updateProfile(
+                            themePreference: val ? 'elegantLavender' : 'activeSteelBlue',
+                          );
+                          
+                          authBloc.add(AuthUserUpdated(updatedUser));
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to update: $e'),
-                                backgroundColor: Theme.of(context).colorScheme.error,
+                              const SnackBar(
+                                content: Text('Failed to save theme preference to server'),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
                           }
                         }
                       },
-                    ),
-
-                    if (user.gender == 'female') ...[
-                      Divider(height: 1, thickness: 1, color: dividerColor, indent: 68),
-                      
-                      AnimatedBuilder(
-                        animation: themeManager,
-                        builder: (context, _) {
-                          final isLavender = themeManager.isWomenMode;
-                          return SwitchListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                            secondary: Container(
-                              padding: const EdgeInsets.all(AppSpacing.xs + 2),
-                              decoration: BoxDecoration(
-                                color: isLavender ? const Color(0xFFFF4D8D).withValues(alpha: 0.1) : Colors.grey.shade200,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.palette_outlined,
-                                color: isLavender ? Colors.white : Colors.grey.shade600,
-                                size: AppIconSize.sm,
-                              ),
-                            ),
-                            title: Row(
-                              children: [
-                                Text(
-                                  'Elegant Lavender Theme',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
-                                ),
-                                const SizedBox(width: AppSpacing.xxs + 2),
-                                if (isLavender)
-                                  const Text('🌸', style: TextStyle(fontSize: 14)),
-                              ],
-                            ),
-                            subtitle: Text(
-                              isLavender
-                                  ? 'Soft pink & lavender experience active'
-                                  : 'Switch to elegant lavender palette',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isLavender ? const Color(0xFFFF4D8D) : Colors.grey.shade600,
-                              ),
-                            ),
-                            value: isLavender,
-                            activeThumbColor: const Color(0xFFFF4D8D),
-                            onChanged: (val) async {
-                              final newPref = val
-                                  ? ThemePreference.elegantLavender
-                                  : ThemePreference.activeSteelBlue;
-                              
-                              themeManager.setThemePreference(newPref);
-                              
-                              try {
-                                final authRepo = context.read<AuthRepository>();
-                                final authBloc = context.read<AuthBloc>();
-                                
-                                final updatedUser = await authRepo.updateProfile(
-                                  themePreference: val ? 'elegantLavender' : 'activeSteelBlue',
-                                );
-                                
-                                authBloc.add(AuthUserUpdated(updatedUser));
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Failed to save theme preference to server'),
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                          );
-                        },
-                      ),
-                    ],
-                  ],
+                    );
+                  },
                 ),
+              ],
+
+              // Dynamic Game Rules
+              _buildMenuTile(
+                context,
+                Icons.shield_outlined,
+                'Dynamic Game Rules',
+                'Read platform game guide',
+                const Color(0xFF4A90D9),
+                () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Sportigo platform game guide coming soon!'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
               ),
 
-              const SizedBox(height: AppSpacing.lg),
-
-              // Group 2 Card: Edit Profile, Dynamic Game Rules, Platform Stats, Sign Out
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                  border: Border.all(color: cardBorderColor),
-                ),
-                child: Column(
-                  children: [
-                    // Edit Profile Menu Option
-                    _buildMenuTile(
-                      context,
-                      Icons.edit_outlined,
-                      'Edit Profile',
-                      'Update display name, bio, and settings',
-                      AppColors.warmOrange,
-                      () {
-                        _showEditProfileModal(context, user);
-                      },
+              // Platform Stats History
+              _buildMenuTile(
+                context,
+                Icons.bar_chart_outlined,
+                'Platform Stats History',
+                'Full tournament logs',
+                Colors.teal,
+                () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Tournament logs coming soon!'),
+                      behavior: SnackBarBehavior.floating,
                     ),
+                  );
+                },
+              ),
 
-                    Divider(height: 1, thickness: 1, color: dividerColor, indent: 68),
-
-                    // Dynamic Game Rules
-                    _buildMenuTile(
-                      context,
-                      Icons.shield_outlined,
-                      'Dynamic Game Rules',
-                      'Read platform game guide',
-                      const Color(0xFF4A90D9),
-                      () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Sportigo platform game guide coming soon!'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
-                    ),
-
-                    Divider(height: 1, thickness: 1, color: dividerColor, indent: 68),
-
-                    // Platform Stats History
-                    _buildMenuTile(
-                      context,
-                      Icons.bar_chart_outlined,
-                      'Platform Stats History',
-                      'Full tournament logs',
-                      Colors.teal,
-                      () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Tournament logs coming soon!'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
-                    ),
-
-                    Divider(height: 1, thickness: 1, color: dividerColor, indent: 68),
-
-                    // Sign Out
-                    _buildMenuTile(
-                      context,
-                      Icons.logout_rounded,
-                      'Sign Out',
-                      'Exit application cleanly',
-                      Colors.redAccent,
-                      () {
-                        _showSignOutConfirmation(context);
-                      },
-                      isDestructive: true,
-                    ),
-                  ],
-                ),
+              // Sign Out
+              _buildMenuTile(
+                context,
+                Icons.logout_rounded,
+                'Sign Out',
+                'Exit application cleanly',
+                Colors.redAccent,
+                () {
+                  _showSignOutConfirmation(context);
+                },
+                isDestructive: true,
               ),
             ],
           ),

@@ -41,7 +41,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   
   // Implicit animation trigger states
   bool _isEditButtonHovered = false;
-  bool _isShareButtonHovered = false;
 
   // Dynamic Profile screen customization features
   bool _showAllActivities = false;
@@ -130,7 +129,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Future<void> _loadPublicProfileWithId(int userId, {bool isRefresh = false}) async {
-    if (!isRefresh && _publicProfileData == null) {
+    final shouldShowLoader = !isRefresh && _publicProfileData == null && !widget.isCurrentUser;
+    if (shouldShowLoader) {
       setState(() {
         _isLoadingPublicProfile = true;
         _publicProfileError = null;
@@ -168,7 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     } catch (e) {
       if (mounted) {
         setState(() {
-          if (!isRefresh || _publicProfileData == null) {
+          if (shouldShowLoader) {
             _publicProfileError = e.toString().replaceAll('Exception: ', '');
           }
           _isLoadingPublicProfile = false;
@@ -555,9 +555,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         
                         // Premium Stat/Achievement Grid
                         _buildStatGrid(context, sportColor),
-                        
-                        // Dynamic Social Engagement / Action Cards
-                        _buildSocialProofRow(context, sportColor),
                         
                         // Interactive Sport Chips Section
                         _buildSportsSection(context, sportColor),
@@ -1212,118 +1209,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildSocialProofRow(BuildContext context, Color sportColor) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Friend circles overlap
-          Row(
-            children: [
-              SizedBox(
-                width: 90,
-                height: 36,
-                child: Stack(
-                  children: List.generate(
-                    4,
-                    (index) => Positioned(
-                      left: index * 18.0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const CircleAvatar(
-                          radius: 16,
-                          backgroundImage: AssetImage('assets/images/player_profile.png'),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '48 Friends',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  Text(
-                    '12 online play-pals',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.sportsGreen.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          
-          // Add/Find Friends floating scale button
-          GestureDetector(
-            onTapDown: (_) => setState(() => _isShareButtonHovered = true),
-            onTapUp: (_) => setState(() => _isShareButtonHovered = false),
-            onTapCancel: () => setState(() => _isShareButtonHovered = false),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Sharing profile dynamic link...'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            child: AnimatedScale(
-              scale: _isShareButtonHovered ? 0.9 : 1.0,
-              duration: const Duration(milliseconds: 150),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [sportColor, sportColor.withValues(alpha: 0.8)]),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: sportColor.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.share_rounded, color: Colors.white, size: 14),
-                    SizedBox(width: 6),
-                    Text(
-                      'Share',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildSportsSection(BuildContext context, Color sportColor) {
     return Column(
@@ -1473,8 +1359,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
         switch (_activeActivityTab) {
           case 0:
+            if (_publicProfileData == null) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32.0),
+                  child: AppLoadingIndicator(),
+                ),
+              );
+            }
             final activitiesList = <ActivityModel>[];
-            if (_publicProfileData != null && _publicProfileData!['activities'] != null) {
+            if (_publicProfileData!['activities'] != null) {
               final activitiesJson = _publicProfileData!['activities'] as List<dynamic>;
               activitiesList.addAll(
                 activitiesJson.map((json) => ActivityModel.fromJson(json as Map<String, dynamic>))
@@ -2046,28 +1940,76 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '🔥 $streakVal Match Winning Streak',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Theme.of(context).colorScheme.onSurface,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text(
+                                    '🔥 ',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      '$streakVal Match Winning Streak',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Play matches this week to keep your streak!',
-                              style: TextStyle(fontSize: 12, color: AppColors.sportsGreen),
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Keep playing matches to grow your streak!',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF2F9E44),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 2,
+                              ),
+                            ],
+                          ),
                         ),
-                        Text(
-                          'Streak x${streakVal > 0 ? (1.0 + (streakVal * 0.1)).toStringAsFixed(1) : "1.0"}',
-                          style: TextStyle(color: sportColor, fontWeight: FontWeight.w900),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F3F5),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '◀',
+                                style: TextStyle(color: Color(0xFFADB5BD), fontSize: 10),
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'THIS WEEK',
+                                style: TextStyle(
+                                  color: Color(0xFF495057),
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 10,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                '▶',
+                                style: TextStyle(color: Color(0xFFADB5BD), fontSize: 10),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -2075,13 +2017,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildStreakDay('M', playedWeekdays.contains(DateTime.monday), sportColor),
-                        _buildStreakDay('T', playedWeekdays.contains(DateTime.tuesday), sportColor),
-                        _buildStreakDay('W', playedWeekdays.contains(DateTime.wednesday), sportColor),
-                        _buildStreakDay('T', playedWeekdays.contains(DateTime.thursday), sportColor),
-                        _buildStreakDay('F', playedWeekdays.contains(DateTime.friday), sportColor),
-                        _buildStreakDay('S', playedWeekdays.contains(DateTime.saturday), sportColor),
-                        _buildStreakDay('S', playedWeekdays.contains(DateTime.sunday), sportColor),
+                        _buildStreakDay('M', playedWeekdays.contains(DateTime.monday)),
+                        _buildStreakDay('T', playedWeekdays.contains(DateTime.tuesday)),
+                        _buildStreakDay('W', playedWeekdays.contains(DateTime.wednesday)),
+                        _buildStreakDay('T', playedWeekdays.contains(DateTime.thursday)),
+                        _buildStreakDay('F', playedWeekdays.contains(DateTime.friday)),
+                        _buildStreakDay('S', playedWeekdays.contains(DateTime.saturday)),
+                        _buildStreakDay('S', playedWeekdays.contains(DateTime.sunday)),
                       ],
                     ),
                   ],
@@ -2169,41 +2111,31 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
 
-  Widget _buildStreakDay(String label, bool active, Color sportColor) {
+  Widget _buildStreakDay(String label, bool active) {
     return Column(
       children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+        Container(
           width: 32,
           height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: active ? sportColor : Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: sportColor.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    )
-                  ]
-                : [],
+            color: active ? const Color(0xFF2B8A3E) : const Color(0xFFF1F3F5),
           ),
           child: Center(
             child: Icon(
               active ? Icons.check : Icons.close,
               size: 14,
-              color: active ? Colors.white : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+              color: active ? Colors.white : const Color(0xFF868E96),
             ),
           ),
         ),
         const SizedBox(height: 6),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: Color(0xFF868E96),
           ),
         ),
       ],
