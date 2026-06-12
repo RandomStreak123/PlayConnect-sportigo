@@ -158,6 +158,7 @@ class _MatchCardState extends State<MatchCard> {
                                   isScrollControlled: true,
                                   backgroundColor: Colors.transparent,
                                   builder: (context) => PlayerRevealCard(
+                                    userId: participant.id,
                                     playerName: participant.name,
                                     sportType: match.sportType,
                                     profilePicture: participant.profilePicture,
@@ -215,13 +216,14 @@ class _MatchCardState extends State<MatchCard> {
                     if (organizer == null && match.participants.isNotEmpty) {
                       organizer = match.participants.first;
                     }
-                    final organizerPhoto = organizer?.profilePicture;
+                    final organizerPhoto = match.organizerPhoto ?? organizer?.profilePicture;
 
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
                       builder: (context) => PlayerRevealCard(
+                        userId: organizer?.id ?? match.creatorId,
                         playerName: match.organizer ?? 'Player',
                         sportType: match.sportType,
                         profilePicture: organizerPhoto,

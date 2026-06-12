@@ -8,7 +8,9 @@ class UserController extends Controller
 {
     public function show(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user();
+        $user->append('stats');
+        return response()->json($user);
     }
 
     public function update(Request $request)
@@ -29,7 +31,9 @@ class UserController extends Controller
         $user = $request->user();
         $user->update($validated);
 
-        return response()->json($user->fresh());
+        $freshUser = $user->fresh();
+        $freshUser->append('stats');
+        return response()->json($freshUser);
     }
 
     public function publicProfile($id)
@@ -39,6 +43,8 @@ class UserController extends Controller
         
         // Merge hosted and joined matches for their public activity feed
         $allMatches = $hostedMatches->merge($user->joinedMatches)->unique('id')->values();
+
+        $activities = \App\Models\Activity::where('user_id', $user->id)->latest()->get();
 
         return response()->json([
             'id' => $user->id,
@@ -53,6 +59,7 @@ class UserController extends Controller
             'skill_tier' => $user->skill_tier,
             'matches' => $allMatches,
             'stats' => $user->stats,
+            'activities' => $activities,
             'tournaments' => $user->tournaments,
             'created_at' => $user->created_at,
         ]);

@@ -135,6 +135,7 @@ class UserStats {
   final int streak;
   final String playStyle;
   final String globalRank;
+  final double averageRating;
   final int totalGames;
 
   UserStats({
@@ -147,6 +148,7 @@ class UserStats {
     required this.streak,
     required this.playStyle,
     required this.globalRank,
+    required this.averageRating,
     required this.totalGames,
   });
 
@@ -161,6 +163,7 @@ class UserStats {
       streak: json['streak'] ?? 0,
       playStyle: json['playStyle'] ?? 'All-Rounder',
       globalRank: json['globalRank'] ?? '#1000 Kochi',
+      averageRating: (json['averageRating'] ?? 3.0).toDouble(),
       totalGames: json['totalGames'] ?? 0,
     );
   }
@@ -176,6 +179,7 @@ class UserStats {
       'streak': streak,
       'playStyle': playStyle,
       'globalRank': globalRank,
+      'averageRating': averageRating,
       'totalGames': totalGames,
     };
   }

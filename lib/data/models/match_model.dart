@@ -37,6 +37,7 @@ class MatchModel {
   final List<MatchParticipant> participants;
   final double distance;
   final String? organizer;
+  final String? organizerPhoto;
   final bool womenOnly;
   final int? creatorId;
 
@@ -73,6 +74,7 @@ class MatchModel {
     required this.participants,
     required this.distance,
     this.organizer,
+    this.organizerPhoto,
     this.womenOnly = false,
     this.creatorId,
   });
@@ -102,8 +104,13 @@ class MatchModel {
       participants: participants,
       distance: (json['distance'] ?? 0.0).toDouble(),
       organizer:
+          (json['organizer'] as String?) ??
           (json['organizer_name'] as String?) ??
           (participants.isNotEmpty ? participants.first.name : null),
+      organizerPhoto:
+          (json['organizer_photo'] as String?) ??
+          (json['user']?['profile_picture'] as String?) ??
+          (json['user']?['avatar'] as String?),
       womenOnly: json['women_only'] == 1 || json['women_only'] == true,
       creatorId: json['creator_id'] as int?,
     );
@@ -149,6 +156,7 @@ class MatchModel {
     List<MatchParticipant>? participants,
     double? distance,
     String? organizer,
+    String? organizerPhoto,
     bool? womenOnly,
     int? creatorId,
   }) {
@@ -165,6 +173,7 @@ class MatchModel {
       participants: participants ?? this.participants,
       distance: distance ?? this.distance,
       organizer: organizer ?? this.organizer,
+      organizerPhoto: organizerPhoto ?? this.organizerPhoto,
       womenOnly: womenOnly ?? this.womenOnly,
       creatorId: creatorId ?? this.creatorId,
     );

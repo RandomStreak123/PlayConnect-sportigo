@@ -129,9 +129,10 @@ class AppView extends StatelessWidget {
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
-                  if (!state.isActionSuccess &&
-                      (state.message!.toLowerCase().contains('unauthenticated') ||
-                          state.message!.toLowerCase().contains('unauthorized'))) {
+                  if (state.isActionSuccess) {
+                    context.read<AuthBloc>().add(const AuthCheckRequested(forceRefresh: true));
+                  } else if (state.message!.toLowerCase().contains('unauthenticated') ||
+                      state.message!.toLowerCase().contains('unauthorized')) {
                     context.read<AuthBloc>().add(const AuthLogoutRequested());
                   }
                 }

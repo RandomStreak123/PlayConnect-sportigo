@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../core/constants/colors.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
@@ -9,7 +10,9 @@ import '../core/utils/avatar_image_helper.dart';
 import 'profile_settings_screen.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import '../data/models/match_model.dart';
+import '../data/models/activity_model.dart';
 import 'package:intl/intl.dart';
+import 'dart:math' as math;
 
 class ProfileScreen extends StatefulWidget {
   final bool isCurrentUser;
@@ -40,6 +43,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   bool _isEditButtonHovered = false;
   bool _isShareButtonHovered = false;
 
+  // Dynamic Profile screen customization features
+  bool _showAllActivities = false;
+  String _selectedTheme = 'Default';
+
   final List<Map<String, dynamic>> _sportsList = [
     {'name': 'Football', 'icon': '⚽'},
     {'name': 'Cricket', 'icon': '🏏'},
@@ -53,6 +60,25 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Map<String, dynamic>? _publicProfileData;
   String? _publicProfileError;
 
+  final Map<String, List<Color>> _premiumGradients = {
+    'Default': [],
+    'Lavender Dusk': [
+      const Color(0xFF2E0854),
+      const Color(0xFF8A2BE2),
+      const Color(0xFFE6E6FA),
+    ],
+    'Gold Rush': [
+      const Color(0xFF3A2D00),
+      const Color(0xFF8A7300),
+      const Color(0xFFD4AF37),
+    ],
+    'Golden Legend': [
+      const Color(0xFF8B6C05),
+      const Color(0xFFD4AF37),
+      const Color(0xFFFFDF73),
+    ],
+  };
+
   @override
   void initState() {
     super.initState();
@@ -61,38 +87,171 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       duration: const Duration(milliseconds: 1000),
     )..forward();
     _scrollController = ScrollController();
+    if (widget.isCurrentUser) {
+      _loadSelectedTheme();
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentUserId = context.read<AuthBloc>().state.user?.id;
       if (widget.isCurrentUser) {
+        if (currentUserId != null) {
+          _loadPublicProfileWithId(currentUserId);
+        }
         context.read<MatchBloc>().add(const MyMatchesFetched());
       } else {
-        _loadPublicProfile();
+        if (widget.userId != null) {
+          _loadPublicProfileWithId(widget.userId!);
+        }
       }
     });
   }
 
-  Future<void> _loadPublicProfile() async {
-    if (widget.userId == null) return;
-    setState(() {
-      _isLoadingPublicProfile = true;
-      _publicProfileError = null;
-    });
+  Future<void> _loadSelectedTheme() async {
     try {
-      final authRepository = context.read<AuthRepository>();
-      final data = await authRepository.getPublicProfile(widget.userId!);
+      final prefs = await SharedPreferences.getInstance();
+      final savedTheme = prefs.getString('profile_theme_key') ?? 'Default';
       if (mounted) {
         setState(() {
+          _selectedTheme = savedTheme;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveSelectedTheme(String themeName) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('profile_theme_key', themeName);
+      if (mounted) {
+        setState(() {
+          _selectedTheme = themeName;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadPublicProfileWithId(int userId, {bool isRefresh = false}) async {
+    if (!isRefresh && _publicProfileData == null) {
+      setState(() {
+        _isLoadingPublicProfile = true;
+        _publicProfileError = null;
+      });
+    }
+    try {
+      final authRepository = context.read<AuthRepository>();
+      final data = await authRepository.getPublicProfile(userId);
+      if (mounted) {
+        final level = data['stats']?['level'] as int? ?? 1;
+        String theme = 'Default';
+        if (level >= 25) {
+          theme = 'Golden Legend';
+        } else if (level >= 10) {
+          theme = 'Gold Rush';
+        } else if (level >= 5) {
+          theme = 'Lavender Dusk';
+        }
+        setState(() {
           _publicProfileData = data;
+          if (widget.isCurrentUser) {
+            _loadSelectedTheme().then((_) {
+              if (_selectedTheme == 'Default' || _selectedTheme.isEmpty) {
+                setState(() {
+                  _selectedTheme = theme;
+                });
+              }
+            });
+          } else {
+            _selectedTheme = theme;
+          }
           _isLoadingPublicProfile = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _publicProfileError = e.toString().replaceAll('Exception: ', '');
+          if (!isRefresh || _publicProfileData == null) {
+            _publicProfileError = e.toString().replaceAll('Exception: ', '');
+          }
           _isLoadingPublicProfile = false;
         });
       }
     }
+  }
+
+  List<Color> _getAvatarBorderColors(int level, Color sportColor) {
+    if (level >= 25) {
+      return [
+        const Color(0xFFFFD700), // Gold
+        const Color(0xFFFFA500), // Orange/Amber
+        const Color(0xFFFFD700),
+      ];
+    } else if (level >= 10) {
+      return [
+        const Color(0xFFFFD700), // Gold
+        const Color(0xFFFFF8DC), // Cornsilk
+        const Color(0xFFFFD700),
+      ];
+    } else if (level >= 5) {
+      return [
+        const Color(0xFFC0C0C0), // Silver
+        const Color(0xFFFFFFFF), // White
+        const Color(0xFFC0C0C0),
+      ];
+    } else if (level >= 2) {
+      return [
+        const Color(0xFFCD7F32), // Bronze
+        const Color(0xFFE5A65D), // Light Bronze
+        const Color(0xFFCD7F32),
+      ];
+    } else {
+      return [
+        sportColor,
+        sportColor.withValues(alpha: 0.4),
+        AppColors.electricCyan,
+        sportColor,
+      ];
+    }
+  }
+
+  BoxShadow _getAvatarBorderShadow(int level, Color sportColor) {
+    if (level >= 25) {
+      return BoxShadow(
+        color: const Color(0xFFFFD700).withValues(alpha: 0.5),
+        blurRadius: 18,
+        spreadRadius: 3,
+      );
+    } else if (level >= 10) {
+      return BoxShadow(
+        color: const Color(0xFFFFD700).withValues(alpha: 0.3),
+        blurRadius: 15,
+        spreadRadius: 2,
+      );
+    } else if (level >= 5) {
+      return BoxShadow(
+        color: const Color(0xFFC0C0C0).withValues(alpha: 0.3),
+        blurRadius: 12,
+        spreadRadius: 2,
+      );
+    } else if (level >= 2) {
+      return BoxShadow(
+        color: const Color(0xFFCD7F32).withValues(alpha: 0.25),
+        blurRadius: 10,
+        spreadRadius: 1,
+      );
+    } else {
+      return BoxShadow(
+        color: sportColor.withValues(alpha: 0.3),
+        blurRadius: 15,
+        spreadRadius: 2,
+      );
+    }
+  }
+
+  String _getLevelBadge(int level) {
+    if (level >= 25) return '🏆';
+    if (level >= 10) return '🥇';
+    if (level >= 5) return '🎖️';
+    if (level >= 2) return '💫';
+    return '👟';
   }
 
   @override
@@ -265,7 +424,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               Text(_publicProfileError!),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _loadPublicProfile,
+                onPressed: () {
+                  final uid = widget.isCurrentUser
+                      ? context.read<AuthBloc>().state.user?.id
+                      : widget.userId;
+                  if (uid != null) {
+                    _loadPublicProfileWithId(uid);
+                  }
+                },
                 child: const Text('Retry'),
               ),
             ],
@@ -276,6 +442,46 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
     final sportColor = _getSportColor(context, _selectedSport);
     
+    final userForTheme = context.read<AuthBloc>().state.user;
+    final levelForTheme = widget.isCurrentUser
+        ? (userForTheme?.stats?.level ?? 1)
+        : (_publicProfileData?['stats']?['level'] as int? ?? 1);
+
+    // Sanitize selected theme based on level requirements
+    String activeTheme = _selectedTheme;
+    if (widget.isCurrentUser) {
+      if (activeTheme == 'Golden Legend' && levelForTheme < 25) {
+        activeTheme = 'Default';
+      } else if (activeTheme == 'Gold Rush' && levelForTheme < 10) {
+        activeTheme = 'Default';
+      } else if (activeTheme == 'Lavender Dusk' && levelForTheme < 5) {
+        activeTheme = 'Default';
+      }
+    } else {
+      if (levelForTheme >= 25) {
+        activeTheme = 'Golden Legend';
+      } else if (levelForTheme >= 10) {
+        activeTheme = 'Gold Rush';
+      } else if (levelForTheme >= 5) {
+        activeTheme = 'Lavender Dusk';
+      } else {
+        activeTheme = 'Default';
+      }
+    }
+
+    final premiumColors = _premiumGradients[activeTheme]!;
+    final gradientColors = activeTheme == 'Default'
+        ? [
+            sportColor.withValues(alpha: 0.15),
+            Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+            Theme.of(context).colorScheme.surface,
+          ]
+        : [
+            premiumColors[0].withValues(alpha: 0.2),
+            premiumColors[1].withValues(alpha: 0.75),
+            Theme.of(context).colorScheme.surface,
+          ];
+
     return Scaffold(
       body: Stack(
         children: [
@@ -284,55 +490,90 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             duration: const Duration(milliseconds: 600),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  sportColor.withValues(alpha: 0.15),
-                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-                  Theme.of(context).colorScheme.surface,
-                ],
+                colors: gradientColors,
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
             ),
           ),
+
+          // Custom ambient animation for Golden Legend theme
+          if (activeTheme == 'Golden Legend')
+            AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                final pulse = math.sin(_animationController.value * 2 * math.pi).abs();
+                return Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.03 + 0.04 * pulse,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: RadialGradient(
+                          colors: [Color(0xFFD4AF37), Colors.transparent],
+                          center: Alignment.topCenter,
+                          radius: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           
           SafeArea(
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  child: Column(
-                    children: [
-                  // App Bar / Title Header
-                  _buildCustomAppBar(context),
-                  
-                  // Large Premium Profile Card with neon details
-                  _buildLargeProfileCard(context, sportColor),
-                  
-                  // Complete Identity & Level Progression System
-                  _buildLevelSection(context, sportColor),
-                  
-                  // Premium Stat/Achievement Grid
-                  _buildStatGrid(context, sportColor),
-                  
-                  // Dynamic Social Engagement / Action Cards
-                  _buildSocialProofRow(context, sportColor),
-                  
-                  // Interactive Sport Chips Section
-                  _buildSportsSection(context, sportColor),
-                  
-                  // Responsive Segmented Activity/Streaks Section
-                  _buildActivitySection(context, sportColor),
-                  
-                  const SizedBox(height: 100), // Padding for elegant floating bottom navigation
-                ],
+            child: RefreshIndicator(
+              onRefresh: () async {
+                final currentUserId = context.read<AuthBloc>().state.user?.id;
+                final targetUserId = widget.isCurrentUser ? currentUserId : widget.userId;
+                final matchBloc = context.read<MatchBloc>();
+                if (targetUserId != null) {
+                  await _loadPublicProfileWithId(targetUserId, isRefresh: true);
+                }
+                if (widget.isCurrentUser) {
+                  matchBloc.add(const MyMatchesFetched());
+                }
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: Column(
+                      children: [
+                        // App Bar / Title Header
+                        _buildCustomAppBar(context),
+                        
+                        // Large Premium Profile Card with neon details
+                        _buildLargeProfileCard(context, sportColor),
+                        
+                        // Complete Identity & Level Progression System
+                        _buildLevelSection(context, sportColor),
+
+                        // Custom Theme Selection Chips (unlocked at Level 5+)
+                        _buildThemeSelector(context, levelForTheme, sportColor),
+                        
+                        // Premium Stat/Achievement Grid
+                        _buildStatGrid(context, sportColor),
+                        
+                        // Dynamic Social Engagement / Action Cards
+                        _buildSocialProofRow(context, sportColor),
+                        
+                        // Interactive Sport Chips Section
+                        _buildSportsSection(context, sportColor),
+                        
+                        // Responsive Segmented Activity/Streaks Section
+                        _buildActivitySection(context, sportColor),
+                        
+                        const SizedBox(height: 100), // Padding for elegant floating bottom navigation
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
-    ],
+        ],
       ),
     );
   }
@@ -375,6 +616,39 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildLargeProfileCard(BuildContext context, Color sportColor) {
+    final userForTheme = context.read<AuthBloc>().state.user;
+    final level = widget.isCurrentUser
+        ? (userForTheme?.stats?.level ?? 1)
+        : (_publicProfileData?['stats']?['level'] as int? ?? 1);
+
+    // Sanitize selected theme based on level requirements
+    String activeTheme = _selectedTheme;
+    if (widget.isCurrentUser) {
+      if (activeTheme == 'Golden Legend' && level < 25) {
+        activeTheme = 'Default';
+      } else if (activeTheme == 'Gold Rush' && level < 10) {
+        activeTheme = 'Default';
+      } else if (activeTheme == 'Lavender Dusk' && level < 5) {
+        activeTheme = 'Default';
+      }
+    } else {
+      if (level >= 25) {
+        activeTheme = 'Golden Legend';
+      } else if (level >= 10) {
+        activeTheme = 'Gold Rush';
+      } else if (level >= 5) {
+        activeTheme = 'Lavender Dusk';
+      } else {
+        activeTheme = 'Default';
+      }
+    }
+
+    final themeGlowColor = activeTheme == 'Default'
+        ? sportColor
+        : (activeTheme == 'Lavender Dusk'
+            ? const Color(0xFF8A2BE2)
+            : const Color(0xFFD4AF37));
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -383,7 +657,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: sportColor.withValues(alpha: 0.08),
+            color: themeGlowColor.withValues(alpha: 0.08),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -397,7 +671,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             top: -20,
             child: CircleAvatar(
               radius: 60,
-              backgroundColor: sportColor.withValues(alpha: 0.04),
+              backgroundColor: themeGlowColor.withValues(alpha: 0.04),
             ),
           ),
           
@@ -427,19 +701,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: SweepGradient(
-                                colors: [
-                                  sportColor,
-                                  sportColor.withValues(alpha: 0.4),
-                                  AppColors.electricCyan,
-                                  sportColor,
-                                ],
+                                colors: _getAvatarBorderColors(level, sportColor),
                               ),
                               boxShadow: [
-                                BoxShadow(
-                                  color: sportColor.withValues(alpha: 0.3),
-                                  blurRadius: 15,
-                                  spreadRadius: 2,
-                                ),
+                                _getAvatarBorderShadow(level, sportColor),
                               ],
                             ),
                           ),
@@ -572,6 +837,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               ),
                             ),
                             const SizedBox(width: 6),
+                            Text(
+                              _getLevelBadge(level),
+                              style: const TextStyle(fontSize: 20),
+                            ),
+                            const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.all(2),
                               decoration: const BoxDecoration(
@@ -626,6 +896,88 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   },
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThemeSelector(BuildContext context, int level, Color sportColor) {
+    if (!widget.isCurrentUser || level < 5) {
+      return const SizedBox.shrink();
+    }
+
+    final availableThemes = ['Default'];
+    if (level >= 5) {
+      availableThemes.add('Lavender Dusk');
+    }
+    if (level >= 10) {
+      availableThemes.add('Gold Rush');
+    }
+    if (level >= 25) {
+      availableThemes.add('Golden Legend');
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.palette_outlined, color: sportColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Profile Theme customization',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: availableThemes.map((themeName) {
+                final isSelected = _selectedTheme == themeName;
+                Color chipColor = sportColor;
+                if (themeName == 'Lavender Dusk') {
+                  chipColor = const Color(0xFF8A2BE2);
+                } else if (themeName == 'Gold Rush' || themeName == 'Golden Legend') {
+                  chipColor = const Color(0xFFD4AF37);
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ChoiceChip(
+                    label: Text(
+                      themeName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        _saveSelectedTheme(themeName);
+                      }
+                    },
+                    selectedColor: chipColor,
+                    backgroundColor: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: isSelected ? chipColor : Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ],
@@ -760,7 +1112,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         final totalGames = widget.isCurrentUser
             ? (user?.stats?.totalGames ?? 120)
             : (_publicProfileData?['stats']?['totalGames'] as int? ?? 0);
-        final averageRating = (3.0 + ((winRate - 50).clamp(0, 50) / 25.0)).toStringAsFixed(1);
+        final averageRating = widget.isCurrentUser
+            ? (user?.stats?.averageRating ?? 3.0)
+            : ((_publicProfileData?['stats']?['averageRating'] as num?)?.toDouble() ?? 3.0);
+        final averageRatingStr = averageRating.toStringAsFixed(1);
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -796,7 +1151,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               _buildGlassStatCard(
                 context,
                 'Average Rating',
-                '$averageRating ⭐',
+                '$averageRatingStr ⭐',
                 Icons.star_border_rounded,
                 Colors.amber,
               ),
@@ -1118,28 +1473,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
         switch (_activeActivityTab) {
           case 0:
-            if (widget.isCurrentUser && matchState.myMatchesStatus == MatchStatus.loading) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: AppLoadingIndicator(),
-                ),
+            final activitiesList = <ActivityModel>[];
+            if (_publicProfileData != null && _publicProfileData!['activities'] != null) {
+              final activitiesJson = _publicProfileData!['activities'] as List<dynamic>;
+              activitiesList.addAll(
+                activitiesJson.map((json) => ActivityModel.fromJson(json as Map<String, dynamic>))
               );
             }
 
-            final currentUserId = widget.isCurrentUser
-                ? context.read<AuthBloc>().state.user?.id
-                : widget.userId;
-
-            final pastMatches = matchesList.where((m) => m.isPast).toList();
-            pastMatches.sort((a, b) => b.parsedDateTime.compareTo(a.parsedDateTime));
-
-            if (pastMatches.isEmpty) {
+            if (activitiesList.isEmpty) {
               return const Padding(
                 padding: EdgeInsets.symmetric(vertical: 32.0, horizontal: 16.0),
                 child: Center(
                   child: Text(
-                    'No matches played yet. Join or organize a match to get started! ⚽',
+                    'No activity yet. Join or organize a match to get started! ⚽',
                     style: TextStyle(
                       fontStyle: FontStyle.italic,
                       fontSize: 14,
@@ -1150,72 +1497,519 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               );
             }
 
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: pastMatches.length,
-              itemBuilder: (context, index) {
-                final match = pastMatches[index];
-                final isCreator = match.creatorId == currentUserId;
-                final xp = _getMatchXp(match, currentUserId);
-                final sportEmoji = _getSportEmoji(match.sportType);
-                final dynamicColor = _getSportColor(context, match.sportType);
-                final title = '${isCreator ? 'Organized' : 'Joined'} ${match.sportType} Match';
-                final subtitle = '${match.title} at ${match.location} • ${_formatDateTime(match.dateTime)}';
+            final displayedActivities = _showAllActivities 
+                ? activitiesList 
+                : activitiesList.take(3).toList();
 
-                return _buildTimelineActivity(
-                  title: title,
-                  subtitle: subtitle,
-                  xpReward: '+$xp XP',
-                  sportEmoji: sportEmoji,
-                  sportColor: dynamicColor,
-                );
-              },
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: displayedActivities.length,
+                    itemBuilder: (context, index) {
+                      final activity = displayedActivities[index];
+                      final meta = activity.meta ?? {};
+                      final sportType = meta['sport_type'] as String? ?? 'Football';
+                      final matchTitle = meta['title'] as String? ?? '';
+                      final location = meta['location'] as String? ?? '';
+                      final dateStr = _formatDateTime(activity.createdAt.toIso8601String());
+
+                      String title = activity.message;
+                      if (activity.type == 'match_created') {
+                        title = 'Organized $sportType Match';
+                      } else if (activity.type == 'match_joined') {
+                        title = 'Joined $sportType Match';
+                      } else if (activity.type == 'match_left') {
+                        title = 'Left $sportType Match';
+                      }
+
+                      String subtitle = '';
+                      if (matchTitle.isNotEmpty && location.isNotEmpty) {
+                        subtitle = '$matchTitle at $location • $dateStr';
+                      } else if (matchTitle.isNotEmpty) {
+                        subtitle = '$matchTitle • $dateStr';
+                      } else {
+                        subtitle = '${activity.message} • $dateStr';
+                      }
+
+                      final xp = _getActivityXp(activity.type);
+                      final sportEmoji = _getSportEmoji(sportType);
+                      final dynamicColor = _getSportColor(context, sportType);
+
+                      return _buildTimelineActivity(
+                        title: title,
+                        subtitle: subtitle,
+                        xpReward: '+$xp XP',
+                        sportEmoji: sportEmoji,
+                        sportColor: dynamicColor,
+                      );
+                    },
+                  ),
+                  if (activitiesList.length > 3)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                      child: TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _showAllActivities = !_showAllActivities;
+                          });
+                        },
+                        icon: Icon(
+                          _showAllActivities ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          color: sportColor,
+                        ),
+                        label: Text(
+                          _showAllActivities ? 'See Less' : 'See All (${activitiesList.length - 3} more)',
+                          style: TextStyle(
+                            color: sportColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             );
 
           case 1:
-            final gamesCount = widget.isCurrentUser
-                ? (context.read<AuthBloc>().state.user?.stats?.totalGames ?? 0)
-                : (_publicProfileData?['stats']?['totalGames'] as int? ?? 0);
-            
+            final userForStats = context.read<AuthBloc>().state.user;
+            final userLevel = widget.isCurrentUser
+                ? (userForStats?.stats?.level ?? 1)
+                : (_publicProfileData?['stats']?['level'] as int? ?? 1);
+            final userStreak = widget.isCurrentUser
+                ? (userForStats?.stats?.streak ?? 0)
+                : (_publicProfileData?['stats']?['streak'] as int? ?? 0);
+            final userRating = widget.isCurrentUser
+                ? (userForStats?.stats?.averageRating ?? 3.0)
+                : ((_publicProfileData?['stats']?['averageRating'] as num?)?.toDouble() ?? 3.0);
+
             final targetUserId = widget.isCurrentUser
                 ? context.read<AuthBloc>().state.user?.id
                 : widget.userId;
 
-            final hasHosted = matchesList.any((m) => m.creatorId == targetUserId);
+            final pastMatchesList = matchesList.where((m) => m.isPast).toList();
+            final createdMatchesCount = pastMatchesList.where((m) => m.creatorId == targetUserId).length;
+            final totalPlayedGames = pastMatchesList.length;
+            
+            // 1. Community Pillar Playstyle calculation
+            final createRatio = totalPlayedGames > 0 ? (createdMatchesCount / totalPlayedGames) : 0.0;
+            final isCommunityPillar = createRatio >= 0.40;
 
-            final List<Widget> badgeWidgets = [
-              _buildAchievementBadge('🤝', 'Fair Play Star', 'Perfect rating'),
+            // 2. Invincible Streak calculation
+            int winStreak = 0;
+            final sortedPast = List<MatchModel>.from(pastMatchesList);
+            sortedPast.sort((a, b) => b.parsedDateTime.compareTo(a.parsedDateTime));
+            for (final m in sortedPast) {
+              bool isWin = false;
+              try {
+                final p = m.participants.firstWhere((part) => part.id == targetUserId);
+                if (p.result == 'win') {
+                  isWin = true;
+                } else if (p.result == 'loss' || p.result == 'draw') {
+                  break;
+                }
+              } catch (_) {
+                break;
+              }
+              if (isWin) {
+                winStreak++;
+              }
+            }
+            final finalStreak = winStreak > 0 ? winStreak : userStreak;
+            final isInvincible = finalStreak >= 5;
+
+            // 3. Fair Play Ambassador rating calculation
+            final isFairPlayAmbassador = userRating >= 4.5 && totalPlayedGames >= 5;
+
+            // 4. Ultimate All-Rounder calculation (3 or more different sport types played)
+            final uniqueSportsPlayed = pastMatchesList.map((m) => m.sportType.trim().toLowerCase()).toSet();
+            final isAllRounder = uniqueSportsPlayed.length >= 3;
+
+            final List<Map<String, dynamic>> levelMilestones = [
+              {
+                'level': 1,
+                'title': 'Rookie Athlete',
+                'req': '0+ XP',
+                'desc': "You've taken your first steps on the court. Join local matches to earn XP and level up!",
+                'rewards': 'Rookie Badge 👟',
+                'badge': '👟',
+                'unlocked': userLevel >= 1,
+              },
+              {
+                'level': 2,
+                'title': 'Rising Star',
+                'req': '1,000+ XP',
+                'desc': 'Unlocked for active participants. Your dedication is showing. Unlocks basic profile customization features (like active themes).',
+                'rewards': 'Rising Star Badge 💫, Theme Selector',
+                'badge': '💫',
+                'unlocked': userLevel >= 2,
+              },
+              {
+                'level': 5,
+                'title': 'Seasoned Veteran',
+                'req': '4,000+ XP',
+                'desc': 'Unlocked for experienced players. You have a deep history of matchups. Unlocks the Silver Profile Frame and access to co-hosting matches.',
+                'rewards': 'Veteran Badge 🎖️, Silver Frame, Lavender Dusk Theme',
+                'badge': '🎖️',
+                'unlocked': userLevel >= 5,
+              },
+              {
+                'level': 10,
+                'title': 'Elite Competitor',
+                'req': '9,000+ XP',
+                'desc': 'Unlocked for master players. You are a regular face in the community. Unlocks the Gold Profile Badge and custom status options on your profile card.',
+                'rewards': 'Gold Badge 🥇, Gold Rush Theme',
+                'badge': '🥇',
+                'unlocked': userLevel >= 10,
+              },
+              {
+                'level': 25,
+                'title': 'Sportigo Legend',
+                'req': '24,000+ XP',
+                'desc': 'The ultimate milestone. Reserved for the most dedicated athletes. Unlocks the premium Golden Profile Theme (with custom ambient animations) and high-priority badge on the match lobbies you organize.',
+                'rewards': 'Legend Badge 🏆, Golden Theme & Frame, Ambient animations',
+                'badge': '🏆',
+                'unlocked': userLevel >= 25,
+              },
             ];
-            if (gamesCount > 0) {
-              badgeWidgets.add(_buildAchievementBadge('🏅', 'First Match', 'Played 1 match'));
-            }
-            if (gamesCount >= 5) {
-              badgeWidgets.add(_buildAchievementBadge('🔥', '5 Match Veteran', 'Played 5 matches'));
-            }
-            if (gamesCount >= 10) {
-              badgeWidgets.add(_buildAchievementBadge('🏆', 'Decathlete', 'Played 10 matches'));
-            }
-            if (hasHosted) {
-              badgeWidgets.add(_buildAchievementBadge('👑', 'Community Host', 'Organized a match'));
-            }
-            if (badgeWidgets.length < 3) {
-              badgeWidgets.add(_buildAchievementBadge('⚡', 'Speed Demon', 'Paced match'));
-            }
 
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 1.0,
+            final List<Map<String, dynamic>> statBadges = [
+              {
+                'emoji': '👑',
+                'title': 'Community Pillar',
+                'req': 'Organize 40%+ of played games',
+                'desc': 'Awarded to players who actively bring people together by organizing games. You are the heartbeat of the local sports community!',
+                'unlocked': isCommunityPillar,
+                'progress': 'Current: ${totalPlayedGames > 0 ? ((createdMatchesCount / totalPlayedGames) * 100).toStringAsFixed(0) : "0"}%',
+              },
+              {
+                'emoji': '🔥',
+                'title': 'Invincible',
+                'req': 'Win streak of 5+ games',
+                'desc': 'Awarded to players on a dominant winning run. There is no stopping you right now!',
+                'unlocked': isInvincible,
+                'progress': 'Current streak: $finalStreak',
+              },
+              {
+                'emoji': '🤝',
+                'title': 'Fair Play Ambassador',
+                'req': 'Average rating of 4.5+ (over 5+ games)',
+                'desc': 'Awarded for excellent sportsmanship, friendliness, and reliable play style as rated by other community members.',
+                'unlocked': isFairPlayAmbassador,
+                'progress': 'Rating: ${userRating.toStringAsFixed(1)} ⭐ (Games: $totalPlayedGames)',
+              },
+              {
+                'emoji': '🏅',
+                'title': 'Ultimate All-Rounder',
+                'req': 'Play 3+ different sport types',
+                'desc': "You don't stick to just one game. You dominate across multiple courts and disciplines!",
+                'unlocked': isAllRounder,
+                'progress': 'Sports: ${uniqueSportsPlayed.length}',
+              },
+            ];
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Section 1: Level Tiers
+                  Row(
+                    children: [
+                      const Text('🏆', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Level Progression Milestones',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: levelMilestones.length,
+                    itemBuilder: (context, index) {
+                      final milestone = levelMilestones[index];
+                      final isUnlocked = milestone['unlocked'] as bool;
+                      
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface.withValues(alpha: isUnlocked ? 0.75 : 0.4),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isUnlocked 
+                                ? sportColor.withValues(alpha: 0.3)
+                                : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                            width: isUnlocked ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Opacity(
+                              opacity: isUnlocked ? 1.0 : 0.4,
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: (isUnlocked ? sportColor : Theme.of(context).colorScheme.surfaceDim).withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  milestone['badge'] as String,
+                                  style: const TextStyle(fontSize: 24),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Level ${milestone['level']}: ${milestone['title']}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: isUnlocked
+                                              ? Theme.of(context).colorScheme.onSurface
+                                              : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: (isUnlocked ? AppColors.sportsGreen : Colors.grey).withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          isUnlocked ? 'UNLOCKED' : 'LOCKED',
+                                          style: TextStyle(
+                                            color: isUnlocked ? AppColors.sportsGreen : Colors.grey,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 9,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Requirement: ${milestone['req']}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: sportColor.withValues(alpha: 0.8),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    milestone['desc'] as String,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isUnlocked 
+                                          ? Theme.of(context).colorScheme.onSurfaceVariant
+                                          : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Rewards: ${milestone['rewards']}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isUnlocked
+                                            ? Theme.of(context).colorScheme.onSurface
+                                            : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Section 2: Special Badges
+                  Row(
+                    children: [
+                      const Text('⚡', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Stat-Based Achievements',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.72,
+                    ),
+                    itemCount: statBadges.length,
+                    itemBuilder: (context, index) {
+                      final badge = statBadges[index];
+                      final isUnlocked = badge['unlocked'] as bool;
+
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface.withValues(alpha: isUnlocked ? 0.75 : 0.4),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: isUnlocked 
+                                ? sportColor.withValues(alpha: 0.3)
+                                : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                            width: isUnlocked ? 1.5 : 1,
+                          ),
+                          boxShadow: isUnlocked
+                              ? [
+                                  BoxShadow(
+                                    color: sportColor.withValues(alpha: 0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ]
+                              : [],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Opacity(
+                                  opacity: isUnlocked ? 1.0 : 0.4,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: (isUnlocked ? sportColor : Theme.of(context).colorScheme.surfaceDim).withValues(alpha: 0.12),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      badge['emoji'] as String,
+                                      style: const TextStyle(fontSize: 22),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: (isUnlocked ? AppColors.sportsGreen : Colors.grey).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    isUnlocked ? 'ACTIVE' : 'LOCKED',
+                                    style: TextStyle(
+                                      color: isUnlocked ? AppColors.sportsGreen : Colors.grey,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 8,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              badge['title'] as String,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: isUnlocked
+                                    ? Theme.of(context).colorScheme.onSurface
+                                    : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              badge['req'] as String,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: sportColor.withValues(alpha: 0.8),
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            Expanded(
+                              child: Text(
+                                badge['desc'] as String,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isUnlocked 
+                                      ? Theme.of(context).colorScheme.onSurfaceVariant
+                                      : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                                  height: 1.3,
+                                ),
+                                maxLines: 5,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                badge['progress'] as String,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: isUnlocked
+                                      ? Theme.of(context).colorScheme.onSurface
+                                      : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
-              itemCount: badgeWidgets.length,
-              itemBuilder: (context, index) => badgeWidgets[index],
             );
 
           case 2:
@@ -1374,45 +2168,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildAchievementBadge(String emoji, String title, String subtitle) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 26)),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 9,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildStreakDay(String label, bool active, Color sportColor) {
     return Column(
@@ -1455,30 +2210,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  int _getMatchXp(MatchModel match, int? currentUserId) {
-    if (currentUserId == null) return 0;
-    
-    // Check if user is creator
-    final isCreator = match.creatorId == currentUserId;
-    
-    // Check if result is a win
-    bool isWin = false;
-    try {
-      final participant = match.participants.firstWhere(
-        (p) => p.id == currentUserId,
-      );
-      isWin = participant.result == 'win';
-    } catch (_) {
-      // Participant not found
-    }
-
-    int matchXp = isCreator ? 20 : 5; // Create or Join
-    matchXp += 15; // Complete
-    if (isWin) {
-      matchXp += 25; // Win
-    }
-    return matchXp;
+  int _getActivityXp(String type) {
+    if (type == 'match_created') return 20;
+    if (type == 'match_joined') return 5;
+    return 0;
   }
+
 
   String _getSportEmoji(String sport) {
     switch (sport) {
