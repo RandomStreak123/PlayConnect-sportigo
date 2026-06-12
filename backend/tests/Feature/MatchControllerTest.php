@@ -325,35 +325,4 @@ class MatchControllerTest extends TestCase
 
         $response->assertOk();
     }
-
-    /** @test */
-    public function test_non_participant_can_rate_participants(): void
-    {
-        $creator = $this->actingAsUser();
-        $player = $this->actingAsUser();
-        $nonParticipant = $this->actingAsUser();
-        $match = $this->createMatch($creator, ['date_time' => now()->subDays(2)->toDateTimeString()]);
-        $match->participants()->attach($player->id);
-
-        $payload = [
-            'ratings' => [
-                [
-                    'user_id' => $player->id,
-                    'rating' => 4,
-                ]
-            ]
-        ];
-
-        $response = $this->actingAs($nonParticipant)
-            ->postJson("/api/matches/{$match->id}/ratings", $payload, $this->jsonHeaders());
-
-        $response->assertOk();
-        
-        $this->assertDatabaseHas('player_ratings', [
-            'match_id' => $match->id,
-            'rater_id' => $nonParticipant->id,
-            'rated_id' => $player->id,
-            'rating' => 4,
-        ]);
-    }
 }

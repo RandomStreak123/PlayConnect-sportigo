@@ -44,6 +44,8 @@ class UserController extends Controller
         // Merge hosted and joined matches for their public activity feed
         $allMatches = $hostedMatches->merge($user->joinedMatches)->unique('id')->values();
 
+        $activities = \App\Models\Activity::where('user_id', $user->id)->latest()->get();
+
         return response()->json([
             'id' => $user->id,
             'name' => $user->name,
@@ -57,6 +59,7 @@ class UserController extends Controller
             'skill_tier' => $user->skill_tier,
             'matches' => $allMatches,
             'stats' => $user->stats,
+            'activities' => $activities,
             'tournaments' => $user->tournaments,
             'created_at' => $user->created_at,
         ]);

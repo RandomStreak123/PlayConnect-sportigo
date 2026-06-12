@@ -52,6 +52,7 @@ class ProfileController extends Controller
             $user->profile_picture = $path;
         }
         $user->save();
+        $user->append('stats');
 
         return response()->json([
             'message' => 'Profile photo updated',
@@ -106,6 +107,7 @@ class ProfileController extends Controller
         }
 
         $user->save();
+        $user->append('stats');
 
         return response()->json([
             'message' => 'Profile updated successfully',

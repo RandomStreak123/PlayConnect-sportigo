@@ -162,8 +162,10 @@ class User extends Authenticatable
             }
         }
 
+        $rankNum = max(1, 1000 - floor($xp / 5));
+
         $avgRating = \App\Models\PlayerRating::where('rated_id', $uid)->avg('rating');
-        $averageRating = $avgRating ? round((float) $avgRating, 1) : 0.0;
+        $averageRating = $avgRating !== null ? round((float) $avgRating, 1) : 3.0;
 
         return [
             'xp' => (int) $xp,
@@ -174,9 +176,9 @@ class User extends Authenticatable
             'winRate' => (int) $winRate,
             'streak' => (int) $streak,
             'playStyle' => $playStyle,
+            'globalRank' => "#{$rankNum} Kochi",
             'averageRating' => (float) $averageRating,
-            'totalGames' => (int) $totalGames,
-            'totalRatingsGiven' => (int) $totalRatingsGiven
+            'totalGames' => (int) $totalGames
         ];
     }
 
