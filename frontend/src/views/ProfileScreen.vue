@@ -115,14 +115,14 @@ const userMatches = computed(() => {
   return filtered
 })
 
-// Filter to matches that have already been played (in the past)
+// Filter to matches that have already been played (in the past or within 24 hours in the future)
 const playedMatches = computed(() => {
-  const now = new Date()
+  const limitDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
   const filtered = userMatches.value.filter(m => {
     const dateStr = m.date_time || m.date
     if (!dateStr) return false
     const matchDate = new Date(dateStr.replace(' ', 'T'))
-    const isPast = matchDate < now
+    const isPast = matchDate < limitDate
     console.log(`ProfileScreen - playedMatches - checking: ${m.title} (${dateStr}) | parsed: ${matchDate} | isPast: ${isPast}`)
     return isPast
   })
@@ -157,58 +157,75 @@ const weekLabel = computed(() => {
 
 // Dynamic streak calculation based on playedMatches.value
 const calculatedStreak = computed(() => {
-  const now = new Date()
-  const currentMonday = getMonday(now)
-  currentMonday.setHours(0, 0, 0, 0)
-  
-  let currentStreak = 0
-  let checkMonday = new Date(currentMonday)
-  
-  // Check current week
-  const hasWinThisWeek = playedMatches.value.some(m => {
+  if (playedMatches.value.length === 0) return 0
+
+  const uniqueDates = new Set()
+  playedMatches.value.forEach(m => {
     const dateStr = m.date_time || m.date
-    if (!dateStr) return false
+    if (!dateStr) return
     const mDate = new Date(dateStr.replace(' ', 'T'))
-    return mDate >= checkMonday
+    const yyyy = mDate.getFullYear()
+    const mm = String(mDate.getMonth() + 1).padStart(2, '0')
+    const dd = String(mDate.getDate()).padStart(2, '0')
+    uniqueDates.add(`${yyyy}-${mm}-${dd}`)
   })
+
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   
-  if (hasWinThisWeek) {
-    currentStreak = 1
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+
+  let currentStreak = 0
+  let checkDate = new Date(now)
+
+  // Start check from today or yesterday, whichever is present, to allow today's grace period
+  if (uniqueDates.has(todayStr)) {
+    checkDate = new Date(now)
+  } else if (uniqueDates.has(yesterdayStr)) {
+    checkDate = new Date(yesterday)
+  } else {
+    return 0
   }
-  
-  let lastWeekHadWin = true
-  while (lastWeekHadWin) {
-    const nextWeekStart = new Date(checkMonday)
-    checkMonday.setDate(checkMonday.getDate() - 7)
-    
-    const hasWinInWeek = playedMatches.value.some(m => {
-      const dateStr = m.date_time || m.date
-      if (!dateStr) return false
-      const mDate = new Date(dateStr.replace(' ', 'T'))
-      return mDate >= checkMonday && mDate < nextWeekStart
-    })
-    
-    if (hasWinInWeek) {
-      if (currentStreak === 0) {
-        currentStreak = 1
-      } else {
-        currentStreak++
-      }
+
+  while (true) {
+    const checkStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`
+    if (uniqueDates.has(checkStr)) {
+      currentStreak++
+      checkDate.setDate(checkDate.getDate() - 1)
     } else {
-      lastWeekHadWin = false
+      break
     }
   }
-  
+
   return currentStreak
 })
 
 const showAllActivities = ref(false)
 
+const isPastMatch = (match) => {
+  const dateStr = match.date_time || match.date
+  if (!dateStr) return false
+  const matchDate = new Date(dateStr.replace(' ', 'T'))
+  return matchDate < new Date()
+}
+
+const sortedActivities = computed(() => {
+  const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
+  if (!uid) return []
+  return [...playedMatches.value].sort((a, b) => {
+    const timeA = a.pivot?.created_at || a.created_at || a.date_time || a.date || ''
+    const timeB = b.pivot?.created_at || b.created_at || b.date_time || b.date || ''
+    return new Date(timeB) - new Date(timeA)
+  })
+})
+
 const visibleActivities = computed(() => {
   if (showAllActivities.value) {
-    return playedMatches.value
+    return sortedActivities.value
   }
-  return playedMatches.value.slice(0, 4)
+  return sortedActivities.value.slice(0, 4)
 })
 
 // Determine if a match is a win for the given user
@@ -672,10 +689,7 @@ const weekDaysStatus = computed(() => {
   })
 })
 
-const streakMultiplier = computed(() => {
-  const streak = calculatedStreak.value
-  return (1.0 + streak * 0.1).toFixed(1)
-})
+
 </script>
 
 <template>
@@ -746,7 +760,7 @@ const streakMultiplier = computed(() => {
       
       <div class="xp-footer-row">
         <span class="xp-progress-pct">Progress to Level {{ profileStats.level + 1 }}: {{ profileStats.progressPct }}%</span>
-        <span v-if="calculatedStreak > 0" class="xp-streak-tag">🔥 {{ calculatedStreak }} Match Winning Streak</span>
+        <span v-if="calculatedStreak > 0" class="xp-streak-tag">🔥 {{ calculatedStreak }} Day Winning Streak</span>
         <span v-else class="xp-streak-tag">Start playing to build a streak!</span>
       </div>
     </div>
@@ -798,25 +812,7 @@ const streakMultiplier = computed(() => {
       </div>
     </div>
 
-    <!-- Friends & Share Card -->
-    <div class="friends-card">
-      <div class="friends-left">
-        <div class="friends-avatars">
-          <img src="/assets/images/players/download.jpg" class="friend-avatar-overlap" />
-          <img src="/assets/images/players/download.jpg" class="friend-avatar-overlap" />
-          <img src="/assets/images/players/download.jpg" class="friend-avatar-overlap" />
-          <img src="/assets/images/players/download.jpg" class="friend-avatar-overlap" />
-        </div>
-        <div class="friends-info-text">
-          <span class="friends-count">48 {{ t('friends') }}</span>
-          <span class="friends-online">12 {{ t('onlinePlayPals') }}</span>
-        </div>
-      </div>
-      <button class="share-pill-btn" @click="handleShareProfile">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="share-icon-svg"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        {{ t('share') }}
-      </button>
-    </div>
+
 
     <!-- Favorite Sports Interests -->
     <div class="sports-rating-section">
@@ -866,7 +862,7 @@ const streakMultiplier = computed(() => {
     <div class="segment-panel">
       <!-- Activity -->
       <div v-if="activeSegmentTab === 0" class="panel-content-new animate-fade-in">
-        <template v-if="playedMatches.length > 0">
+        <template v-if="sortedActivities.length > 0">
           <div v-for="match in visibleActivities" :key="match.id" class="activity-tile-new">
             <div class="activity-left">
               <span 
@@ -888,7 +884,7 @@ const streakMultiplier = computed(() => {
               +{{ getMatchXp(match) }} XP
             </span>
           </div>
-          <div v-if="playedMatches.length > 4" class="see-all-container">
+          <div v-if="sortedActivities.length > 4" class="see-all-container">
             <button class="see-all-btn" @click="showAllActivities = !showAllActivities">
               {{ showAllActivities ? 'See Less' : 'See All' }}
             </button>
@@ -960,10 +956,10 @@ const streakMultiplier = computed(() => {
           <div class="streak-card-header">
             <div class="streak-header-left">
               <h4 class="streak-title-text">
-                🔥 {{ calculatedStreak }} Match Winning Streak
+                🔥 {{ calculatedStreak }} Day Winning Streak
               </h4>
               <p class="streak-subtitle-text">
-                {{ calculatedStreak > 0 ? 'Keep playing matches to grow your streak!' : 'Play matches this week to keep your streak!' }}
+                {{ calculatedStreak > 0 ? 'Keep playing matches daily to grow your streak!' : 'Play matches daily to keep your streak!' }}
               </p>
             </div>
             <div class="streak-header-right" style="display: flex; align-items: center;">
@@ -995,7 +991,6 @@ const streakMultiplier = computed(() => {
                   ▶
                 </button>
               </div>
-              <span class="streak-multiplier-badge">Streak x{{ streakMultiplier }}</span>
             </div>
           </div>
           
