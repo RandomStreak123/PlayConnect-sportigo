@@ -9,6 +9,7 @@ class UserController extends Controller
     public function show(Request $request)
     {
         $user = $request->user();
+        $user->loadMissing(['joinedMatches.participants', 'hostedMatches.participants']);
         $user->append('stats');
         return response()->json($user);
     }
@@ -38,11 +39,14 @@ class UserController extends Controller
 
     public function publicProfile($id)
     {
-        $user = \App\Models\User::with(['joinedMatches', 'tournaments'])->findOrFail($id);
-        $hostedMatches = \App\Models\SportsMatch::with(['user', 'participants'])->where('creator_id', $user->id)->get();
+        $user = \App\Models\User::with([
+            'joinedMatches.participants',
+            'hostedMatches.participants',
+            'tournaments'
+        ])->findOrFail($id);
         
         // Merge hosted and joined matches for their public activity feed
-        $allMatches = $hostedMatches->merge($user->joinedMatches)->unique('id')->values();
+        $allMatches = $user->hostedMatches->merge($user->joinedMatches)->unique('id')->values();
 
         $activities = \App\Models\Activity::where('user_id', $user->id)->latest()->get();
 

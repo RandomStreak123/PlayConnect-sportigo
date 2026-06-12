@@ -56,7 +56,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     {'name': 'Padel', 'icon': '🏓'},
   ];
 
-  bool _isLoadingPublicProfile = false;
   Map<String, dynamic>? _publicProfileData;
   String? _publicProfileError;
 
@@ -133,7 +132,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final shouldShowLoader = !isRefresh && _publicProfileData == null && !widget.isCurrentUser;
     if (shouldShowLoader) {
       setState(() {
-        _isLoadingPublicProfile = true;
         _publicProfileError = null;
       });
     }
@@ -163,7 +161,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           } else {
             _selectedTheme = theme;
           }
-          _isLoadingPublicProfile = false;
         });
       }
     } catch (e) {
@@ -172,7 +169,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           if (shouldShowLoader) {
             _publicProfileError = e.toString().replaceAll('Exception: ', '');
           }
-          _isLoadingPublicProfile = false;
         });
       }
     }
@@ -395,16 +391,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoadingPublicProfile) {
-      return Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: const BackButton(),
-        ),
-        body: const Center(child: AppLoadingIndicator()),
-      );
-    }
 
     if (_publicProfileError != null) {
       return Scaffold(
@@ -444,9 +430,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final sportColor = _getSportColor(context, _selectedSport);
     
     final userForTheme = context.read<AuthBloc>().state.user;
-    final levelForTheme = widget.isCurrentUser
-        ? (userForTheme?.stats?.level ?? 1)
-        : (_publicProfileData?['stats']?['level'] as int? ?? 1);
+    final levelForTheme = _publicProfileData?['stats']?['level'] as int? ??
+        (widget.isCurrentUser ? (userForTheme?.stats?.level ?? 1) : 1);
 
     // Sanitize selected theme based on level requirements
     String activeTheme = _selectedTheme;
@@ -615,9 +600,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Widget _buildLargeProfileCard(BuildContext context, Color sportColor) {
     final userForTheme = context.read<AuthBloc>().state.user;
-    final level = widget.isCurrentUser
-        ? (userForTheme?.stats?.level ?? 1)
-        : (_publicProfileData?['stats']?['level'] as int? ?? 1);
+    final level = _publicProfileData?['stats']?['level'] as int? ??
+        (widget.isCurrentUser ? (userForTheme?.stats?.level ?? 1) : 1);
 
     // Sanitize selected theme based on level requirements
     String activeTheme = _selectedTheme;
@@ -681,12 +665,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 Center(
                   child: BlocBuilder<AuthBloc, AuthState>(
                     builder: (context, state) {
-                      final photoUrl = widget.isCurrentUser 
-                          ? state.user?.profilePhotoUrl 
-                          : (_publicProfileData?['avatar'] as String? ?? 
-                             _publicProfileData?['profile_picture'] as String? ?? 
-                             _publicProfileData?['profile_photo'] as String? ?? 
-                             widget.profilePicture);
+                      final photoUrl = _publicProfileData?['avatar'] as String? ?? 
+                          _publicProfileData?['profile_picture'] as String? ?? 
+                          _publicProfileData?['profile_photo'] as String? ?? 
+                          (widget.isCurrentUser ? state.user?.profilePhotoUrl : widget.profilePicture);
 
                       return Stack(
                         alignment: Alignment.center,
@@ -819,9 +801,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 // Name, verified check, and country flag
                 BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, state) {
-                    final userName = widget.isCurrentUser 
-                        ? (state.user?.name ?? 'Sportigo Champ')
-                        : (_publicProfileData?['name'] as String? ?? widget.playerName ?? 'Player');
+                    final userName = _publicProfileData?['name'] as String? ??
+                        (widget.isCurrentUser ? (state.user?.name ?? 'Sportigo Champ') : (widget.playerName ?? 'Player'));
+                    final skillTierStr = _publicProfileData?['skill_tier'] as String? ??
+                        (widget.isCurrentUser ? state.user?.skillTier : null);
+                    final isPro = skillTierStr == 'Professional' || skillTierStr == 'Advanced';
                     return Column(
                       children: [
                         Row(
@@ -859,9 +843,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              widget.isCurrentUser 
-                                  ? ((state.user?.skillTier == 'Professional' || state.user?.skillTier == 'Advanced') ? '🔥 PRO PLAYER' : '🔥 PLAYER')
-                                  : (((_publicProfileData?['skill_tier'] as String?) == 'Professional' || (_publicProfileData?['skill_tier'] as String?) == 'Advanced') ? '🔥 PRO PLAYER' : '🔥 PLAYER'),
+                              isPro ? '🔥 PRO PLAYER' : '🔥 PLAYER',
                               style: TextStyle(
                                 color: sportColor,
                                 fontWeight: FontWeight.bold,
@@ -987,21 +969,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final user = state.user;
-        final level = widget.isCurrentUser
-            ? (user?.stats?.level ?? 24)
-            : (_publicProfileData?['stats']?['level'] as int? ?? 1);
-        final xp = widget.isCurrentUser
-            ? (user?.stats?.currentLevelXp ?? 750)
-            : (_publicProfileData?['stats']?['currentLevelXp'] as int? ?? 0);
-        final nextXp = widget.isCurrentUser
-            ? (user?.stats?.nextLevelXp ?? 1000)
-            : (_publicProfileData?['stats']?['nextLevelXp'] as int? ?? 1000);
-        final progressPct = widget.isCurrentUser
-            ? (user?.stats?.progressPct ?? 75)
-            : (_publicProfileData?['stats']?['progressPct'] as int? ?? 0);
-        final streak = widget.isCurrentUser
-            ? (user?.stats?.streak ?? 7)
-            : (_publicProfileData?['stats']?['streak'] as int? ?? 0);
+        final level = _publicProfileData?['stats']?['level'] as int? ??
+            (widget.isCurrentUser ? (user?.stats?.level ?? 24) : 1);
+        final xp = _publicProfileData?['stats']?['currentLevelXp'] as int? ??
+            (widget.isCurrentUser ? (user?.stats?.currentLevelXp ?? 750) : 0);
+        final nextXp = _publicProfileData?['stats']?['nextLevelXp'] as int? ??
+            (widget.isCurrentUser ? (user?.stats?.nextLevelXp ?? 1000) : 1000);
+        final progressPct = _publicProfileData?['stats']?['progressPct'] as int? ??
+            (widget.isCurrentUser ? (user?.stats?.progressPct ?? 75) : 0);
+        final streak = _publicProfileData?['stats']?['streak'] as int? ??
+            (widget.isCurrentUser ? (user?.stats?.streak ?? 7) : 0);
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1101,18 +1078,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final user = state.user;
-        final winRate = widget.isCurrentUser
-            ? (user?.stats?.winRate ?? 72)
-            : (_publicProfileData?['stats']?['winRate'] as int? ?? 0);
-        final playStyle = widget.isCurrentUser
-            ? (user?.stats?.playStyle ?? 'All-Rounder')
-            : (_publicProfileData?['stats']?['playStyle'] as String? ?? 'All-Rounder');
-        final totalGames = widget.isCurrentUser
-            ? (user?.stats?.totalGames ?? 120)
-            : (_publicProfileData?['stats']?['totalGames'] as int? ?? 0);
-        final averageRating = widget.isCurrentUser
-            ? (user?.stats?.averageRating ?? 3.0)
-            : ((_publicProfileData?['stats']?['averageRating'] as num?)?.toDouble() ?? 3.0);
+        final winRate = _publicProfileData?['stats']?['winRate'] as int? ??
+            (widget.isCurrentUser ? (user?.stats?.winRate ?? 72) : 0);
+        final playStyle = _publicProfileData?['stats']?['playStyle'] as String? ??
+            (widget.isCurrentUser ? (user?.stats?.playStyle ?? 'All-Rounder') : 'All-Rounder');
+        final totalGames = _publicProfileData?['stats']?['totalGames'] as int? ??
+            (widget.isCurrentUser ? (user?.stats?.totalGames ?? 120) : 0);
+        final averageRating = (_publicProfileData?['stats']?['averageRating'] as num?)?.toDouble() ??
+            (widget.isCurrentUser ? (user?.stats?.averageRating ?? 3.0) : 3.0);
         final averageRatingStr = averageRating.toStringAsFixed(1);
 
         return Padding(
@@ -1360,16 +1333,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
         switch (_activeActivityTab) {
           case 0:
-            if (_publicProfileData == null) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32.0),
-                  child: AppLoadingIndicator(),
-                ),
-              );
-            }
             final activitiesList = <ActivityModel>[];
-            if (_publicProfileData!['activities'] != null) {
+            if (_publicProfileData != null && _publicProfileData!['activities'] != null) {
               final activitiesJson = _publicProfileData!['activities'] as List<dynamic>;
               activitiesList.addAll(
                 activitiesJson.map((json) => ActivityModel.fromJson(json as Map<String, dynamic>))
@@ -1472,15 +1437,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
           case 1:
             final userForStats = context.read<AuthBloc>().state.user;
-            final userLevel = widget.isCurrentUser
-                ? (userForStats?.stats?.level ?? 1)
-                : (_publicProfileData?['stats']?['level'] as int? ?? 1);
-            final userStreak = widget.isCurrentUser
-                ? (userForStats?.stats?.streak ?? 0)
-                : (_publicProfileData?['stats']?['streak'] as int? ?? 0);
-            final userRating = widget.isCurrentUser
-                ? (userForStats?.stats?.averageRating ?? 3.0)
-                : ((_publicProfileData?['stats']?['averageRating'] as num?)?.toDouble() ?? 3.0);
+            final userLevel = _publicProfileData?['stats']?['level'] as int? ??
+                (widget.isCurrentUser ? (userForStats?.stats?.level ?? 1) : 1);
+            final userStreak = _publicProfileData?['stats']?['streak'] as int? ??
+                (widget.isCurrentUser ? (userForStats?.stats?.streak ?? 0) : 0);
+            final userRating = (_publicProfileData?['stats']?['averageRating'] as num?)?.toDouble() ??
+                (widget.isCurrentUser ? (userForStats?.stats?.averageRating ?? 3.0) : 3.0);
 
             final targetUserId = widget.isCurrentUser
                 ? context.read<AuthBloc>().state.user?.id
@@ -1908,9 +1870,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             );
 
           case 2:
-            final streakVal = widget.isCurrentUser
-                ? (context.read<AuthBloc>().state.user?.stats?.streak ?? 0)
-                : (_publicProfileData?['stats']?['streak'] as int? ?? 0);
+            final streakVal = _publicProfileData?['stats']?['streak'] as int? ??
+                (widget.isCurrentUser ? (context.read<AuthBloc>().state.user?.stats?.streak ?? 0) : 0);
 
             // Calculate played weekdays for the selected week
             final playedWeekdays = <int>{};

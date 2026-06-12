@@ -62,6 +62,11 @@ class User extends Authenticatable
         return $this->belongsToMany(Tournament::class, 'tournament_user')->withPivot('team_name')->withTimestamps();
     }
 
+    public function hostedMatches()
+    {
+        return $this->hasMany(SportsMatch::class, 'creator_id');
+    }
+
     public function getProfilePhotoUrlAttribute()
     {
         $photo = $this->avatar;
@@ -90,8 +95,21 @@ class User extends Authenticatable
     {
         $uid = $this->id;
 
-        $joinedMatches = $this->joinedMatches()->with('participants')->get();
-        $hostedMatches = \App\Models\SportsMatch::with('participants')->where('creator_id', $uid)->get();
+        $joinedMatches = $this->relationLoaded('joinedMatches')
+            ? $this->joinedMatches
+            : $this->joinedMatches()->with('participants')->get();
+
+        if ($joinedMatches->isNotEmpty() && !$joinedMatches->first()->relationLoaded('participants')) {
+            $joinedMatches->load('participants');
+        }
+
+        $hostedMatches = $this->relationLoaded('hostedMatches')
+            ? $this->hostedMatches
+            : \App\Models\SportsMatch::with('participants')->where('creator_id', $uid)->get();
+
+        if ($hostedMatches->isNotEmpty() && !$hostedMatches->first()->relationLoaded('participants')) {
+            $hostedMatches->load('participants');
+        }
         
         $allPlayedMatches = $hostedMatches->merge($joinedMatches)
             ->unique('id')

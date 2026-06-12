@@ -8,6 +8,8 @@ import '../theme/theme_manager.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_icon_size.dart';
 import '../data/models/user_model.dart';
+import 'game_rules_screen.dart';
+import 'policy_guidelines_screen.dart';
 
 
 class ProfileSettingsScreen extends StatefulWidget {
@@ -109,17 +111,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         if (user == null) return const SizedBox.shrink();
 
         final themeManager = context.watch<ThemeManager>();
-        final genderLabel = switch (user.gender) {
-          'female' => '♀ Female',
-          'male' => '♂ Male',
-          'other' => '⚧ Other',
-          _ => 'Not Set',
-        };
-        final genderColor = switch (user.gender) {
-          'female' => const Color(0xFFFF4D8D),
-          'male' => const Color(0xFF4A90D9),
-          _ => Colors.grey.shade600,
-        };
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -135,36 +126,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                 AppColors.warmOrange,
                 () {
                   _showEditProfileModal(context, user);
-                },
-              ),
-
-              // Gender Identity
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                leading: Container(
-                  padding: const EdgeInsets.all(AppSpacing.xs + 2),
-                  decoration: BoxDecoration(
-                    color: genderColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.person_outline, color: genderColor, size: AppIconSize.sm),
-                ),
-                title: Text(
-                  'Gender Identity',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
-                ),
-                subtitle: Text(
-                  genderLabel,
-                  style: TextStyle(fontSize: 12, color: genderColor, fontWeight: FontWeight.w600),
-                ),
-                trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: AppIconSize.sm),
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Gender can be updated during registration'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
                 },
               ),
 
@@ -249,27 +210,27 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                 'Read platform game guide',
                 const Color(0xFF4A90D9),
                 () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Sportigo platform game guide coming soon!'),
-                      behavior: SnackBarBehavior.floating,
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const GameRulesScreen(),
                     ),
                   );
                 },
               ),
 
-              // Platform Stats History
+              // Policy & Guidelines
               _buildMenuTile(
                 context,
-                Icons.bar_chart_outlined,
-                'Platform Stats History',
-                'Full tournament logs',
+                Icons.description_outlined,
+                'Policy & Guidelines',
+                'Read platform terms and guidelines',
                 Colors.teal,
                 () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Tournament logs coming soon!'),
-                      behavior: SnackBarBehavior.floating,
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PolicyGuidelinesScreen(),
                     ),
                   );
                 },
