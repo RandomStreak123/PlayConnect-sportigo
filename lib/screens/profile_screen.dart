@@ -760,9 +760,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         final totalGames = widget.isCurrentUser
             ? (user?.stats?.totalGames ?? 120)
             : (_publicProfileData?['stats']?['totalGames'] as int? ?? 0);
-        final globalRank = widget.isCurrentUser
-            ? (user?.stats?.globalRank ?? '#128 Kochi')
-            : (_publicProfileData?['stats']?['globalRank'] as String? ?? '#1000 Kochi');
+        final averageRating = (3.0 + ((winRate - 50).clamp(0, 50) / 25.0)).toStringAsFixed(1);
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -797,10 +795,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
               _buildGlassStatCard(
                 context,
-                'Global Rank',
-                globalRank,
-                Icons.public_rounded,
-                Colors.indigo,
+                'Average Rating',
+                '$averageRating ⭐',
+                Icons.star_border_rounded,
+                Colors.amber,
               ),
             ],
           ),
