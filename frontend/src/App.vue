@@ -93,7 +93,7 @@ const switchTab = (tabName) => {
 }
 
 const viewUserProfile = (player) => {
-  if (player && (player.id === currentUser.value.id || player.name === currentUser.value.name)) {
+  if (player && (Number(player.id) === Number(currentUser.value.id) || player.name === currentUser.value.name)) {
     switchTab('profile')
   } else {
     profileTargetUser.value = player
@@ -155,7 +155,7 @@ onMounted(() => {
 
 // Modal actions
 const openPlayerReveal = (player, sport) => {
-  if (player && (player.id === currentUser.value.id || player.name === currentUser.value.name)) {
+  if (player && (Number(player.id) === Number(currentUser.value.id) || player.name === currentUser.value.name)) {
     switchTab('profile')
   } else {
     selectedPlayer.value = player
@@ -342,7 +342,7 @@ const isWomenTheme = computed(() => {
           </div>
           <ProfileScreen 
             v-else-if="currentTab === 'profile'"
-            :is-current-user="!profileTargetUser || profileTargetUser.id === currentUser.id"
+            :is-current-user="!profileTargetUser || Number(profileTargetUser.id) === Number(currentUser.id)"
             :user-id="profileTargetUser ? profileTargetUser.id : null"
             :player-name="profileTargetUser ? profileTargetUser.name : ''"
             :profile-picture="profileTargetUser ? (profileTargetUser.profilePicture || profileTargetUser.profilePhotoUrl || profileTargetUser.avatar) : null"

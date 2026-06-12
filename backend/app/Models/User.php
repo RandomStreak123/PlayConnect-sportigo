@@ -39,7 +39,6 @@ class User extends Authenticatable
     protected $appends = [
         'profilePhotoUrl',
         'profilePicture',
-        'stats',
     ];
 
     protected function casts(): array

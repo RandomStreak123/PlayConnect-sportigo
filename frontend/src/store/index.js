@@ -75,13 +75,11 @@ const init = async () => {
   try {
     const headers = getAuthHeaders()
 
-    // Fetch user details, matches, activities, and notifications in parallel
-    const [userData, matchesData, mineMatchesData, activitiesData, notificationsData] = await Promise.all([
+    // Fetch user details, matches, and joined matches (critical for homepage) in parallel
+    const [userData, matchesData, mineMatchesData] = await Promise.all([
       safeFetch(`${API_URL}/user`, { headers }),
       safeFetch(`${API_URL}/matches`, { headers }),
-      safeFetch(`${API_URL}/matches/mine`, { headers }),
-      safeFetch(`${API_URL}/activities`, { headers }),
-      safeFetch(`${API_URL}/notifications`, { headers })
+      safeFetch(`${API_URL}/matches/mine`, { headers })
     ])
 
     if (userData) {
@@ -102,22 +100,34 @@ const init = async () => {
       state.matches = combined
       console.log('store.init() - state.matches updated count:', state.matches.length)
     }
-    if (activitiesData) {
-      state.activities = Array.isArray(activitiesData)
-        ? activitiesData
-        : (Array.isArray(activitiesData.data) ? activitiesData.data : [])
-    }
-    if (notificationsData && Array.isArray(notificationsData.data)) {
-      state.notifications = notificationsData.data.map(n => ({
-        ...n,
-        read: Boolean(n.is_read),
-        body: n.message,
-        time: formatRelativeTime(n.created_at)
-      }))
-    }
+
+    // Unblock the main UI / skeletons immediately once critical dashboard data is loaded
+    state.isLoading = false
+
+    // Fetch non-critical data (activities and notifications) concurrently in the background
+    Promise.all([
+      safeFetch(`${API_URL}/activities`, { headers }),
+      safeFetch(`${API_URL}/notifications`, { headers })
+    ]).then(([activitiesData, notificationsData]) => {
+      if (activitiesData) {
+        state.activities = Array.isArray(activitiesData)
+          ? activitiesData
+          : (Array.isArray(activitiesData.data) ? activitiesData.data : [])
+      }
+      if (notificationsData && Array.isArray(notificationsData.data)) {
+        state.notifications = notificationsData.data.map(n => ({
+          ...n,
+          read: Boolean(n.is_read),
+          body: n.message,
+          time: formatRelativeTime(n.created_at)
+        }))
+      }
+    }).catch(e => {
+      console.warn('Background store fetch failed:', e.message)
+    })
+
   } catch (e) {
     console.error('Store init error:', e)
-  } finally {
     state.isLoading = false
   }
 }
