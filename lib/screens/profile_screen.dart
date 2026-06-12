@@ -45,6 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   // Dynamic Profile screen customization features
   bool _showAllActivities = false;
   String _selectedTheme = 'Default';
+  int _selectedWeekOffset = 0;
 
   final List<Map<String, dynamic>> _sportsList = [
     {'name': 'Football', 'icon': '⚽'},
@@ -1911,17 +1912,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 ? (context.read<AuthBloc>().state.user?.stats?.streak ?? 0)
                 : (_publicProfileData?['stats']?['streak'] as int? ?? 0);
 
-            // Calculate played weekdays for the current week
+            // Calculate played weekdays for the selected week
             final playedWeekdays = <int>{};
             final now = DateTime.now();
-            final currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
-            final currentWeekMonday = DateTime(currentWeekStart.year, currentWeekStart.month, currentWeekStart.day);
+            final selectedWeekStart = now.subtract(Duration(days: now.weekday - 1 - (_selectedWeekOffset * 7)));
+            final selectedWeekMonday = DateTime(selectedWeekStart.year, selectedWeekStart.month, selectedWeekStart.day);
+            final selectedWeekSunday = selectedWeekMonday.add(const Duration(days: 7));
 
             for (final match in matchesList) {
               if (match.isPast) {
                 final matchDate = match.parsedDateTime.toLocal();
-                if (matchDate.isAfter(currentWeekMonday.subtract(const Duration(seconds: 1))) && 
-                    matchDate.isBefore(now.add(const Duration(minutes: 1)))) {
+                if (matchDate.isAfter(selectedWeekMonday.subtract(const Duration(seconds: 1))) && 
+                    matchDate.isBefore(selectedWeekSunday)) {
                   playedWeekdays.add(matchDate.weekday);
                 }
               }
@@ -1934,7 +1936,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
@@ -1986,27 +1994,55 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             color: const Color(0xFFF1F3F5),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                '◀',
-                                style: TextStyle(color: Color(0xFFADB5BD), fontSize: 10),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedWeekOffset--;
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  color: Colors.transparent,
+                                  child: const Text(
+                                    '◀',
+                                    style: TextStyle(color: Color(0xFF495057), fontSize: 10, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
                               ),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Text(
-                                'THIS WEEK',
-                                style: TextStyle(
+                                _getWeekLabel(_selectedWeekOffset),
+                                style: const TextStyle(
                                   color: Color(0xFF495057),
                                   fontWeight: FontWeight.w800,
                                   fontSize: 10,
                                   letterSpacing: 0.5,
                                 ),
                               ),
-                              SizedBox(width: 8),
-                              Text(
-                                '▶',
-                                style: TextStyle(color: Color(0xFFADB5BD), fontSize: 10),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: _selectedWeekOffset < 0
+                                    ? () {
+                                        setState(() {
+                                          _selectedWeekOffset++;
+                                        });
+                                      }
+                                    : null,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  color: Colors.transparent,
+                                  child: Text(
+                                    '▶',
+                                    style: TextStyle(
+                                      color: _selectedWeekOffset < 0 ? const Color(0xFF495057) : const Color(0xFFADB5BD),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -2177,4 +2213,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     }
   }
 
+  String _getWeekLabel(int offset) {
+    if (offset == 0) return 'THIS WEEK';
+    if (offset == -1) return 'LAST WEEK';
+    
+    final now = DateTime.now();
+    final targetWeekStart = now.subtract(Duration(days: now.weekday - 1 - (offset * 7)));
+    final targetWeekEnd = targetWeekStart.add(const Duration(days: 6));
+    
+    final startStr = DateFormat('MMM d').format(targetWeekStart);
+    final endStr = DateFormat('MMM d').format(targetWeekEnd);
+    return '$startStr - $endStr'.toUpperCase();
+  }
 }

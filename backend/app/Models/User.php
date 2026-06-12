@@ -41,6 +41,8 @@ class User extends Authenticatable
         'profilePicture',
     ];
 
+
+
     protected function casts(): array
     {
         return [
@@ -138,14 +140,30 @@ class User extends Authenticatable
         $winRate = $recordedMatchCount > 0 ? round(($wins / $recordedMatchCount) * 100) : 0;
 
         $streak = 0;
-        $sortedMatches = $allPlayedMatches->sortByDesc('date_time');
-        foreach ($sortedMatches as $match) {
-            $participant = $match->participants->where('id', $uid)->first();
-            $result = $participant ? ($participant->pivot->result ?? null) : null;
-            if ($result === 'win') {
-                $streak++;
-            } elseif ($result === 'loss' || $result === 'draw') {
-                break;
+        $playedDates = $allPlayedMatches->map(function($m) {
+            $time = $m->date_time ?? $m->date;
+            return $time ? (new \DateTime($time))->format('Y-m-d') : null;
+        })->filter(function($date) {
+            return $date !== null && $date <= now()->format('Y-m-d');
+        })->unique()->values()->all();
+
+
+        if (count($playedDates) > 0) {
+            rsort($playedDates);
+            $nowDate = now()->format('Y-m-d');
+            $yesterdayDate = now()->subDay()->format('Y-m-d');
+            if ($playedDates[0] === $nowDate || $playedDates[0] === $yesterdayDate) {
+                $streak = 1;
+                for ($i = 0; $i < count($playedDates) - 1; $i++) {
+                    $d1 = new \DateTime($playedDates[$i]);
+                    $d2 = new \DateTime($playedDates[$i + 1]);
+                    $diff = $d1->diff($d2)->days;
+                    if ($diff === 1) {
+                        $streak++;
+                    } elseif ($diff > 1) {
+                        break;
+                    }
+                }
             }
         }
 
