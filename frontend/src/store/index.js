@@ -91,6 +91,7 @@ const init = async () => {
     if (matchesData) {
       const allMatches = Array.isArray(matchesData) ? matchesData : (matchesData.data || [])
       const mineMatches = Array.isArray(mineMatchesData) ? mineMatchesData : (mineMatchesData || [])
+      console.log('store.init() - allMatches count:', allMatches.length, 'mineMatches count:', mineMatches.length)
       
       const combined = [...allMatches]
       mineMatches.forEach(m => {
@@ -99,6 +100,7 @@ const init = async () => {
         }
       })
       state.matches = combined
+      console.log('store.init() - state.matches updated count:', state.matches.length)
     }
     if (activitiesData) {
       state.activities = Array.isArray(activitiesData)

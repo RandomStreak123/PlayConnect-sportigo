@@ -102,24 +102,31 @@ const currentUser = computed(() => {
 const userMatches = computed(() => {
   const matches = props.isCurrentUser ? store.state.matches : (profileUser.value?.matches || [])
   const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
+  console.log('ProfileScreen - userMatches - total matches:', matches.length, 'uid:', uid)
   if (!uid) return []
   
-  return matches.filter(m => {
+  const filtered = matches.filter(m => {
     const isCreator = Number(m.creator_id || m.user_id) === Number(uid)
     const isParticipant = m.participants?.some(p => Number(p.id) === Number(uid))
     return isCreator || isParticipant
   })
+  console.log('ProfileScreen - userMatches - filtered matches:', filtered.length)
+  return filtered
 })
 
 // Filter to matches that have already been played (in the past)
 const playedMatches = computed(() => {
   const now = new Date()
-  return userMatches.value.filter(m => {
+  const filtered = userMatches.value.filter(m => {
     const dateStr = m.date_time || m.date
     if (!dateStr) return false
     const matchDate = new Date(dateStr.replace(' ', 'T'))
-    return matchDate < now
+    const isPast = matchDate < now
+    console.log(`ProfileScreen - playedMatches - checking: ${m.title} (${dateStr}) | parsed: ${matchDate} | isPast: ${isPast}`)
+    return isPast
   })
+  console.log('ProfileScreen - playedMatches - filtered past matches:', filtered.length)
+  return filtered
 })
 
 const showAllActivities = ref(false)
