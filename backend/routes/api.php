@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Public User Profile
     Route::get('/users/{id}', [UserController::class, 'publicProfile']);
+    Route::post('/users/{id}/wave', [UserController::class, 'wave']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
     

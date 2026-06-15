@@ -356,6 +356,23 @@ class AuthRepository {
     }
   }
 
+  Future<void> waveUser(int userId) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('User not authenticated');
+
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/users/$userId/wave'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(_extractErrorMessage(response, 'Failed to send wave'));
+    }
+  }
+
   void dispose() {
     _controller.close();
     _userController.close();

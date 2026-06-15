@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:math' as math;
 import '../core/constants/colors.dart';
 import '../core/utils/sport_icon_helper.dart';
 import '../core/utils/avatar_image_helper.dart';
 import '../screens/profile_screen.dart';
+import '../data/repositories/auth_repository.dart';
 
-class PlayerRevealCard extends StatelessWidget {
+class PlayerRevealCard extends StatefulWidget {
   final int? userId;
   final String playerName;
   final String sportType;
@@ -17,6 +20,24 @@ class PlayerRevealCard extends StatelessWidget {
     this.sportType = 'Sport',
     this.profilePicture,
   });
+
+  @override
+  State<PlayerRevealCard> createState() => _PlayerRevealCardState();
+}
+
+class _PlayerRevealCardState extends State<PlayerRevealCard> {
+  final List<Map<String, dynamic>> _waves = [];
+  int _waveCounter = 0;
+
+  void _addWave() {
+    setState(() {
+      final id = _waveCounter++;
+      _waves.add({
+        'id': id,
+        'key': UniqueKey(),
+      });
+    });
+  }
 
   List<Color> _getGradientForSport(String sport) {
     switch (sport.toLowerCase().trim()) {
@@ -39,16 +60,24 @@ class PlayerRevealCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final playerName = widget.playerName;
+    final profilePicture = widget.profilePicture;
+    final userId = widget.userId;
+    final sportType = widget.sportType;
     final headerGradient = _getGradientForSport(sportType);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
           // Header + Profile Pic overlap (positioned at the absolute top of the card)
           Stack(
             clipBehavior: Clip.none,
@@ -265,16 +294,25 @@ class PlayerRevealCard extends StatelessWidget {
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Waved at $playerName! 👋'),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
+                    onPressed: userId == null ? null : () async {
+                      _addWave();
+                      try {
+                        final authRepo = context.read<AuthRepository>();
+                        await authRepo.waveUser(userId);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to wave at $playerName: ${e.toString().replaceAll('Exception: ', '')}'),
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
+                        }
+                      }
                     },
                     icon: const Text('👋', style: TextStyle(fontSize: 18)),
                     label: const Text(
@@ -334,6 +372,102 @@ class PlayerRevealCard extends StatelessWidget {
           const SizedBox(height: 24),
         ],
       ),
+    ),
+    
+    // Floating waving hand emojis layer
+    ..._waves.map((wave) {
+      return Positioned(
+        bottom: 110, // positioned right above the "Send Wave" button
+        child: FloatingEmoji(
+          key: wave['key'] as Key,
+          onComplete: () {
+            setState(() {
+              _waves.removeWhere((w) => w['id'] == wave['id']);
+            });
+          },
+        ),
+      );
+    }),
+  ],
+);
+  }
+}
+
+class FloatingEmoji extends StatefulWidget {
+  final VoidCallback onComplete;
+
+  const FloatingEmoji({required super.key, required this.onComplete});
+
+  @override
+  State<FloatingEmoji> createState() => _FloatingEmojiState();
+}
+
+class _FloatingEmojiState extends State<FloatingEmoji> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _yAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<double> _scaleAnimation;
+  late double _randomXOffset;
+  late String _emoji;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+
+    _emoji = '👋';
+
+    // Random horizontal float spread
+    _randomXOffset = (math.Random().nextDouble() - 0.5) * 80.0; 
+
+    _yAnimation = Tween<double>(begin: 0.0, end: -250.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+
+    _opacityAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.0), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.0), weight: 55),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(_controller);
+
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.5, end: 1.2), weight: 30),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.2, end: 1.0), weight: 70),
+    ]).animate(_controller);
+
+    _controller.forward().then((_) {
+      widget.onComplete();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(_randomXOffset, _yAnimation.value),
+          child: Opacity(
+            opacity: _opacityAnimation.value,
+            child: Transform.scale(
+              scale: _scaleAnimation.value,
+              child: Text(
+                _emoji,
+                style: const TextStyle(fontSize: 36),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
