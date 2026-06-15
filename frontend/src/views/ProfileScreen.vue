@@ -115,14 +115,14 @@ const userMatches = computed(() => {
   return filtered
 })
 
-// Filter to matches that have already been played (in the past or within 24 hours in the future)
+// Filter to matches that have already been played (strictly in the past)
 const playedMatches = computed(() => {
-  const limitDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
+  const now = new Date()
   const filtered = userMatches.value.filter(m => {
     const dateStr = m.date_time || m.date
     if (!dateStr) return false
     const matchDate = new Date(dateStr.replace(' ', 'T'))
-    const isPast = matchDate < limitDate
+    const isPast = matchDate <= now
     console.log(`ProfileScreen - playedMatches - checking: ${m.title} (${dateStr}) | parsed: ${matchDate} | isPast: ${isPast}`)
     return isPast
   })
@@ -170,36 +170,68 @@ const calculatedStreak = computed(() => {
     uniqueDates.add(`${yyyy}-${mm}-${dd}`)
   })
 
-  const now = new Date()
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  // Determine reference date based on weekOffset
+  let refDate = new Date()
+  if (weekOffset.value < 0) {
+    const monday = getMonday(new Date())
+    monday.setDate(monday.getDate() + weekOffset.value * 7)
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    sunday.setHours(23, 59, 59, 999)
+    refDate = sunday
+  }
+
+  const refYear = refDate.getFullYear()
+  const refMonth = String(refDate.getMonth() + 1).padStart(2, '0')
+  const refDay = String(refDate.getDate()).padStart(2, '0')
+  const refStr = `${refYear}-${refMonth}-${refDay}`
   
-  const yesterday = new Date(now)
-  yesterday.setDate(now.getDate() - 1)
-  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+  const prevDate = new Date(refDate)
+  prevDate.setDate(refDate.getDate() - 1)
+  const prevStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}-${String(prevDate.getDate()).padStart(2, '0')}`
 
-  let currentStreak = 0
-  let checkDate = new Date(now)
+  let checkDate = null
 
-  // Start check from today or yesterday, whichever is present, to allow today's grace period
-  if (uniqueDates.has(todayStr)) {
-    checkDate = new Date(now)
-  } else if (uniqueDates.has(yesterdayStr)) {
-    checkDate = new Date(yesterday)
+  // 1. Determine anchor date (ref date or day before ref date)
+  if (uniqueDates.has(refStr)) {
+    checkDate = new Date(refDate)
+  } else if (uniqueDates.has(prevStr)) {
+    checkDate = new Date(prevDate)
   } else {
     return 0
   }
 
+  // 2. Count backwards from the anchor date
+  let backwardCount = 0
+  let tempDate = new Date(checkDate)
   while (true) {
-    const checkStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`
+    const checkStr = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`
     if (uniqueDates.has(checkStr)) {
-      currentStreak++
-      checkDate.setDate(checkDate.getDate() - 1)
+      backwardCount++
+      tempDate.setDate(tempDate.getDate() - 1)
     } else {
       break
     }
   }
 
-  return currentStreak
+  // 3. Count forwards from the day after the anchor date (limited to target week's end if in the past)
+  let forwardCount = 0
+  tempDate = new Date(checkDate)
+  tempDate.setDate(tempDate.getDate() + 1)
+  const maxForwardDate = weekOffset.value === 0 ? new Date(3000, 0, 1) : refDate
+  maxForwardDate.setHours(23, 59, 59, 999)
+
+  while (tempDate <= maxForwardDate) {
+    const checkStr = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`
+    if (uniqueDates.has(checkStr)) {
+      forwardCount++
+      tempDate.setDate(tempDate.getDate() + 1)
+    } else {
+      break
+    }
+  }
+
+  return backwardCount + forwardCount
 })
 
 const showAllActivities = ref(false)
@@ -214,7 +246,7 @@ const isPastMatch = (match) => {
 const sortedActivities = computed(() => {
   const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
   if (!uid) return []
-  return [...playedMatches.value].sort((a, b) => {
+  return [...userMatches.value].sort((a, b) => {
     const timeA = a.pivot?.created_at || a.created_at || a.date_time || a.date || ''
     const timeB = b.pivot?.created_at || b.created_at || b.date_time || b.date || ''
     return new Date(timeB) - new Date(timeA)
@@ -486,7 +518,6 @@ const totalRatingsGiven = computed(() => {
 })
 
 // Dynamic Profile Theme & Achievements Code
-const selectedTheme = ref(localStorage.getItem('profile_theme_key') || 'default')
 
 const uniqueSportsPlayedCount = computed(() => {
   const sports = playedMatches.value.map(m => m.sport_type).filter(Boolean)
@@ -610,35 +641,8 @@ const achievementsList = computed(() => {
   ]
 })
 
-// Active profile theme resolution
-const activeTheme = computed(() => {
-  const lvl = profileStats.value.level || 1
-  if (props.isCurrentUser) {
-    const theme = selectedTheme.value
-    if (theme === 'golden_legend' && lvl >= 25) return 'golden_legend'
-    if (theme === 'gold_rush' && lvl >= 10) return 'gold_rush'
-    if (theme === 'lavender_dusk' && lvl >= 5) return 'lavender_dusk'
-    return 'default'
-  } else {
-    // Public profile auto-resolves to highest unlocked
-    if (lvl >= 25) return 'golden_legend'
-    if (lvl >= 10) return 'gold_rush'
-    if (lvl >= 5) return 'lavender_dusk'
-    return 'default'
-  }
-})
-
 // Profile Background Style
 const profileBackgroundStyle = computed(() => {
-  const theme = activeTheme.value
-  if (theme === 'lavender_dusk') {
-    return { background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.18) 0%, rgba(224, 204, 250, 0.08) 150px, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)' }
-  } else if (theme === 'gold_rush') {
-    return { background: 'linear-gradient(180deg, rgba(234, 179, 8, 0.18) 0%, rgba(254, 240, 138, 0.08) 150px, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)' }
-  } else if (theme === 'golden_legend') {
-    return { background: 'linear-gradient(180deg, rgba(212, 175, 55, 0.22) 0%, rgba(255, 223, 0, 0.1) 150px, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)' }
-  }
-  // Default sport-based background
   return { background: `linear-gradient(180deg, ${currentSportColor.value}2E 0%, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)` }
 })
 
@@ -651,13 +655,6 @@ const avatarBorderClass = computed(() => {
   if (lvl >= 2) return 'border-silver'
   return 'border-bronze'
 })
-
-const handleThemeChange = (e) => {
-  const theme = e.target.value
-  selectedTheme.value = theme
-  localStorage.setItem('profile_theme_key', theme)
-  emit('toast-message', `Profile theme updated to ${theme.replace('_', ' ')}! 🎨`)
-}
 
 // Streaks computed status
 const weekDaysStatus = computed(() => {
@@ -689,7 +686,188 @@ const weekDaysStatus = computed(() => {
   })
 })
 
+const showRulesModal = ref(false)
+const showPoliciesModal = ref(false)
+const selectedRulesSport = ref(null)
 
+watch(showRulesModal, (newVal) => {
+  if (!newVal) {
+    selectedRulesSport.value = null
+  }
+})
+
+watch(showPoliciesModal, (newVal) => {
+  console.log('showPoliciesModal changed to:', newVal)
+})
+
+const getSportSubtitle = (sportName) => {
+  const subs = {
+    'Football': store.state.language === 'hi' ? '5v5/7v7 टर्फ नियम और टैकल नीतियां' : '5v5/7v7 turf rules and tackle policies',
+    'Cricket': store.state.language === 'hi' ? 'ओवर सीमाएं, गेंदबाजी दिशा और नेट बाउंड्री' : 'Over limits, bowling direction, and net boundaries',
+    'Badminton': store.state.language === 'hi' ? 'सिंगल्स/डबल्स सर्विस और स्कोरिंग प्रणाली' : 'Singles/doubles service and scoring system',
+    'Basketball': store.state.language === 'hi' ? '3v3 हाफ-कोर्ट और 5v5 फुल-कोर्ट फाउल्स' : '3v3 half-court and 5v5 fouls',
+    'Tennis': store.state.language === 'hi' ? 'सेट, स्कोरिंग (15/30/40) और टाई-ब्रेकर' : 'Sets, scoring (15/30/40), and tie-breakers',
+    'Padel': store.state.language === 'hi' ? 'संलग्न ग्लास दीवार नियम और अंडरहैंड सर्विस' : 'Enclosed glass wall rules and underhand service'
+  }
+  return subs[sportName] || ''
+}
+
+const sportsRules = {
+  en: {
+    'Football': {
+      icon: '⚽',
+      color: '#10b981',
+      image: '/assets/images/football/images (4).jpg',
+      description: 'Guidelines for friendly turf matches, scrimmage games, and tournaments.',
+      rules: [
+        { title: 'Player Count', desc: 'Standard turf matches are 5v5 (min 8 players) or 7v7 (min 12 players).' },
+        { title: 'Match Duration', desc: 'Usually played as two halves of 25 or 30 minutes each, with a 5-minute break.' },
+        { title: 'Fair Play', desc: 'Slide tackles are strictly prohibited on artificial turf to prevent injuries.' },
+        { title: 'Equipments', desc: 'Molded studs or turf shoes only. Shin guards are highly recommended.' }
+      ]
+    },
+    'Cricket': {
+      icon: '🏏',
+      color: '#3b82f6',
+      image: '/assets/images/cricket/images (3).jpg',
+      description: 'Guidelines for box cricket, turf leagues, and net practice sessions.',
+      rules: [
+        { title: 'Overs Limit', desc: 'Matches are typically 6 to 12 overs per innings, depending on slot duration.' },
+        { title: 'Bowler Rules', desc: 'Each bowler can bowl a maximum of 2 overs in a standard 8-over match.' },
+        { title: 'Underarm/Overarm', desc: 'Specify bowling type (overarm or underarm) in the match description when organizing.' },
+        { title: 'Boundary Rules', desc: 'Direct hits on the net or walls may count as limited runs (e.g., 1 or 2 runs) or outs.' }
+      ]
+    },
+    'Badminton': {
+      icon: '🏸',
+      color: '#8b5cf6',
+      image: '/assets/images/badminton/download (6).jpg',
+      description: 'Rules for indoor singles and doubles badminton matches.',
+      rules: [
+        { title: 'Scoring Format', desc: 'Best of 3 games. Each game is played to 21 points using rally scoring.' },
+        { title: 'Deuce Rule', desc: 'If the score reaches 20-all, the side that gains a 2-point lead first wins the game.' },
+        { title: 'Service', desc: 'Underhand service only. The shuttle must be struck below the waist level.' },
+        { title: 'Double Play', desc: 'The service court changes dynamically between partners only when winning a point on service.' }
+      ]
+    },
+    'Basketball': {
+      icon: '🏀',
+      color: '#f97316',
+      image: '/assets/images/basketball/download (5).jpg',
+      description: 'Guidelines for half-court 3v3 or full-court 5v5 basketball games.',
+      rules: [
+        { title: 'Match Types', desc: '3v3 is played on a single hoop. 5v5 is played full-court.' },
+        { title: 'Scoring', desc: 'Standard baskets count as 2 points, shots from behind the arc count as 3 points.' },
+        { title: 'Fouls & Violations', desc: 'Double dribble, traveling, and high contact result in turnover of possession.' },
+        { title: 'Game Points', desc: 'First to 21 points (in 3v3) or highest score at the end of four 10-minute quarters.' }
+      ]
+    },
+    'Tennis': {
+      icon: '🎾',
+      color: '#06b6d4',
+      image: '/assets/images/tennis/download (4).jpg',
+      description: 'Singles and doubles rules for clay and hardcourt tennis.',
+      rules: [
+        { title: 'Scoring', desc: 'Points progress as 15, 30, 40, and Game. Deuce is active at 40-40.' },
+        { title: 'Advantage', desc: 'After deuce, a player must win two consecutive points to win the game.' },
+        { title: 'Sets & Match', desc: 'Played as best-of-3 sets. A set is won by the first player to win 6 games with a 2-game lead.' },
+        { title: 'Tie-breaker', desc: 'At 6-6 in games, a 7-point tiebreaker is played to decide the set.' }
+      ]
+    },
+    'Padel': {
+      icon: '🏓',
+      color: '#2563eb',
+      image: '/assets/images/padel/padel.png',
+      description: 'Rules for doubles padel matches played in enclosed courts.',
+      rules: [
+        { title: 'Doubles Format', desc: 'Padel is predominantly played as a doubles sport on an enclosed court.' },
+        { title: 'Service', desc: 'Must be underhand, struck at or below waist level, and bounce in the opponent\'s crosscourt box.' },
+        { title: 'Wall Play', desc: 'Ball must bounce on the ground before hitting any wall or fence.' },
+        { title: 'Rebounds', desc: 'Players can strike the ball after it rebounds off their own glass walls to return it.' }
+      ]
+    }
+  },
+  hi: {
+    'Football': {
+      icon: '⚽',
+      color: '#10b981',
+      image: '/assets/images/football/images (4).jpg',
+      description: 'टर्फ मैचों, स्क्रिमेज खेलों और टूर्नामेंटों के लिए दिशानिर्देश।',
+      rules: [
+        { title: 'खिलाड़ी संख्या', desc: 'टर्फ मैच आमतौर पर 5v5 (न्यूनतम 8 खिलाड़ी) या 7v7 (न्यूनतम 12 खिलाड़ी) होते हैं।' },
+        { title: 'मैच की अवधि', desc: 'आमतौर पर 25 या 30 मिनट के दो हिस्सों में खेला जाता है, जिसमें 5 मिनट का ब्रेक होता है।' },
+        { title: 'खेल भावना', desc: 'चोटों से बचने के लिए कृत्रिम टर्फ पर स्लाइड टैकल पूरी तरह से प्रतिबंधित हैं।' },
+        { title: 'उपकरण', desc: 'केवल मोल्डेड स्टड्स या टर्फ जूते। शिन गार्ड की अत्यधिक सिफारिश की जाती है।' }
+      ]
+    },
+    'Cricket': {
+      icon: '🏏',
+      color: '#3b82f6',
+      image: '/assets/images/cricket/images (3).jpg',
+      description: 'बॉक्स क्रिकेट, टर्फ लीग और नेट प्रैक्टिस सत्रों के लिए दिशानिर्देश।',
+      rules: [
+        { title: 'ओवर सीमा', desc: 'स्लॉट अवधि के आधार पर मैच आमतौर पर प्रति पारी 6 से 12 ओवर के होते हैं।' },
+        { title: 'गेंदबाज नियम', desc: 'प्रत्येक गेंदबाज एक मानक 8 ओवर के मैच में अधिकतम 2 ओवर फेंक सकता है।' },
+        { title: 'अंडरआर्म/ओवरआर्म', desc: 'मैच बनाते समय विवरण में गेंदबाजी के प्रकार (ओवरआर्म या अंडरआर्म) को स्पष्ट करें।' },
+        { title: 'बाउंड्री नियम', desc: 'नेट या दीवारों पर सीधे हिट सीमित रन (जैसे, 1 या 2 रन) या आउट माने जा सकते हैं।' }
+      ]
+    },
+    'Badminton': {
+      icon: '🏸',
+      color: '#8b5cf6',
+      image: '/assets/images/badminton/download (6).jpg',
+      description: 'इनडोर सिंगल्स और डबल्स बैडमिंटन मैचों के नियम।',
+      rules: [
+        { title: 'स्कोरिंग प्रारूप', desc: 'सर्वश्रेष्ठ 3 खेल। प्रत्येक खेल रैली स्कोरिंग का उपयोग करके 21 अंकों तक खेला जाता है।' },
+        { title: 'ड्यूस नियम', desc: 'यदि स्कोर 20-बराबर हो जाता है, तो जो पक्ष पहले 2 अंकों की बढ़त हासिल करता है, वह खेल जीतता है।' },
+        { title: 'सर्विस', desc: 'केवल अंडरहैंड सर्विस। शटल को कमर के स्तर से नीचे मारा जाना चाहिए।' },
+        { title: 'डबल्स खेल', desc: 'केवल सर्विस पर अंक जीतने पर ही सर्विस कोर्ट भागीदारों के बीच गतिशील रूप से बदलता है।' }
+      ]
+    },
+    'Basketball': {
+      icon: '🏀',
+      color: '#f97316',
+      image: '/assets/images/basketball/download (5).jpg',
+      description: 'हाफ-कोर्ट 3v3 या फुल-कोर्ट 5v5 बास्केटबॉल खेलों के लिए दिशानिर्देश।',
+      rules: [
+        { title: 'मैच प्रकार', desc: '3v3 एक ही हुप पर खेला जाता है। 5v5 पूरे कोर्ट पर खेला जाता है।' },
+        { title: 'स्कोरिंग', desc: 'सामान्य बास्केट 2 अंक के होते हैं, थ्री-पॉइंट लाइन के पीछे से किए गए शॉट 3 अंक के होते हैं।' },
+        { title: 'फाउल और उल्लंघन', desc: 'डबल ड्रिबल, ट्रैवलिंग और उच्च शारीरिक संपर्क के परिणामस्वरूप कब्जा विरोधी टीम को मिल जाता है।' },
+        { title: 'जीत के अंक', desc: 'पहले 21 अंक (3v3 में) तक पहुंचने वाली टीम या चार 10 मिनट के क्वार्टर के अंत में उच्चतम स्कोर वाली टीम जीतती है।' }
+      ]
+    },
+    'Tennis': {
+      icon: '🎾',
+      color: '#06b6d4',
+      image: '/assets/images/tennis/download (4).jpg',
+      description: 'मिट्टी (क्ले) और हार्डकोर्ट टेनिस के लिए सिंगल्स और डबल्स नियम।',
+      rules: [
+        { title: 'स्कोरिंग', desc: 'अंक 15, 30, 40 और गेम के रूप में बढ़ते हैं। 40-40 पर ड्यूस सक्रिय होता है।' },
+        { title: 'एडवांटेज', desc: 'ड्यूस के बाद, खिलाड़ी को गेम जीतने के लिए लगातार दो अंक जीतने होंगे।' },
+        { title: 'सेट और मैच', desc: 'सर्वश्रेष्ठ-ऑफ-3 सेट। एक सेट 2-गेम की बढ़त के साथ 6 गेम जीतने वाले पहले खिलाड़ी द्वारा जीता जाता है।' },
+        { title: 'टाई-ब्रेकर', desc: 'गेम 6-6 होने पर, सेट का फैसला करने के लिए 7-पॉइंट का टाईब्रेकर खेला जाता है।' }
+      ]
+    },
+    'Padel': {
+      icon: '🏓',
+      color: '#2563eb',
+      image: '/assets/images/padel/padel.png',
+      description: 'संलग्न कोर्ट में खेले जाने वाले डबल्स पैडल मैचों के नियम।',
+      rules: [
+        { title: 'डबल्स प्रारूप', desc: 'पैडल मुख्य रूप से एक संलग्न कोर्ट पर डबल्स खेल के रूप में खेला जाता है।' },
+        { title: 'सर्विस', desc: 'कमर के स्तर पर या उससे नीचे अंडरहैंड सर्विस होनी चाहिए, जो विरोधी के क्रॉसकोर्ट बॉक्स में टप्पा खाए।' },
+        { title: 'दीवार का खेल', desc: 'किसी भी दीवार या बाड़ से टकराने से पहले गेंद का जमीन पर टप्पा खाना अनिवार्य है।' },
+        { title: 'रिबाउंड', desc: 'खिलाड़ी गेंद को वापस करने के लिए अपने स्वयं के शीशे की दीवारों से टकराने के बाद भी मार सकते हैं।' }
+      ]
+    }
+  }
+}
+
+const currentSportRules = computed(() => {
+  if (!selectedRulesSport.value) return null
+  const lang = store.state.language === 'hi' ? 'hi' : 'en'
+  return sportsRules[lang]?.[selectedRulesSport.value] || sportsRules['en']?.[selectedRulesSport.value]
+})
 </script>
 
 <template>
@@ -697,9 +875,6 @@ const weekDaysStatus = computed(() => {
     class="profile-container scrollable-y animate-fade-in"
     :style="profileBackgroundStyle"
   >
-    <!-- Golden Legend Pulsing Radial Glow Overlay -->
-    <div v-if="activeTheme === 'golden_legend'" class="golden-radial-glow"></div>
-
     <div class="profile-content-wrap">
       <!-- Custom Header -->
     <div class="profile-header">
@@ -733,15 +908,7 @@ const weekDaysStatus = computed(() => {
         </span>
       </div>
 
-      <div class="card-badges-row">
-        <span class="badge-item-inline text-green">
-          🔥 {{ currentUser.skill_tier === 'Professional' || currentUser.skill_tier === 'Advanced' ? 'PRO PLAYER' : 'PLAYER' }}
-        </span>
-        <span class="badge-separator">•</span>
-        <span class="badge-item-inline text-gray">
-          🇮🇳 {{ currentUser.location || 'Kochi, IN' }}
-        </span>
-      </div>
+
     </div>
 
     <!-- XP Progression Card -->
@@ -1050,75 +1217,214 @@ const weekDaysStatus = computed(() => {
               </select>
             </div>
 
-            <!-- Theme Selection Dropdown -->
+            <!-- Elegant Lavender Theme Toggle -->
             <div class="setting-switch-tile">
               <div class="setting-switch-info">
-                <span class="tile-title">🎨 Profile Theme</span>
-                <span class="tile-desc">Choose theme based on your player level</span>
+                <span class="tile-title">🌸 {{ t('elegantLavender') }}</span>
+                <span class="tile-desc">{{ isLavenderTheme ? t('lavenderActive') : t('switchLavender') }}</span>
               </div>
-              <select 
-                :value="selectedTheme" 
-                class="language-select-dropdown" 
-                @change="handleThemeChange"
-              >
-                <option value="default">Default (Sport Gradient)</option>
-                <option value="lavender_dusk" :disabled="profileStats.level < 5">
-                  Lavender Dusk {{ profileStats.level < 5 ? '(Lvl 5+ 🔒)' : '' }}
-                </option>
-                <option value="gold_rush" :disabled="profileStats.level < 10">
-                  Gold Rush {{ profileStats.level < 10 ? '(Lvl 10+ 🔒)' : '' }}
-                </option>
-                <option value="golden_legend" :disabled="profileStats.level < 25">
-                  Golden Legend {{ profileStats.level < 25 ? '(Lvl 25+ 🔒)' : '' }}
-                </option>
-              </select>
+              <label class="toggle-control">
+                <input 
+                  type="checkbox" 
+                  :checked="isLavenderTheme" 
+                  @change="handleThemeToggle"
+                >
+                <span class="toggle-slider"></span>
+              </label>
             </div>
           </div>
 
           <!-- Menu settings lists -->
-          <div class="settings-menu-list">
-            <div class="menu-tile" @click="() => { showSettingsModal = false; openEditModal(); }">
-              <span class="menu-icon">✏️</span>
-              <div class="menu-info">
-                <span class="menu-title">{{ t('editProfile') }}</span>
-                <span class="menu-subtitle">Update display name, bio, and settings</span>
+          <div class="privacy-section">
+            <h4 class="section-sub-title">{{ store.state.language === 'hi' ? 'खाता और विकल्प' : 'Account & Options' }}</h4>
+            <div class="settings-menu-list">
+              <div class="menu-tile" @click="() => { showSettingsModal = false; openEditModal(); }">
+                <span class="menu-icon">✏️</span>
+                <div class="menu-info">
+                  <span class="menu-title">{{ t('editProfile') }}</span>
+                  <span class="menu-subtitle">Update display name, bio, and settings</span>
+                </div>
+                <span class="chevron">➔</span>
               </div>
-              <span class="chevron">➔</span>
-            </div>
 
-
-            <div class="menu-tile" @click="handleSettingsInfo('Sportigo platform game guide coming soon! 📑')">
-              <span class="menu-icon">🛡️</span>
-              <div class="menu-info">
-                <span class="menu-title">{{ t('gameRules') }}</span>
-                <span class="menu-subtitle">{{ t('gameRulesSub') }}</span>
+              <div class="menu-tile" @click="() => { console.log('Game Rules clicked'); showRulesModal = true; }">
+                <span class="menu-icon">🛡️</span>
+                <div class="menu-info">
+                  <span class="menu-title">{{ t('gameRules') }}</span>
+                  <span class="menu-subtitle">{{ t('gameRulesSub') }}</span>
+                </div>
+                <span class="chevron">➔</span>
               </div>
-              <span class="chevron">➔</span>
-            </div>
 
-            <div class="menu-tile" @click="handleSettingsInfo('Tournament logs coming soon! 🏆')">
-              <span class="menu-icon">📊</span>
-              <div class="menu-info">
-                <span class="menu-title">{{ t('statsHistory') }}</span>
-                <span class="menu-subtitle">{{ t('statsHistorySub') }}</span>
+              <div class="menu-tile" @click="() => { console.log('Company Policies clicked'); showPoliciesModal = true; }">
+                <span class="menu-icon">📄</span>
+                <div class="menu-info">
+                  <span class="menu-title">{{ t('statsHistory') }}</span>
+                  <span class="menu-subtitle">{{ t('statsHistorySub') }}</span>
+                </div>
+                <span class="chevron">➔</span>
               </div>
-              <span class="chevron">➔</span>
-            </div>
 
-            <div class="menu-tile destructive" @click="showLogoutConfirm = true">
-              <span class="menu-icon">🚪</span>
-              <div class="menu-info">
-                <span class="menu-title">{{ t('signOut') }}</span>
-                <span class="menu-subtitle">{{ t('signOutSub') }}</span>
+              <div class="menu-tile destructive" @click="showLogoutConfirm = true">
+                <span class="menu-icon">🚪</span>
+                <div class="menu-info">
+                  <span class="menu-title">{{ t('signOut') }}</span>
+                  <span class="menu-subtitle">{{ t('signOutSub') }}</span>
+                </div>
+                <span class="chevron">➔</span>
               </div>
-              <span class="chevron">➔</span>
             </div>
           </div>
         </div>
       </div>
     </Transition>
 
-    </div>
+    <!-- Game Rules Full-Screen Panel -->
+    <Transition name="settings-slide">
+      <div v-if="showRulesModal" class="rules-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
+        <!-- Main Sports Options List View -->
+        <div v-if="!selectedRulesSport" class="rules-main-view flex-col h-full" style="display: flex; flex-direction: column; height: 100%;">
+          <div class="settings-panel-header">
+            <h2 class="settings-panel-title modal-title" style="display: flex; align-items: center; gap: 8px;">
+              <span>🛡️</span>
+              <span>{{ store.state.language === 'hi' ? 'खेल के नियम' : 'Game Rules' }}</span>
+            </h2>
+            <button class="settings-close-btn close-btn" @click="showRulesModal = false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="settings-panel-body scrollable-y flex-1 no-scrollbar" style="flex: 1; overflow-y: auto;">
+            <p class="rules-intro-text">{{ store.state.language === 'hi' ? 'दिशानिर्देश और नियम देखने के लिए एक खेल चुनें:' : 'Select a sport to view its detailed rules and match guidelines:' }}</p>
+            
+            <div class="rules-sports-grid">
+              <div 
+                v-for="sport in sportsList" 
+                :key="sport.name" 
+                class="rules-sport-card-option"
+                :style="{ borderLeft: `5px solid ${getSportColor(sport.name)}` }"
+                @click="selectedRulesSport = sport.name"
+              >
+                <div class="rules-option-icon" :style="{ backgroundColor: `${getSportColor(sport.name)}1A`, color: getSportColor(sport.name) }">
+                  {{ sport.icon }}
+                </div>
+                <div class="rules-option-info">
+                  <span class="rules-option-title">{{ store.state.language === 'hi' ? t('sport_' + sport.name) : sport.name }}</span>
+                  <span class="rules-option-subtitle">{{ getSportSubtitle(sport.name) }}</span>
+                </div>
+                <span class="rules-option-arrow" :style="{ color: getSportColor(sport.name) }">➔</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sport Detailed Rules View -->
+        <div v-else class="rules-detail-view flex-col h-full animate-fade-in" style="display: flex; flex-direction: column; height: 100%;" :key="selectedRulesSport">
+          <div class="settings-panel-header" :style="{ borderBottom: `2px solid ${currentSportRules.color}20` }">
+            <h2 class="settings-panel-title modal-title" style="display: flex; align-items: center; gap: 8px;">
+              <span :style="{ color: currentSportRules.color }">{{ currentSportRules.icon }}</span>
+              <span>{{ store.state.language === 'hi' ? t('sport_' + selectedRulesSport) : selectedRulesSport }} {{ store.state.language === 'hi' ? 'के नियम' : 'Rules' }}</span>
+            </h2>
+            <button class="settings-close-btn close-btn" @click="selectedRulesSport = null">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="settings-panel-body scrollable-y flex-1 no-scrollbar" style="flex: 1; overflow-y: auto;">
+            <div class="rules-sport-info-card" :style="{ background: `linear-gradient(135deg, ${currentSportRules.color}15 0%, ${currentSportRules.color}05 100%)`, borderLeft: `4px solid ${currentSportRules.color}` }">
+              <div class="rules-card-text" style="flex: 1;">
+                <p class="rules-card-desc" style="font-weight: 600; font-size: 0.95rem;">{{ currentSportRules.description }}</p>
+              </div>
+              <img 
+                v-if="currentSportRules.image" 
+                :src="currentSportRules.image" 
+                class="rules-sport-banner" 
+                alt="Sport Banner" 
+              />
+            </div>
+
+            <div class="rules-list-container">
+              <div v-for="(rule, index) in currentSportRules.rules" :key="index" class="rule-item-card">
+                <div class="rule-item-number" :style="{ backgroundColor: currentSportRules.color }">{{ index + 1 }}</div>
+                <div class="rule-item-content">
+                  <h4 class="rule-item-title">{{ rule.title }}</h4>
+                  <p class="rule-item-description">{{ rule.desc }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Company Policies Full-Screen Panel -->
+    <Transition name="settings-slide">
+      <div v-if="showPoliciesModal" class="rules-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
+        <div class="rules-main-view flex-col h-full" style="display: flex; flex-direction: column; height: 100%;">
+          <div class="settings-panel-header">
+            <h2 class="settings-panel-title modal-title" style="display: flex; align-items: center; gap: 8px;">
+              <span>📄</span>
+              <span>{{ t('statsHistory') }}</span>
+            </h2>
+            <button class="settings-close-btn close-btn" @click="showPoliciesModal = false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="settings-panel-body scrollable-y flex-1 no-scrollbar" style="flex: 1; overflow-y: auto;">
+            <!-- Policies list -->
+            <div class="policies-list">
+              <div class="policy-item-card">
+                <div class="policy-header-row">
+                  <h4 class="policy-item-title">{{ store.state.language === 'hi' ? '1. खाता सुरक्षा और प्रमाणीकरण' : '1. Account Security & Verification' }}</h4>
+                </div>
+                <p class="policy-item-description">
+                  {{ store.state.language === 'hi' ? 'पासवर्ड भूल जाने की स्थिति में त्वरित और सुरक्षित प्रमाणीकरण के लिए सभी उपयोगकर्ताओं को एक वैध ईमेल पता प्रदान करना आवश्यक है। यह सुनिश्चित करता है कि आपके व्यक्तिगत आंकड़े, बुकिंग और भुगतान इतिहास सुरक्षित रहें।' : 'To guarantee quick and secure authentication, especially in the event of a forgotten password, all players must register with a valid email. This ensures that your progress, stats, and personal bookings remain secure and recoverable.' }}
+                </p>
+              </div>
+
+              <div class="policy-item-card">
+                <div class="policy-header-row">
+                  <h4 class="policy-item-title">{{ store.state.language === 'hi' ? '2. आचार संहिता और निष्पक्ष खेल' : '2. Code of Conduct & Fair Play' }}</h4>
+                </div>
+                <p class="policy-item-description">
+                  {{ store.state.language === 'hi' ? 'टूर्नामेंट और मैत्रीपूर्ण मैचों के दौरान खेल भावना बनाए रखें। किसी भी प्रकार की अभद्र भाषा, धोखाधड़ी या अभद्र व्यवहार के परिणामस्वरूप स्थायी खाता निलंबन किया जाएगा।' : 'Maintain a respectful, friendly environment during matches. PlayConnect has a zero-tolerance policy for harassment, cheating, or unsportsmanlike behavior. Violation of code of conduct can lead to permanent account suspension.' }}
+                </p>
+              </div>
+
+              <div class="policy-item-card">
+                <div class="policy-header-row">
+                  <h4 class="policy-item-title">{{ store.state.language === 'hi' ? '3. सुरक्षा और संरक्षा नीतियां' : '3. Safety & Safety Policies' }}</h4>
+                </div>
+                <p class="policy-item-description">
+                  {{ store.state.language === 'hi' ? 'महिलाओं के लिए विशिष्ट रूप से चिह्नित मैचों में केवल महिला खिलाड़ी ही शामिल हो सकती हैं। प्लेकनेक्ट सभी खिलाड़ियों के लिए एक समावेशी, मैत्रीपूर्ण और सुरक्षित खेल मैदान प्रदान करने के लिए प्रतिबद्ध है।' : 'Only verified female players can join matches designated as "Women-Only". PlayConnect is committed to providing a safe, friendly, and inclusive sporting ecosystem for everyone.' }}
+                </p>
+              </div>
+
+              <div class="policy-item-card">
+                <div class="policy-header-row">
+                  <h4 class="policy-item-title">{{ store.state.language === 'hi' ? '4. रद्दीकरण और धनवापसी नीति' : '4. Cancellation & Refund Policy' }}</h4>
+                </div>
+                <p class="policy-item-description">
+                  {{ store.state.language === 'hi' ? 'यदि बुकिंग शुरू होने से 24 घंटे पहले रद्द की जाती है, तो पूरी राशि वापस कर दी जाएगी। अंतिम समय में बुकिंग रद्द करने पर धनवापसी नहीं मिलेगी।' : 'Full refund is available if a match spot or booking is cancelled at least 24 hours prior to the scheduled start. Cancellations made within 24 hours of the match start time are non-refundable.' }}
+                </p>
+              </div>
+
+              <div class="policy-item-card">
+                <div class="policy-header-row">
+                  <h4 class="policy-item-title">{{ store.state.language === 'hi' ? '5. देयता की सीमा' : '5. Limitation of Liability' }}</h4>
+                </div>
+                <p class="policy-item-description">
+                  {{ store.state.language === 'hi' ? 'मैच के दौरान खिलाड़ियों को लगी किसी भी शारीरिक चोट के लिए प्लेकनेक्ट या आयोजन स्थल जिम्मेदार नहीं होंगे। सभी खिलाड़ियों को स्वयं की सुरक्षा सुनिश्चित करने की सलाह दी जाती है।' : 'PlayConnect or associated venues are not liable for physical injuries sustained during matches. Players participate at their own risk and are advised to maintain physical fitness and wear proper protective gear.' }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+  </div>
 
     <!-- Edit Profile Modal -->
     <Teleport to="body">
@@ -1231,6 +1537,8 @@ const weekDaysStatus = computed(() => {
         </div>
       </Transition>
     </Teleport>
+
+
   </div>
 </template>
 
@@ -2043,6 +2351,20 @@ input:checked + .toggle-slider:before {
   }
 }
 
+.settings-fullscreen-panel .settings-panel-body {
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  align-content: start;
+}
+
+@media (min-width: 768px) {
+  .settings-fullscreen-panel .settings-panel-body {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .settings-panel-header {
   display: flex;
   justify-content: space-between;
@@ -2414,10 +2736,10 @@ input:checked + .toggle-slider:before {
 /* Avatar dynamic border styling */
 .border-bronze {
   border: 4px solid transparent !important;
-  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #cd7f32, #dca77a, #9c5a1f) !important;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #10b981, #34d399, #059669) !important;
   background-origin: border-box !important;
   background-clip: padding-box, border-box !important;
-  box-shadow: 0 0 10px rgba(205, 127, 50, 0.35) !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35) !important;
 }
 
 .border-silver {
@@ -2744,5 +3066,306 @@ input:checked + .toggle-slider:before {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--on-surface-variant);
+}
+
+/* Rules Full-Screen Panel Styles */
+.rules-fullscreen-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: calc(100% - 280px);
+  height: 100vh;
+  background-color: var(--scaffold-bg);
+  z-index: 1300;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+  .rules-fullscreen-panel {
+    width: 100%;
+    left: 0;
+  }
+}
+
+.rules-fullscreen-panel .settings-panel-body {
+  max-width: 1200px;
+}
+
+.rules-intro-text {
+  font-size: 0.95rem;
+  color: var(--on-surface-variant);
+  margin: 0 0 24px;
+  line-height: 1.4;
+  text-align: left;
+  font-weight: 500;
+}
+
+.rules-sports-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .rules-sports-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.rules-sport-card-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--outline-variant);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
+}
+
+.rules-sport-card-option:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.rules-sport-card-option:active {
+  transform: scale(0.99) translateY(-2px);
+}
+
+.rules-option-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.rules-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rules-option-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.rules-option-subtitle {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  line-height: 1.25;
+}
+
+.rules-option-arrow {
+  font-size: 1rem;
+  margin-left: auto;
+  font-weight: bold;
+  transition: transform 0.2s ease;
+}
+
+.rules-sport-card-option:hover .rules-option-arrow {
+  transform: translateX(4px);
+}
+
+.rules-sport-info-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.rules-card-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.rules-card-desc {
+  font-size: 0.88rem;
+  color: var(--on-surface-variant);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.rules-sport-banner {
+  width: 140px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1.5px solid var(--outline-variant);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .rules-sport-banner {
+    display: none;
+  }
+}
+
+.rules-list-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .rules-list-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.rule-item-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--outline-variant);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-align: left;
+}
+
+.rule-item-card:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.rule-item-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.rule-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rule-item-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.rule-item-description {
+  font-size: 0.82rem;
+  color: var(--on-surface-variant);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Policies Modal Styles */
+.mandatory-notice-card {
+  background: linear-gradient(135deg, rgba(211, 47, 47, 0.1) 0%, rgba(211, 47, 47, 0.05) 100%);
+  border: 1px dashed var(--error, #d32f2f);
+  border-left: 5px solid var(--error, #d32f2f);
+  padding: 16px 20px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.mandatory-notice-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.warning-icon {
+  font-size: 1.2rem;
+}
+
+.warning-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--error, #d32f2f);
+  letter-spacing: 0.5px;
+}
+
+.warning-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.policies-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .policies-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.policy-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--outline-variant);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-align: left;
+}
+
+.policy-item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+}
+
+.policy-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.policy-emoji {
+  font-size: 1.25rem;
+}
+
+.policy-item-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.policy-item-description {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  margin: 0;
+  line-height: 1.45;
 }
 </style>

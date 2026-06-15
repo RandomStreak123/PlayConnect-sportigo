@@ -1,0 +1,864 @@
+diff --git a/frontend/src/views/ProfileScreen.vue b/frontend/src/views/ProfileScreen.vue
+index f16c060..e5d5833 100644
+--- a/frontend/src/views/ProfileScreen.vue
++++ b/frontend/src/views/ProfileScreen.vue
+@@ -55,7 +55,8 @@ const loadUserProfile = async () => {
+   }
+ }
+ 
+-watch(() => props.userId, () => {
++watch(() => [props.userId, props.isCurrentUser], () => {
++  profileUser.value = null
+   loadUserProfile()
+ }, { immediate: true })
+ 
+@@ -129,6 +130,78 @@ const playedMatches = computed(() => {
+   return filtered
+ })
+ 
++// Streaks navigation state
++const weekOffset = ref(0)
++
++const getMonday = (d) => {
++  const dateCopy = new Date(d)
++  const day = dateCopy.getDay()
++  const diff = dateCopy.getDate() - day + (day === 0 ? -6 : 1)
++  return new Date(dateCopy.setDate(diff))
++}
++
++const weekLabel = computed(() => {
++  if (weekOffset.value === 0) return t('thisWeek') || 'This Week'
++  if (weekOffset.value === -1) return t('lastWeek') || 'Last Week'
++  
++  const today = new Date()
++  const targetMonday = getMonday(today)
++  targetMonday.setDate(targetMonday.getDate() + weekOffset.value * 7)
++  
++  const targetSunday = new Date(targetMonday)
++  targetSunday.setDate(targetSunday.getDate() + 6)
++  
++  const options = { month: 'short', day: 'numeric' }
++  return `${targetMonday.toLocaleDateString('default', options)} - ${targetSunday.toLocaleDateString('default', options)}`
++})
++
++// Dynamic streak calculation based on playedMatches.value
++const calculatedStreak = computed(() => {
++  const now = new Date()
++  const currentMonday = getMonday(now)
++  currentMonday.setHours(0, 0, 0, 0)
++  
++  let currentStreak = 0
++  let checkMonday = new Date(currentMonday)
++  
++  // Check current week
++  const hasWinThisWeek = playedMatches.value.some(m => {
++    const dateStr = m.date_time || m.date
++    if (!dateStr) return false
++    const mDate = new Date(dateStr.replace(' ', 'T'))
++    return mDate >= checkMonday
++  })
++  
++  if (hasWinThisWeek) {
++    currentStreak = 1
++  }
++  
++  let lastWeekHadWin = true
++  while (lastWeekHadWin) {
++    const nextWeekStart = new Date(checkMonday)
++    checkMonday.setDate(checkMonday.getDate() - 7)
++    
++    const hasWinInWeek = playedMatches.value.some(m => {
++      const dateStr = m.date_time || m.date
++      if (!dateStr) return false
++      const mDate = new Date(dateStr.replace(' ', 'T'))
++      return mDate >= checkMonday && mDate < nextWeekStart
++    })
++    
++    if (hasWinInWeek) {
++      if (currentStreak === 0) {
++        currentStreak = 1
++      } else {
++        currentStreak++
++      }
++    } else {
++      lastWeekHadWin = false
++    }
++  }
++  
++  return currentStreak
++})
++
+ const showAllActivities = ref(false)
+ 
+ const visibleActivities = computed(() => {
+@@ -394,13 +467,225 @@ const onFileSelected = async (event) => {
+ const totalRatingsGiven = computed(() => {
+   return profileStats.value.totalRatingsGiven || 0
+ })
++
++// Dynamic Profile Theme & Achievements Code
++const selectedTheme = ref(localStorage.getItem('profile_theme_key') || 'default')
++
++const uniqueSportsPlayedCount = computed(() => {
++  const sports = playedMatches.value.map(m => m.sport_type).filter(Boolean)
++  return new Set(sports).size
++})
++
++const isCommunityPillar = computed(() => {
++  const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
++  if (!uid) return false
++  const total = playedMatches.value.length
++  if (total === 0) return false
++  const created = playedMatches.value.filter(m => Number(m.creator_id || m.user_id) === Number(uid)).length
++  return (created / total) >= 0.40
++})
++
++const isInvincible = computed(() => {
++  return calculatedStreak.value >= 5
++})
++
++const isFairPlayAmbassador = computed(() => {
++  const avgRating = Number(profileStats.value.averageRating || 0)
++  const totalGames = Number(profileStats.value.totalGames || 0)
++  return avgRating >= 4.5 && totalGames >= 5
++})
++
++const isUltimateAllRounder = computed(() => {
++  return uniqueSportsPlayedCount.value >= 3
++})
++
++// Combined Achievements & Milestones List
++const achievementsList = computed(() => {
++  const lvl = profileStats.value.level || 1
++  const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
++  const total = playedMatches.value.length
++  const created = playedMatches.value.filter(m => Number(m.creator_id || m.user_id) === Number(uid)).length
++
++  return [
++    // Milestones
++    {
++      id: 'rookie',
++      type: 'milestone',
++      title: 'Rookie Milestone',
++      description: 'Welcome to Sportigo! Level 1 reached.',
++      icon: '🌱',
++      unlocked: true,
++      progressText: `Level ${lvl} / 1`
++    },
++    {
++      id: 'rising_star',
++      type: 'milestone',
++      title: 'Rising Star Milestone',
++      description: 'Reach Level 2 to show your potential.',
++      icon: '✨',
++      unlocked: lvl >= 2,
++      progressText: `Level ${lvl} / 2`
++    },
++    {
++      id: 'veteran',
++      type: 'milestone',
++      title: 'Veteran Milestone',
++      description: 'Reach Level 5. Unlocks the Lavender Dusk profile theme.',
++      icon: '🎖️',
++      unlocked: lvl >= 5,
++      progressText: `Level ${lvl} / 5`
++    },
++    {
++      id: 'competitor',
++      type: 'milestone',
++      title: 'Elite Competitor Milestone',
++      description: 'Reach Level 10. Unlocks the Gold Rush profile theme.',
++      icon: '🏆',
++      unlocked: lvl >= 10,
++      progressText: `Level ${lvl} / 10`
++    },
++    {
++      id: 'legend',
++      type: 'milestone',
++      title: 'Sportigo Legend Milestone',
++      description: 'Reach Level 25. Unlocks the animated Golden Legend profile theme.',
++      icon: '👑',
++      unlocked: lvl >= 25,
++      progressText: `Level ${lvl} / 25`
++    },
++    // Badges
++    {
++      id: 'community_pillar',
++      type: 'badge',
++      title: 'Community Pillar',
++      description: 'Organize at least 40% of the matches you play (minimum 1 game).',
++      icon: '📣',
++      unlocked: isCommunityPillar.value,
++      progressText: `${total > 0 ? Math.round((created / total) * 100) : 0}% matches organized (${created}/${total})`
++    },
++    {
++      id: 'invincible',
++      type: 'badge',
++      title: 'Invincible',
++      description: 'Maintain a winning streak of 5 matches or more.',
++      icon: '🔥',
++      unlocked: isInvincible.value,
++      progressText: `Streak: ${calculatedStreak.value} / 5`
++    },
++    {
++      id: 'fair_play',
++      type: 'badge',
++      title: 'Fair Play Ambassador',
++      description: 'Maintain an average rating of 4.5+ with at least 5 games played.',
++      icon: '🤝',
++      unlocked: isFairPlayAmbassador.value,
++      progressText: `Rating: ${Number(profileStats.value.averageRating || 0).toFixed(1)}/4.5 (${profileStats.value.totalGames || 0}/5 games)`
++    },
++    {
++      id: 'all_rounder',
++      type: 'badge',
++      title: 'Ultimate All-Rounder',
++      description: 'Play at least 3 unique sport types.',
++      icon: '🎯',
++      unlocked: isUltimateAllRounder.value,
++      progressText: `${uniqueSportsPlayedCount.value} / 3 sports played`
++    }
++  ]
++})
++
++// Active profile theme resolution
++const activeTheme = computed(() => {
++  const lvl = profileStats.value.level || 1
++  if (props.isCurrentUser) {
++    const theme = selectedTheme.value
++    if (theme === 'golden_legend' && lvl >= 25) return 'golden_legend'
++    if (theme === 'gold_rush' && lvl >= 10) return 'gold_rush'
++    if (theme === 'lavender_dusk' && lvl >= 5) return 'lavender_dusk'
++    return 'default'
++  } else {
++    // Public profile auto-resolves to highest unlocked
++    if (lvl >= 25) return 'golden_legend'
++    if (lvl >= 10) return 'gold_rush'
++    if (lvl >= 5) return 'lavender_dusk'
++    return 'default'
++  }
++})
++
++// Profile Background Style
++const profileBackgroundStyle = computed(() => {
++  const theme = activeTheme.value
++  if (theme === 'lavender_dusk') {
++    return { background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.18) 0%, rgba(224, 204, 250, 0.08) 150px, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)' }
++  } else if (theme === 'gold_rush') {
++    return { background: 'linear-gradient(180deg, rgba(234, 179, 8, 0.18) 0%, rgba(254, 240, 138, 0.08) 150px, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)' }
++  } else if (theme === 'golden_legend') {
++    return { background: 'linear-gradient(180deg, rgba(212, 175, 55, 0.22) 0%, rgba(255, 223, 0, 0.1) 150px, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)' }
++  }
++  // Default sport-based background
++  return { background: `linear-gradient(180deg, ${currentSportColor.value}2E 0%, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)` }
++})
++
++// Avatar Border CSS Class
++const avatarBorderClass = computed(() => {
++  const lvl = profileStats.value.level || 1
++  if (lvl >= 25) return 'border-legend'
++  if (lvl >= 10) return 'border-gold-elite'
++  if (lvl >= 5) return 'border-gold'
++  if (lvl >= 2) return 'border-silver'
++  return 'border-bronze'
++})
++
++const handleThemeChange = (e) => {
++  const theme = e.target.value
++  selectedTheme.value = theme
++  localStorage.setItem('profile_theme_key', theme)
++  emit('toast-message', `Profile theme updated to ${theme.replace('_', ' ')}! 🎨`)
++}
++
++// Streaks computed status
++const weekDaysStatus = computed(() => {
++  const now = new Date()
++  const currentMonday = getMonday(now)
++  currentMonday.setDate(currentMonday.getDate() + weekOffset.value * 7)
++  currentMonday.setHours(0, 0, 0, 0)
++
++  const daysLabel = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
++  
++  return daysLabel.map((label, index) => {
++    const targetDate = new Date(currentMonday)
++    targetDate.setDate(currentMonday.getDate() + index)
++    
++    const hasPlayed = playedMatches.value.some(m => {
++      const dateStr = m.date_time || m.date
++      if (!dateStr) return false
++      const matchDate = new Date(dateStr.replace(' ', 'T'))
++      return matchDate.getFullYear() === targetDate.getFullYear() &&
++             matchDate.getMonth() === targetDate.getMonth() &&
++             matchDate.getDate() === targetDate.getDate()
++    })
++    
++    return {
++      label,
++      date: targetDate,
++      hasPlayed
++    }
++  })
++})
++
++const streakMultiplier = computed(() => {
++  const streak = calculatedStreak.value
++  return (1.0 + streak * 0.1).toFixed(1)
++})
+ </script>
+ 
+ <template>
+   <div 
+     class="profile-container scrollable-y animate-fade-in"
+-    :style="{ background: `linear-gradient(180deg, ${currentSportColor}2E 0%, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)` }"
++    :style="profileBackgroundStyle"
+   >
++    <!-- Golden Legend Pulsing Radial Glow Overlay -->
++    <div v-if="activeTheme === 'golden_legend'" class="golden-radial-glow"></div>
++
+     <div class="profile-content-wrap">
+       <!-- Custom Header -->
+     <div class="profile-header">
+@@ -413,7 +698,7 @@ const totalRatingsGiven = computed(() => {
+     <!-- Profile Info Card -->
+     <div class="profile-card">
+       <div class="avatar-wrap">
+-        <img :src="avatarUrl" class="card-avatar" @error="(e) => e.target.src = '/assets/images/players/download.jpg'" />
++        <img :src="avatarUrl" class="card-avatar" :class="avatarBorderClass" @error="(e) => e.target.src = '/assets/images/players/download.jpg'" />
+         <button v-if="isCurrentUser" class="camera-btn" @click="fileInput.click()" :disabled="isUploading">
+           <span v-if="isUploading">⏳</span>
+           <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h3l2-3h6l2 3h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><circle cx="12" cy="13" r="4"/></svg>
+@@ -461,7 +746,7 @@ const totalRatingsGiven = computed(() => {
+       
+       <div class="xp-footer-row">
+         <span class="xp-progress-pct">Progress to Level {{ profileStats.level + 1 }}: {{ profileStats.progressPct }}%</span>
+-        <span v-if="profileStats.streak > 0" class="xp-streak-tag">🔥 {{ profileStats.streak }} Match Winning Streak</span>
++        <span v-if="calculatedStreak > 0" class="xp-streak-tag">🔥 {{ calculatedStreak }} Match Winning Streak</span>
+         <span v-else class="xp-streak-tag">Start playing to build a streak!</span>
+       </div>
+     </div>
+@@ -615,19 +900,126 @@ const totalRatingsGiven = computed(() => {
+       </div>
+ 
+       <!-- Achievements -->
+-      <div v-else-if="activeSegmentTab === 1" class="panel-content achievements animate-fade-in" style="display: flex; flex-direction: column; gap: 10px;">
+-        <div class="badge-item">🤝 Fair Play Badge</div>
+-        <div v-if="playedMatches.length > 0" class="badge-item">🏅 First Match Played</div>
+-        <div v-if="playedMatches.length >= 5" class="badge-item">🔥 5 Match Veteran</div>
+-        <div v-if="playedMatches.length >= 10" class="badge-item">🏆 Decathlete</div>
+-        <div v-if="playedMatches.some(m => Number(m.creator_id || m.user_id) === Number(props.isCurrentUser ? store.state.currentUser?.id : props.userId))" class="badge-item">👑 Community Host</div>
++      <div v-else-if="activeSegmentTab === 1" class="panel-content achievements-panel animate-fade-in">
++        <!-- Milestone Header -->
++        <h4 class="achievements-section-title">Level Milestones</h4>
++        <div class="achievements-grid">
++          <div 
++            v-for="item in achievementsList.filter(a => a.type === 'milestone')" 
++            :key="item.id"
++            class="achievement-item-card"
++            :class="{ locked: !item.unlocked, 'unlocked-milestone': item.unlocked }"
++          >
++            <div class="achievement-icon-wrapper">
++              <span class="achievement-icon">{{ item.icon }}</span>
++              <span v-if="!item.unlocked" class="lock-indicator">🔒</span>
++            </div>
++            <div class="achievement-details">
++              <h5 class="achievement-name">{{ item.title }}</h5>
++              <p class="achievement-desc">{{ item.description }}</p>
++              <div class="achievement-progress-row">
++                <span class="achievement-progress-text">{{ item.progressText }}</span>
++                <span class="achievement-status" :class="item.unlocked ? 'status-unlocked' : 'status-locked'">
++                  {{ item.unlocked ? 'Unlocked' : 'Locked' }}
++                </span>
++              </div>
++            </div>
++          </div>
++        </div>
++
++        <!-- Badges Header -->
++        <h4 class="achievements-section-title" style="margin-top: 24px;">Stat-Based Badges</h4>
++        <div class="achievements-grid">
++          <div 
++            v-for="item in achievementsList.filter(a => a.type === 'badge')" 
++            :key="item.id"
++            class="achievement-item-card"
++            :class="{ locked: !item.unlocked, 'unlocked-badge': item.unlocked }"
++          >
++            <div class="achievement-icon-wrapper">
++              <span class="achievement-icon">{{ item.icon }}</span>
++              <span v-if="!item.unlocked" class="lock-indicator">🔒</span>
++            </div>
++            <div class="achievement-details">
++              <h5 class="achievement-name">{{ item.title }}</h5>
++              <p class="achievement-desc">{{ item.description }}</p>
++              <div class="achievement-progress-row">
++                <span class="achievement-progress-text">{{ item.progressText }}</span>
++                <span class="achievement-status" :class="item.unlocked ? 'status-unlocked' : 'status-locked'">
++                  {{ item.unlocked ? 'Active' : 'Inactive' }}
++                </span>
++              </div>
++            </div>
++          </div>
++        </div>
+       </div>
+ 
+       <!-- Streaks -->
+-      <div v-else class="panel-content streaks animate-fade-in">
+-        <div class="streak-details" style="display: flex; align-items: baseline; gap: 8px;">
+-          <span class="streak-large" style="font-size: 2rem; font-weight: 800; color: #f97316;">{{ profileStats.streak }}</span>
+-          <span class="streak-label" style="font-size: 0.9rem; font-weight: 600; color: var(--on-surface-variant);">{{ t('consecutiveWeekly') }}</span>
++      <div v-else class="panel-content streaks-panel animate-fade-in">
++        <div class="streak-card">
++          <div class="streak-card-header">
++            <div class="streak-header-left">
++              <h4 class="streak-title-text">
++                🔥 {{ calculatedStreak }} Match Winning Streak
++              </h4>
++              <p class="streak-subtitle-text">
++                {{ calculatedStreak > 0 ? 'Keep playing matches to grow your streak!' : 'Play matches this week to keep your streak!' }}
++              </p>
++            </div>
++            <div class="streak-header-right" style="display: flex; align-items: center;">
++              <!-- Week Navigator controls -->
++              <div class="week-navigator-container" style="display: inline-flex; align-items: center; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-right: 12px; border: 1px solid #cbd5e1;">
++                <button 
++                  @click="weekOffset--"
++                  type="button"
++                  style="background: transparent; border: none; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: #64748b; cursor: pointer; font-weight: bold; border-radius: 8px; transition: background 0.2s;"
++                  onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';"
++                  onmouseout="this.style.background='transparent'; this.style.color='#64748b';"
++                  title="Previous Week"
++                >
++                  ◀
++                </button>
++                <span class="week-navigator-label" style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #475569; min-width: 90px; text-align: center; user-select: none;">
++                  {{ weekLabel }}
++                </span>
++                <button 
++                  @click="weekOffset++"
++                  :disabled="weekOffset === 0"
++                  type="button"
++                  style="background: transparent; border: none; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: #64748b; cursor: pointer; font-weight: bold; border-radius: 8px; transition: background 0.2s;"
++                  onmouseover="if(!this.disabled) { this.style.background='#e2e8f0'; this.style.color='#0f172a'; }"
++                  onmouseout="this.style.background='transparent'; this.style.color='#64748b';"
++                  :style="weekOffset === 0 ? { opacity: '0.3', cursor: 'not-allowed' } : {}"
++                  title="Next Week"
++                >
++                  ▶
++                </button>
++              </div>
++              <span class="streak-multiplier-badge">Streak x{{ streakMultiplier }}</span>
++            </div>
++          </div>
++          
++          <div class="streak-days-row">
++            <div 
++              v-for="(day, idx) in weekDaysStatus" 
++              :key="idx" 
++              class="streak-day-col"
++            >
++              <div 
++                class="streak-day-indicator"
++                :class="{ 'day-played': day.hasPlayed, 'day-missed': !day.hasPlayed }"
++              >
++                <svg v-if="day.hasPlayed" class="indicator-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
++                  <polyline points="20 6 9 17 4 12"></polyline>
++                </svg>
++                <svg v-else class="indicator-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
++                  <line x1="18" y1="6" x2="6" y2="18"></line>
++                  <line x1="6" y1="6" x2="18" y2="18"></line>
++                </svg>
++              </div>
++              <span class="streak-day-label">{{ day.label }}</span>
++            </div>
++          </div>
+         </div>
+       </div>
+     </div>
+@@ -663,18 +1055,28 @@ const totalRatingsGiven = computed(() => {
+               </select>
+             </div>
+ 
+-            <!-- Theme Switch -->
++            <!-- Theme Selection Dropdown -->
+             <div class="setting-switch-tile">
+               <div class="setting-switch-info">
+-                <span class="tile-title">🌸 {{ t('elegantLavender') }}</span>
+-                <span class="tile-desc">
+-                  {{ isLavenderTheme ? t('lavenderActive') : t('switchLavender') }}
+-                </span>
++                <span class="tile-title">🎨 Profile Theme</span>
++                <span class="tile-desc">Choose theme based on your player level</span>
+               </div>
+-              <label class="toggle-control">
+-                <input :checked="isLavenderTheme" type="checkbox" @change="handleThemeToggle" />
+-                <span class="toggle-slider"></span>
+-              </label>
++              <select 
++                :value="selectedTheme" 
++                class="language-select-dropdown" 
++                @change="handleThemeChange"
++              >
++                <option value="default">Default (Sport Gradient)</option>
++                <option value="lavender_dusk" :disabled="profileStats.level < 5">
++                  Lavender Dusk {{ profileStats.level < 5 ? '(Lvl 5+ 🔒)' : '' }}
++                </option>
++                <option value="gold_rush" :disabled="profileStats.level < 10">
++                  Gold Rush {{ profileStats.level < 10 ? '(Lvl 10+ 🔒)' : '' }}
++                </option>
++                <option value="golden_legend" :disabled="profileStats.level < 25">
++                  Golden Legend {{ profileStats.level < 25 ? '(Lvl 25+ 🔒)' : '' }}
++                </option>
++              </select>
+             </div>
+           </div>
+ 
+@@ -921,9 +1323,9 @@ const totalRatingsGiven = computed(() => {
+   border-radius: 50%;
+   object-fit: cover;
+   padding: 6px;
+-  border: 3px solid #00c49f;
+   background-color: #ffffff;
+   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
++  transition: all 0.3s ease;
+ }
+ 
+ /* avatar-online-dot removed */
+@@ -2013,4 +2415,339 @@ input:checked + .toggle-slider:before {
+ .fade-leave-to {
+   opacity: 0;
+ }
++
++/* Avatar dynamic border styling */
++.border-bronze {
++  border: 4px solid transparent !important;
++  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #cd7f32, #dca77a, #9c5a1f) !important;
++  background-origin: border-box !important;
++  background-clip: padding-box, border-box !important;
++  box-shadow: 0 0 10px rgba(205, 127, 50, 0.35) !important;
++}
++
++.border-silver {
++  border: 4px solid transparent !important;
++  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #c0c0c0, #f0f0f0, #8a8a8a) !important;
++  background-origin: border-box !important;
++  background-clip: padding-box, border-box !important;
++  box-shadow: 0 0 12px rgba(192, 192, 192, 0.4) !important;
++}
++
++.border-gold {
++  border: 4px solid transparent !important;
++  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ffd700, #fff3a8, #c5a000) !important;
++  background-origin: border-box !important;
++  background-clip: padding-box, border-box !important;
++  box-shadow: 0 0 16px rgba(255, 215, 0, 0.5) !important;
++}
++
++.border-gold-elite {
++  border: 4px solid transparent !important;
++  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ffd700, #ff8c00, #d97706) !important;
++  background-origin: border-box !important;
++  background-clip: padding-box, border-box !important;
++  box-shadow: 0 0 20px rgba(245, 158, 11, 0.7) !important;
++}
++
++.border-legend {
++  border: 4px solid transparent !important;
++  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #8b5cf6, #ec4899, #3b82f6) !important;
++  background-origin: border-box !important;
++  background-clip: padding-box, border-box !important;
++  animation: legendBorderPulse 3s infinite alternate !important;
++}
++
++/* Golden Legend Pulsing Radial Glow Overlay */
++.golden-radial-glow {
++  position: absolute;
++  top: 0;
++  left: 0;
++  width: 100%;
++  height: 350px;
++  background: radial-gradient(circle, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0) 70%);
++  pointer-events: none;
++  z-index: 0;
++  animation: goldenGlowPulse 4s ease-in-out infinite alternate;
++}
++
++@keyframes goldenGlowPulse {
++  0% {
++    transform: scale(0.95);
++    opacity: 0.7;
++  }
++  100% {
++    transform: scale(1.05);
++    opacity: 1;
++  }
++}
++
++@keyframes legendBorderPulse {
++  0% {
++    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #8b5cf6, #ec4899, #3b82f6);
++    box-shadow: 0 0 16px rgba(139, 92, 246, 0.4);
++  }
++  50% {
++    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ec4899, #3b82f6, #8b5cf6);
++    box-shadow: 0 0 24px rgba(236, 72, 153, 0.7);
++  }
++  100% {
++    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
++    box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
++  }
++}
++
++/* Achievements Section Styles */
++.achievements-panel {
++  display: flex;
++  flex-direction: column;
++  gap: 16px;
++  padding: 8px 4px;
++}
++
++.achievements-section-title {
++  font-family: var(--font-display);
++  font-size: 1.05rem;
++  font-weight: 800;
++  color: var(--on-surface);
++  text-transform: uppercase;
++  letter-spacing: 0.5px;
++  margin-bottom: 4px;
++  border-left: 3px solid var(--primary);
++  padding-left: 8px;
++}
++
++.achievements-grid {
++  display: grid;
++  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
++  gap: 16px;
++}
++
++.achievement-item-card {
++  background-color: #ffffff;
++  border: 1px solid var(--outline-variant);
++  border-radius: var(--radius-md);
++  padding: 16px;
++  display: flex;
++  gap: 16px;
++  align-items: center;
++  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
++  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
++  position: relative;
++}
++
++.achievement-item-card:hover {
++  transform: translateY(-2px);
++  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
++}
++
++.achievement-item-card.locked {
++  opacity: 0.65;
++  background-color: var(--surface-dim);
++  border-color: var(--outline-variant);
++}
++
++.achievement-item-card.unlocked-milestone {
++  border-left: 4px solid var(--primary);
++}
++
++.achievement-item-card.unlocked-badge {
++  border-left: 4px solid #f59e0b;
++  background: linear-gradient(135deg, #ffffff 0%, rgba(245, 158, 11, 0.02) 100%);
++}
++
++.achievement-icon-wrapper {
++  width: 50px;
++  height: 50px;
++  border-radius: 50%;
++  background-color: var(--surface-dim);
++  display: flex;
++  justify-content: center;
++  align-items: center;
++  position: relative;
++  flex-shrink: 0;
++  border: 1px solid var(--outline-variant);
++}
++
++.unlocked-milestone .achievement-icon-wrapper {
++  background-color: rgba(0, 196, 159, 0.1);
++  border-color: rgba(0, 196, 159, 0.2);
++}
++
++.unlocked-badge .achievement-icon-wrapper {
++  background-color: rgba(245, 158, 11, 0.1);
++  border-color: rgba(245, 158, 11, 0.2);
++}
++
++.achievement-icon {
++  font-size: 1.5rem;
++}
++
++.lock-indicator {
++  position: absolute;
++  bottom: -4px;
++  right: -4px;
++  font-size: 0.8rem;
++  background-color: #ffffff;
++  border-radius: 50%;
++  padding: 2px;
++  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
++  display: flex;
++  align-items: center;
++  justify-content: center;
++}
++
++.achievement-details {
++  display: flex;
++  flex-direction: column;
++  flex: 1;
++  text-align: left;
++}
++
++.achievement-name {
++  font-family: var(--font-display);
++  font-size: 0.95rem;
++  font-weight: 700;
++  color: var(--on-surface);
++  margin-bottom: 2px;
++}
++
++.achievement-desc {
++  font-size: 0.78rem;
++  color: var(--on-surface-variant);
++  margin-bottom: 8px;
++  line-height: 1.3;
++}
++
++.achievement-progress-row {
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  font-size: 0.72rem;
++  font-weight: 700;
++}
++
++.achievement-progress-text {
++  color: var(--outline);
++}
++
++.achievement-status {
++  padding: 2px 6px;
++  border-radius: 8px;
++  font-size: 0.68rem;
++}
++
++.status-unlocked {
++  background-color: rgba(16, 185, 129, 0.12);
++  color: #10b981;
++}
++
++.status-locked {
++  background-color: var(--outline-variant);
++  color: var(--outline);
++}
++
++/* Streaks Tab Custom Styles */
++.streaks-panel {
++  padding: 8px 4px;
++}
++
++.streak-card {
++  background-color: #ffffff;
++  border: 1px solid var(--outline-variant);
++  border-radius: 24px;
++  padding: 24px;
++  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
++  display: flex;
++  flex-direction: column;
++  gap: 20px;
++}
++
++.streak-card-header {
++  display: flex;
++  justify-content: space-between;
++  align-items: flex-start;
++  text-align: left;
++}
++
++.streak-header-left {
++  display: flex;
++  flex-direction: column;
++  gap: 4px;
++}
++
++.streak-title-text {
++  font-family: var(--font-display);
++  font-size: 1.25rem;
++  font-weight: 800;
++  color: var(--on-surface);
++  margin: 0;
++  display: flex;
++  align-items: center;
++  gap: 6px;
++}
++
++.streak-subtitle-text {
++  font-size: 0.85rem;
++  font-weight: 600;
++  color: #16a34a; /* Green text matching screenshot */
++  margin: 0;
++}
++
++.streak-header-right {
++  flex-shrink: 0;
++}
++
++.streak-multiplier-badge {
++  font-size: 1.05rem;
++  font-weight: 700;
++  color: #16a34a; /* Green matching screenshot */
++}
++
++.streak-days-row {
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  gap: 8px;
++  width: 100%;
++}
++
++.streak-day-col {
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  gap: 8px;
++  flex: 1;
++}
++
++.streak-day-indicator {
++  width: 36px;
++  height: 36px;
++  border-radius: 50%;
++  display: flex;
++  justify-content: center;
++  align-items: center;
++  transition: all 0.2s ease;
++}
++
++.streak-day-indicator.day-played {
++  background-color: #2e7d32;
++  color: #ffffff;
++  box-shadow: 0 4px 10px rgba(46, 125, 80, 0.3);
++}
++
++.streak-day-indicator.day-missed {
++  background-color: #f1f5f9;
++  color: #94a3b8;
++}
++
++.indicator-svg {
++  width: 16px;
++  height: 16px;
++}
++
++.streak-day-label {
++  font-size: 0.78rem;
++  font-weight: 700;
++  color: var(--on-surface-variant);
++}
+ </style>
