@@ -26,6 +26,129 @@ const props = defineProps({
   }
 })
 
+const selectedTheme = ref(localStorage.getItem('profile_theme_key') || 'default')
+
+const showUnfollowConfirm = ref(false)
+const playerToUnfollow = ref(null)
+const unfollowSource = ref('main') // 'main' or 'list'
+
+const requestUnfollow = (user, source = 'main') => {
+  playerToUnfollow.value = user
+  unfollowSource.value = source
+  showUnfollowConfirm.value = true
+}
+
+const confirmUnfollow = async () => {
+  if (!playerToUnfollow.value) return
+  showUnfollowConfirm.value = false
+  
+  const userId = playerToUnfollow.value.id
+  try {
+    const res = await store.unfollowPlayer(userId)
+    if (res && res.success) {
+      if (unfollowSource.value === 'main') {
+        if (profileUser.value) {
+          profileUser.value.isFollowed = false
+          profileUser.value.followersCount = res.followersCount
+        }
+      } else {
+        const idx = followListUsers.value.findIndex(u => u.id === userId)
+        if (idx !== -1) {
+          followListUsers.value[idx].isFollowed = false
+        }
+        if (!props.isCurrentUser && profileUser.value && userId === store.state.currentUser?.id) {
+          profileUser.value.isFollowed = false
+          profileUser.value.followersCount = res.followersCount
+        }
+      }
+      emit('toast-message', `Unfollowed ${playerToUnfollow.value.name}! 👥`)
+    }
+  } catch (err) {
+    console.error('Failed to unfollow:', err)
+  }
+}
+
+const handleFollowToggle = async () => {
+  if (props.isCurrentUser) return
+  try {
+    if (currentUser.value.isFollowed) {
+      requestUnfollow(currentUser.value, 'main')
+    } else {
+      const res = await store.followPlayer(props.userId)
+      if (res && res.success) {
+        if (profileUser.value) {
+          profileUser.value.isFollowed = true
+          profileUser.value.followersCount = res.followersCount
+        }
+        emit('toast-message', `Following ${currentUser.value.name}! 🎉`)
+      }
+    }
+  } catch (err) {
+    console.error('Failed to toggle follow status:', err)
+    emit('toast-message', 'Failed to update follow status ❌')
+  }
+}
+
+const showFollowListModal = ref(false)
+const followListType = ref('followers') // 'followers' or 'following'
+const followListUsers = ref([])
+const loadingFollowList = ref(false)
+
+const openFollowModal = async (type) => {
+  followListType.value = type
+  showFollowListModal.value = true
+  loadingFollowList.value = true
+  followListUsers.value = []
+  
+  const userId = props.isCurrentUser ? store.state.currentUser?.id : props.userId
+  if (!userId) {
+    loadingFollowList.value = false
+    return
+  }
+
+  try {
+    const res = await fetch(`/api/users/${userId}/${type}`, {
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('sportigo_token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+    if (res.ok) {
+      followListUsers.value = await res.json()
+    }
+  } catch (err) {
+    console.error(`Failed to load ${type}:`, err)
+  } finally {
+    loadingFollowList.value = false
+  }
+}
+
+const navigateToPlayerProfile = (player) => {
+  showFollowListModal.value = false
+  emit('view-profile', player)
+}
+
+const handleListFollowToggle = async (user) => {
+  try {
+    if (user.isFollowed) {
+      requestUnfollow(user, 'list')
+    } else {
+      const res = await store.followPlayer(user.id)
+      if (res && res.success) {
+        user.isFollowed = true
+        if (!props.isCurrentUser && profileUser.value && user.id === store.state.currentUser?.id) {
+          profileUser.value.isFollowed = true
+          profileUser.value.followersCount = res.followersCount
+        }
+        emit('toast-message', `Following ${user.name}! 🎉`)
+      }
+    }
+  } catch (err) {
+    console.error('Failed to toggle follow in list:', err)
+  }
+}
+
 const profileUser = ref(null)
 const loadingProfileUser = ref(false)
 
@@ -115,14 +238,14 @@ const userMatches = computed(() => {
   return filtered
 })
 
-// Filter to matches that have already been played (in the past or within 24 hours in the future)
+// Filter to matches that have already been played (strictly in the past)
 const playedMatches = computed(() => {
-  const limitDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
+  const now = new Date()
   const filtered = userMatches.value.filter(m => {
     const dateStr = m.date_time || m.date
     if (!dateStr) return false
     const matchDate = new Date(dateStr.replace(' ', 'T'))
-    const isPast = matchDate < limitDate
+    const isPast = matchDate <= now
     console.log(`ProfileScreen - playedMatches - checking: ${m.title} (${dateStr}) | parsed: ${matchDate} | isPast: ${isPast}`)
     return isPast
   })
@@ -170,36 +293,68 @@ const calculatedStreak = computed(() => {
     uniqueDates.add(`${yyyy}-${mm}-${dd}`)
   })
 
-  const now = new Date()
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  // Determine reference date based on weekOffset
+  let refDate = new Date()
+  if (weekOffset.value < 0) {
+    const monday = getMonday(new Date())
+    monday.setDate(monday.getDate() + weekOffset.value * 7)
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    sunday.setHours(23, 59, 59, 999)
+    refDate = sunday
+  }
+
+  const refYear = refDate.getFullYear()
+  const refMonth = String(refDate.getMonth() + 1).padStart(2, '0')
+  const refDay = String(refDate.getDate()).padStart(2, '0')
+  const refStr = `${refYear}-${refMonth}-${refDay}`
   
-  const yesterday = new Date(now)
-  yesterday.setDate(now.getDate() - 1)
-  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+  const prevDate = new Date(refDate)
+  prevDate.setDate(refDate.getDate() - 1)
+  const prevStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}-${String(prevDate.getDate()).padStart(2, '0')}`
 
-  let currentStreak = 0
-  let checkDate = new Date(now)
+  let checkDate = null
 
-  // Start check from today or yesterday, whichever is present, to allow today's grace period
-  if (uniqueDates.has(todayStr)) {
-    checkDate = new Date(now)
-  } else if (uniqueDates.has(yesterdayStr)) {
-    checkDate = new Date(yesterday)
+  // 1. Determine anchor date (ref date or day before ref date)
+  if (uniqueDates.has(refStr)) {
+    checkDate = new Date(refDate)
+  } else if (uniqueDates.has(prevStr)) {
+    checkDate = new Date(prevDate)
   } else {
     return 0
   }
 
+  // 2. Count backwards from the anchor date
+  let backwardCount = 0
+  let tempDate = new Date(checkDate)
   while (true) {
-    const checkStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`
+    const checkStr = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`
     if (uniqueDates.has(checkStr)) {
-      currentStreak++
-      checkDate.setDate(checkDate.getDate() - 1)
+      backwardCount++
+      tempDate.setDate(tempDate.getDate() - 1)
     } else {
       break
     }
   }
 
-  return currentStreak
+  // 3. Count forwards from the day after the anchor date (limited to target week's end if in the past)
+  let forwardCount = 0
+  tempDate = new Date(checkDate)
+  tempDate.setDate(tempDate.getDate() + 1)
+  const maxForwardDate = weekOffset.value === 0 ? new Date(3000, 0, 1) : refDate
+  maxForwardDate.setHours(23, 59, 59, 999)
+
+  while (tempDate <= maxForwardDate) {
+    const checkStr = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`
+    if (uniqueDates.has(checkStr)) {
+      forwardCount++
+      tempDate.setDate(tempDate.getDate() + 1)
+    } else {
+      break
+    }
+  }
+
+  return backwardCount + forwardCount
 })
 
 const showAllActivities = ref(false)
@@ -214,7 +369,7 @@ const isPastMatch = (match) => {
 const sortedActivities = computed(() => {
   const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
   if (!uid) return []
-  return [...playedMatches.value].sort((a, b) => {
+  return [...userMatches.value].sort((a, b) => {
     const timeA = a.pivot?.created_at || a.created_at || a.date_time || a.date || ''
     const timeB = b.pivot?.created_at || b.created_at || b.date_time || b.date || ''
     return new Date(timeB) - new Date(timeA)
@@ -256,7 +411,6 @@ const profileStats = computed(() => {
     progressPct: 0,
     winRate: 0,
     streak: 0,
-    playStyle: 'All-Rounder',
     averageRating: 0.0,
     totalGames: 0
   }
@@ -343,9 +497,15 @@ const handleRate = (stars) => {
   emit('toast-message', `Rated ${selectedSport.value} as ${stars} Stars! ⭐`)
 }
 
-const handleThemeToggle = (e) => {
-  const checked = e.target.checked
-  store.setThemePreference(checked ? 'elegantLavender' : 'activeSteelBlue')
+const showRulesModal = ref(false)
+const showPoliciesModal = ref(false)
+const selectedRulesSport = ref(null)
+
+const handleThemeChange = (e) => {
+  const theme = e.target.value
+  selectedTheme.value = theme
+  localStorage.setItem('profile_theme_key', theme)
+  emit('toast-message', `Profile theme updated to ${theme.replace('_', ' ')}! 🎨`)
 }
 
 const showLogoutConfirm = ref(false)
@@ -486,7 +646,6 @@ const totalRatingsGiven = computed(() => {
 })
 
 // Dynamic Profile Theme & Achievements Code
-const selectedTheme = ref(localStorage.getItem('profile_theme_key') || 'default')
 
 const uniqueSportsPlayedCount = computed(() => {
   const sports = playedMatches.value.map(m => m.sport_type).filter(Boolean)
@@ -651,12 +810,6 @@ const avatarBorderClass = computed(() => {
   if (lvl >= 2) return 'border-silver'
   return 'border-bronze'
 })
-const handleThemeChange = (e) => {
-  const theme = e.target.value
-  selectedTheme.value = theme
-  localStorage.setItem('profile_theme_key', theme)
-  emit('toast-message', `Profile theme updated to ${theme.replace('_', ' ')}! 🎨`)
-}
 
 // Streaks computed status
 const weekDaysStatus = computed(() => {
@@ -688,126 +841,6 @@ const weekDaysStatus = computed(() => {
   })
 })
 
-const showUnfollowConfirm = ref(false)
-const playerToUnfollow = ref(null)
-const unfollowSource = ref('main') // 'main' or 'list'
-
-const requestUnfollow = (user, source = 'main') => {
-  playerToUnfollow.value = user
-  unfollowSource.value = source
-  showUnfollowConfirm.value = true
-}
-
-const confirmUnfollow = async () => {
-  if (!playerToUnfollow.value) return
-  showUnfollowConfirm.value = false
-  
-  const userId = playerToUnfollow.value.id
-  try {
-    const res = await store.unfollowPlayer(userId)
-    if (res && res.success) {
-      if (unfollowSource.value === 'main') {
-        if (profileUser.value) {
-          profileUser.value.isFollowed = false
-          profileUser.value.followersCount = res.followersCount
-        }
-      } else {
-        const idx = followListUsers.value.findIndex(u => u.id === userId)
-        if (idx !== -1) {
-          followListUsers.value[idx].isFollowed = false
-        }
-        if (!props.isCurrentUser && profileUser.value && userId === store.state.currentUser?.id) {
-          profileUser.value.isFollowed = false
-          profileUser.value.followersCount = res.followersCount
-        }
-      }
-      emit('toast-message', `Unfollowed ${playerToUnfollow.value.name}! 👥`)
-    }
-  } catch (err) {
-    console.error('Failed to unfollow:', err)
-  }
-}
-
-const handleFollowToggle = async () => {
-  if (props.isCurrentUser) return
-  try {
-    if (currentUser.value.isFollowed) {
-      requestUnfollow(currentUser.value, 'main')
-    } else {
-      const res = await store.followPlayer(props.userId)
-      if (res && res.success) {
-        if (profileUser.value) {
-          profileUser.value.isFollowed = true
-          profileUser.value.followersCount = res.followersCount
-        }
-        emit('toast-message', `Following ${currentUser.value.name}! 🎉`)
-      }
-    }
-  } catch (err) {
-    console.error('Failed to toggle follow status:', err)
-    emit('toast-message', 'Failed to update follow status ❌')
-  }
-}
-
-const showFollowListModal = ref(false)
-const followListType = ref('followers') // 'followers' or 'following'
-const followListUsers = ref([])
-const loadingFollowList = ref(false)
-
-const openFollowModal = async (type) => {
-  followListType.value = type
-  showFollowListModal.value = true
-  loadingFollowList.value = true
-  followListUsers.value = []
-  
-  const userId = props.isCurrentUser ? store.state.currentUser?.id : props.userId
-  if (!userId) {
-    loadingFollowList.value = false
-    return
-  }
-
-  try {
-    const res = await fetch(`/api/users/${userId}/${type}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('sportigo_token')}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    })
-    if (res.ok) {
-      followListUsers.value = await res.json()
-    }
-  } catch (err) {
-    console.error(`Failed to load ${type}:`, err)
-  } finally {
-    loadingFollowList.value = false
-  }
-}
-
-const navigateToPlayerProfile = (player) => {
-  showFollowListModal.value = false
-  emit('view-profile', player)
-}
-
-const handleListFollowToggle = async (user) => {
-  try {
-    if (user.isFollowed) {
-      requestUnfollow(user, 'list')
-    } else {
-      const res = await store.followPlayer(user.id)
-      if (res && res.success) {
-        user.isFollowed = true
-        if (!props.isCurrentUser && profileUser.value && user.id === store.state.currentUser?.id) {
-          profileUser.value.isFollowed = true
-          profileUser.value.followersCount = res.followersCount
-        }
-        emit('toast-message', `Following ${user.name}! 🎉`)
-      }
-    }
-  } catch (err) {
-    console.error('Failed to toggle follow in list:', err)
-  }
-}
 
 </script>
 
@@ -852,15 +885,7 @@ const handleListFollowToggle = async (user) => {
         </span>
       </div>
 
-      <div class="card-badges-row">
-        <span class="badge-item-inline text-green">
-          🔥 {{ currentUser.skill_tier === 'Professional' || currentUser.skill_tier === 'Advanced' ? 'PRO PLAYER' : 'PLAYER' }}
-        </span>
-        <span class="badge-separator">•</span>
-        <span class="badge-item-inline text-gray">
-          🇮🇳 {{ currentUser.location || 'Kochi, IN' }}
-        </span>
-      </div>
+
     </div>
 
     <!-- XP Progression Card -->
@@ -897,15 +922,15 @@ const handleListFollowToggle = async (user) => {
         <div class="stat-card-value">{{ profileStats.winRate }}%</div>
       </div>
       
-      <!-- Card 2: Play Style -->
+      <!-- Card 2: Primary Sport -->
       <div class="new-stat-card">
         <div class="stat-header">
-          <span class="stat-card-title">{{ t('playStyle') }}</span>
+          <span class="stat-card-title">{{ t('primarySport') }}</span>
           <span class="stat-svg-container">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
           </span>
         </div>
-        <div class="stat-card-value">{{ profileStats.playStyle }}</div>
+        <div class="stat-card-value">{{ currentUser.primary_sport || 'None' }}</div>
       </div>
 
       <!-- Card 3: Total Games -->
@@ -1197,11 +1222,11 @@ const handleListFollowToggle = async (user) => {
               </select>
             </div>
 
-            <!-- Theme Selection Dropdown -->
+            <!-- Elegant Lavender Theme Toggle -->
             <div class="setting-switch-tile">
               <div class="setting-switch-info">
-                <span class="tile-title">🎨 Profile Theme</span>
-                <span class="tile-desc">Choose theme based on your player level</span>
+                <span class="tile-title">🌸 {{ t('elegantLavender') }}</span>
+                <span class="tile-desc">{{ isLavenderTheme ? t('lavenderActive') : t('switchLavender') }}</span>
               </div>
               <select 
                 :value="selectedTheme" 
@@ -1223,49 +1248,276 @@ const handleListFollowToggle = async (user) => {
           </div>
 
           <!-- Menu settings lists -->
-          <div class="settings-menu-list">
-            <div class="menu-tile" @click="() => { showSettingsModal = false; openEditModal(); }">
-              <span class="menu-icon">✏️</span>
-              <div class="menu-info">
-                <span class="menu-title">{{ t('editProfile') }}</span>
-                <span class="menu-subtitle">Update display name, bio, and settings</span>
+          <div class="privacy-section">
+            <h4 class="section-sub-title">{{ store.state.language === 'hi' ? 'खाता और विकल्प' : 'Account & Options' }}</h4>
+            <div class="settings-menu-list">
+              <div class="menu-tile" @click="() => { showSettingsModal = false; openEditModal(); }">
+                <span class="menu-icon">✏️</span>
+                <div class="menu-info">
+                  <span class="menu-title">{{ t('editProfile') }}</span>
+                  <span class="menu-subtitle">Update display name, bio, and settings</span>
+                </div>
+                <span class="chevron">➔</span>
               </div>
-              <span class="chevron">➔</span>
-            </div>
 
-
-            <div class="menu-tile" @click="handleSettingsInfo('Sportigo platform game guide coming soon! 📑')">
-              <span class="menu-icon">🛡️</span>
-              <div class="menu-info">
-                <span class="menu-title">{{ t('gameRules') }}</span>
-                <span class="menu-subtitle">{{ t('gameRulesSub') }}</span>
+              <div class="menu-tile" @click="() => { console.log('Game Rules clicked'); showRulesModal = true; }">
+                <span class="menu-icon">🛡️</span>
+                <div class="menu-info">
+                  <span class="menu-title">{{ t('gameRules') }}</span>
+                  <span class="menu-subtitle">{{ t('gameRulesSub') }}</span>
+                </div>
+                <span class="chevron">➔</span>
               </div>
-              <span class="chevron">➔</span>
-            </div>
 
-            <div class="menu-tile" @click="handleSettingsInfo('Tournament logs coming soon! 🏆')">
-              <span class="menu-icon">📊</span>
-              <div class="menu-info">
-                <span class="menu-title">{{ t('statsHistory') }}</span>
-                <span class="menu-subtitle">{{ t('statsHistorySub') }}</span>
+              <div class="menu-tile" @click="() => { console.log('Company Policies clicked'); showPoliciesModal = true; }">
+                <span class="menu-icon">📄</span>
+                <div class="menu-info">
+                  <span class="menu-title">{{ t('statsHistory') }}</span>
+                  <span class="menu-subtitle">{{ t('statsHistorySub') }}</span>
+                </div>
+                <span class="chevron">➔</span>
               </div>
-              <span class="chevron">➔</span>
-            </div>
 
-            <div class="menu-tile destructive" @click="showLogoutConfirm = true">
-              <span class="menu-icon">🚪</span>
-              <div class="menu-info">
-                <span class="menu-title">{{ t('signOut') }}</span>
-                <span class="menu-subtitle">{{ t('signOutSub') }}</span>
+              <div class="menu-tile destructive" @click="showLogoutConfirm = true">
+                <span class="menu-icon">🚪</span>
+                <div class="menu-info">
+                  <span class="menu-title">{{ t('signOut') }}</span>
+                  <span class="menu-subtitle">{{ t('signOutSub') }}</span>
+                </div>
+                <span class="chevron">➔</span>
               </div>
-              <span class="chevron">➔</span>
             </div>
           </div>
         </div>
       </div>
     </Transition>
 
-    </div>
+    <!-- Game Rules Full-Screen Panel -->
+    <Transition name="settings-slide">
+      <div v-if="showRulesModal" class="rules-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
+        <!-- Main Sports Options List View -->
+        <div v-if="!selectedRulesSport" class="rules-main-view flex-col h-full" style="display: flex; flex-direction: column; height: 100%;">
+          <div class="settings-panel-header">
+            <h2 class="settings-panel-title modal-title" style="display: flex; align-items: center; gap: 8px;">
+              <span>🛡️</span>
+              <span>{{ store.state.language === 'hi' ? 'खेल के नियम' : 'Game Rules' }}</span>
+            </h2>
+            <button class="settings-close-btn close-btn" @click="showRulesModal = false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="settings-panel-body scrollable-y flex-1 no-scrollbar" style="flex: 1; overflow-y: auto;">
+            <p class="rules-intro-text">{{ store.state.language === 'hi' ? 'दिशानिर्देश और नियम देखने के लिए एक खेल चुनें:' : 'Select a sport to view its detailed rules and match guidelines:' }}</p>
+            
+            <div class="rules-sports-grid">
+              <div 
+                v-for="sport in sportsList" 
+                :key="sport.name" 
+                class="rules-sport-card-option"
+                :style="{ borderLeft: `5px solid ${getSportColor(sport.name)}` }"
+                @click="selectedRulesSport = sport.name"
+              >
+                <div class="rules-option-icon" :style="{ backgroundColor: `${getSportColor(sport.name)}1A`, color: getSportColor(sport.name) }">
+                  {{ sport.icon }}
+                </div>
+                <div class="rules-option-info">
+                  <span class="rules-option-title">{{ store.state.language === 'hi' ? t('sport_' + sport.name) : sport.name }}</span>
+                  <span class="rules-option-subtitle">{{ getSportSubtitle(sport.name) }}</span>
+                </div>
+                <span class="rules-option-arrow" :style="{ color: getSportColor(sport.name) }">➔</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sport Detailed Rules View -->
+        <div v-else class="rules-detail-view flex-col h-full animate-fade-in" style="display: flex; flex-direction: column; height: 100%;" :key="selectedRulesSport">
+          <div class="settings-panel-header" :style="{ borderBottom: `2px solid ${currentSportRules.color}20` }">
+            <h2 class="settings-panel-title modal-title" style="display: flex; align-items: center; gap: 8px;">
+              <span :style="{ color: currentSportRules.color }">{{ currentSportRules.icon }}</span>
+              <span>{{ store.state.language === 'hi' ? t('sport_' + selectedRulesSport) : selectedRulesSport }} {{ store.state.language === 'hi' ? 'के नियम' : 'Rules' }}</span>
+            </h2>
+            <button class="settings-close-btn close-btn" @click="selectedRulesSport = null">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="settings-panel-body scrollable-y flex-1 no-scrollbar" style="flex: 1; overflow-y: auto;">
+            <div class="rules-sport-info-card" :style="{ background: `linear-gradient(135deg, ${currentSportRules.color}15 0%, ${currentSportRules.color}05 100%)`, borderLeft: `4px solid ${currentSportRules.color}` }">
+              <div class="rules-card-text" style="flex: 1;">
+                <p class="rules-card-desc" style="font-weight: 600; font-size: 0.95rem;">{{ currentSportRules.description }}</p>
+              </div>
+              <img 
+                v-if="currentSportRules.image" 
+                :src="currentSportRules.image" 
+                class="rules-sport-banner" 
+                alt="Sport Banner" 
+              />
+            </div>
+
+            <div class="rules-list-container">
+              <div v-for="(rule, index) in currentSportRules.rules" :key="index" class="rule-item-card">
+                <div class="rule-item-number" :style="{ backgroundColor: currentSportRules.color }">{{ index + 1 }}</div>
+                <div class="rule-item-content">
+                  <h4 class="rule-item-title">{{ rule.title }}</h4>
+                  <p class="rule-item-description">{{ rule.desc }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Company Policies Full-Screen Panel -->
+    <Transition name="settings-slide">
+      <div v-if="showPoliciesModal" class="rules-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
+        <div class="rules-main-view flex-col h-full" style="display: flex; flex-direction: column; height: 100%;">
+          <div class="settings-panel-header">
+            <h2 class="settings-panel-title modal-title" style="display: flex; align-items: center; gap: 8px;">
+              <span>📄</span>
+              <span>{{ t('statsHistory') }}</span>
+            </h2>
+            <button class="settings-close-btn close-btn" @click="showPoliciesModal = false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="settings-panel-body scrollable-y flex-1 no-scrollbar" style="flex: 1; overflow-y: auto;">
+            <!-- Policies list -->
+            <div class="policies-list">
+              <div class="policy-item-card">
+                <div class="policy-header-row">
+                  <h4 class="policy-item-title">{{ store.state.language === 'hi' ? '1. खाता सुरक्षा और प्रमाणीकरण' : '1. Account Security & Verification' }}</h4>
+                </div>
+                <p class="policy-item-description">
+                  {{ store.state.language === 'hi' ? 'पासवर्ड भूल जाने की स्थिति में त्वरित और सुरक्षित प्रमाणीकरण के लिए सभी उपयोगकर्ताओं को एक वैध ईमेल पता प्रदान करना आवश्यक है। यह सुनिश्चित करता है कि आपके व्यक्तिगत आंकड़े, बुकिंग और भुगतान इतिहास सुरक्षित रहें।' : 'To guarantee quick and secure authentication, especially in the event of a forgotten password, all players must register with a valid email. This ensures that your progress, stats, and personal bookings remain secure and recoverable.' }}
+                </p>
+              </div>
+
+              <div class="policy-item-card">
+                <div class="policy-header-row">
+                  <h4 class="policy-item-title">{{ store.state.language === 'hi' ? '2. आचार संहिता और निष्पक्ष खेल' : '2. Code of Conduct & Fair Play' }}</h4>
+                </div>
+                <p class="policy-item-description">
+                  {{ store.state.language === 'hi' ? 'टूर्नामेंट और मैत्रीपूर्ण मैचों के दौरान खेल भावना बनाए रखें। किसी भी प्रकार की अभद्र भाषा, धोखाधड़ी या अभद्र व्यवहार के परिणामस्वरूप स्थायी खाता निलंबन किया जाएगा।' : 'Maintain a respectful, friendly environment during matches. PlayConnect has a zero-tolerance policy for harassment, cheating, or unsportsmanlike behavior. Violation of code of conduct can lead to permanent account suspension.' }}
+                </p>
+              </div>
+
+              <div class="policy-item-card">
+                <div class="policy-header-row">
+                  <h4 class="policy-item-title">{{ store.state.language === 'hi' ? '3. सुरक्षा और संरक्षा नीतियां' : '3. Safety & Safety Policies' }}</h4>
+                </div>
+                <p class="policy-item-description">
+                  {{ store.state.language === 'hi' ? 'महिलाओं के लिए विशिष्ट रूप से चिह्नित मैचों में केवल महिला खिलाड़ी ही शामिल हो सकती हैं। प्लेकनेक्ट सभी खिलाड़ियों के लिए एक समावेशी, मैत्रीपूर्ण और सुरक्षित खेल मैदान प्रदान करने के लिए प्रतिबद्ध है।' : 'Only verified female players can join matches designated as "Women-Only". PlayConnect is committed to providing a safe, friendly, and inclusive sporting ecosystem for everyone.' }}
+                </p>
+              </div>
+
+              <div class="policy-item-card">
+                <div class="policy-header-row">
+                  <h4 class="policy-item-title">{{ store.state.language === 'hi' ? '4. रद्दीकरण और धनवापसी नीति' : '4. Cancellation & Refund Policy' }}</h4>
+                </div>
+                <p class="policy-item-description">
+                  {{ store.state.language === 'hi' ? 'यदि बुकिंग शुरू होने से 24 घंटे पहले रद्द की जाती है, तो पूरी राशि वापस कर दी जाएगी। अंतिम समय में बुकिंग रद्द करने पर धनवापसी नहीं मिलेगी।' : 'Full refund is available if a match spot or booking is cancelled at least 24 hours prior to the scheduled start. Cancellations made within 24 hours of the match start time are non-refundable.' }}
+                </p>
+              </div>
+
+              <div class="policy-item-card">
+                <div class="policy-header-row">
+                  <h4 class="policy-item-title">{{ store.state.language === 'hi' ? '5. देयता की सीमा' : '5. Limitation of Liability' }}</h4>
+                </div>
+                <p class="policy-item-description">
+                  {{ store.state.language === 'hi' ? 'मैच के दौरान खिलाड़ियों को लगी किसी भी शारीरिक चोट के लिए प्लेकनेक्ट या आयोजन स्थल जिम्मेदार नहीं होंगे। सभी खिलाड़ियों को स्वयं की सुरक्षा सुनिश्चित करने की सलाह दी जाती है।' : 'PlayConnect or associated venues are not liable for physical injuries sustained during matches. Players participate at their own risk and are advised to maintain physical fitness and wear proper protective gear.' }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+  </div>
+
+    <!-- Followers / Following Modal -->
+    <Teleport to="body">
+      <div v-if="showFollowListModal" class="modal-backdrop" :class="{ 'theme-women': store.isWomenMode.value }" @click="showFollowListModal = false">
+        <div class="modal-sheet animate-slide-up" @click.stop>
+          <div class="modal-header">
+            <h2 class="modal-title">{{ followListType === 'followers' ? 'Followers' : 'Following' }}</h2>
+            <button class="close-btn" @click="showFollowListModal = false">✕</button>
+          </div>
+
+          <div class="modal-body scrollable-y">
+            <div v-if="loadingFollowList" class="loading-state" style="text-align: center; padding: 32px 0; color: var(--outline);">
+              <span>⏳ Loading list...</span>
+            </div>
+            <div v-else-if="followListUsers.length === 0" class="empty-state" style="text-align: center; padding: 48px 16px; color: #64748b;">
+              <span style="font-size: 2.5rem; display: block; margin-bottom: 12px;">👥</span>
+              <h3 style="font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">No users found</h3>
+              <p style="font-size: 0.82rem; color: #64748b; margin: 0;">This list is currently empty.</p>
+            </div>
+            <div v-else class="follow-list-group" style="display: flex; flex-direction: column; gap: 14px;">
+              <div 
+                v-for="user in followListUsers" 
+                :key="user.id" 
+                class="follow-user-row"
+                style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--outline-variant);"
+              >
+                <!-- User Profile info -->
+                <div 
+                  class="follow-user-info" 
+                  style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;"
+                  @click="navigateToPlayerProfile(user)"
+                >
+                  <img 
+                    :src="getPlayerAvatar(user.avatar || user.profile_picture || user.profile_photo, user.gender)" 
+                    class="follow-user-avatar" 
+                    style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover;"
+                    @error="(e) => e.target.src = '/assets/images/players/download.jpg'"
+                  />
+                  <div style="display: flex; flex-direction: column;">
+                    <span style="font-size: 0.9rem; font-weight: 700; color: var(--on-surface);">{{ user.name }}</span>
+                    <span style="font-size: 0.75rem; color: #64748b;">@{{ user.username }}</span>
+                  </div>
+                </div>
+
+                <!-- Follow toggle button -->
+                <button 
+                  v-if="store.state.currentUser && user.id !== store.state.currentUser.id"
+                  class="list-follow-btn"
+                  :class="{ 'following': user.isFollowed }"
+                  style="padding: 6px 14px; border-radius: 16px; font-size: 0.78rem; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s ease;"
+                  @click="handleListFollowToggle(user)"
+                >
+                  {{ user.isFollowed ? '✓ Following' : '+ Follow' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Unfollow Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showUnfollowConfirm" class="logout-confirm-backdrop" @click="showUnfollowConfirm = false">
+          <div class="logout-confirm-card animate-slide-up" @click.stop>
+            <div class="logout-confirm-handle"></div>
+            <div class="logout-confirm-icon-wrap" style="background-color: #fee2e2;">
+              <span style="font-size: 1.5rem;">💔</span>
+            </div>
+            <h3 class="logout-confirm-title">Unfollow {{ playerToUnfollow?.name }}?</h3>
+            <p class="logout-confirm-desc">Are you sure you want to unfollow this player? You will stop seeing their match activities.</p>
+            <div class="logout-confirm-actions">
+              <button class="logout-btn-no" @click="showUnfollowConfirm = false">Cancel</button>
+              <button class="logout-btn-yes" style="background-color: #dc2626;" @click="confirmUnfollow">Unfollow</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Edit Profile Modal -->
     <Teleport to="body">
@@ -1373,86 +1625,6 @@ const handleListFollowToggle = async (user) => {
             <div class="logout-confirm-actions">
               <button class="logout-btn-no" @click="showLogoutConfirm = false">Cancel</button>
               <button class="logout-btn-yes" @click="() => { showLogoutConfirm = false; showSettingsModal = false; handleLogout(); }">Sign Out</button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Followers / Following Modal -->
-    <Teleport to="body">
-      <div v-if="showFollowListModal" class="modal-backdrop" :class="{ 'theme-women': store.isWomenMode.value }" @click="showFollowListModal = false">
-        <div class="modal-sheet animate-slide-up" @click.stop>
-          <div class="modal-header">
-            <h2 class="modal-title">{{ followListType === 'followers' ? 'Followers' : 'Following' }}</h2>
-            <button class="close-btn" @click="showFollowListModal = false">✕</button>
-          </div>
-
-          <div class="modal-body scrollable-y">
-            <div v-if="loadingFollowList" class="loading-state" style="text-align: center; padding: 32px 0; color: var(--outline);">
-              <span>⏳ Loading list...</span>
-            </div>
-            <div v-else-if="followListUsers.length === 0" class="empty-state" style="text-align: center; padding: 48px 16px; color: #64748b;">
-              <span style="font-size: 2.5rem; display: block; margin-bottom: 12px;">👥</span>
-              <h3 style="font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">No users found</h3>
-              <p style="font-size: 0.82rem; color: #64748b; margin: 0;">This list is currently empty.</p>
-            </div>
-            <div v-else class="follow-list-group" style="display: flex; flex-direction: column; gap: 14px;">
-              <div 
-                v-for="user in followListUsers" 
-                :key="user.id" 
-                class="follow-user-row"
-                style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--outline-variant);"
-              >
-                <!-- User Profile info -->
-                <div 
-                  class="follow-user-info" 
-                  style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;"
-                  @click="navigateToPlayerProfile(user)"
-                >
-                  <img 
-                    :src="getPlayerAvatar(user.avatar || user.profile_picture || user.profile_photo, user.gender)" 
-                    class="follow-user-avatar" 
-                    style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover;"
-                    @error="(e) => e.target.src = '/assets/images/players/download.jpg'"
-                  />
-                  <div style="display: flex; flex-direction: column;">
-                    <span style="font-size: 0.9rem; font-weight: 700; color: var(--on-surface);">{{ user.name }}</span>
-                    <span style="font-size: 0.75rem; color: #64748b;">@{{ user.username }}</span>
-                  </div>
-                </div>
-
-                <!-- Follow toggle button -->
-                <button 
-                  v-if="store.state.currentUser && user.id !== store.state.currentUser.id"
-                  class="list-follow-btn"
-                  :class="{ 'following': user.isFollowed }"
-                  style="padding: 6px 14px; border-radius: 16px; font-size: 0.78rem; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s ease;"
-                  @click="handleListFollowToggle(user)"
-                >
-                  {{ user.isFollowed ? '✓ Following' : '+ Follow' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <!-- Unfollow Confirmation Modal -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div v-if="showUnfollowConfirm" class="logout-confirm-backdrop" @click="showUnfollowConfirm = false">
-          <div class="logout-confirm-card animate-slide-up" @click.stop>
-            <div class="logout-confirm-handle"></div>
-            <div class="logout-confirm-icon-wrap" style="background-color: #fee2e2;">
-              <span style="font-size: 1.5rem;">💔</span>
-            </div>
-            <h3 class="logout-confirm-title">Unfollow {{ playerToUnfollow?.name }}?</h3>
-            <p class="logout-confirm-desc">Are you sure you want to unfollow this player? You will stop seeing their match activities.</p>
-            <div class="logout-confirm-actions">
-              <button class="logout-btn-no" @click="showUnfollowConfirm = false">Cancel</button>
-              <button class="logout-btn-yes" style="background-color: #dc2626;" @click="confirmUnfollow">Unfollow</button>
             </div>
           </div>
         </div>
@@ -2341,6 +2513,20 @@ input:checked + .toggle-slider:before {
   }
 }
 
+.settings-fullscreen-panel .settings-panel-body {
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  align-content: start;
+}
+
+@media (min-width: 768px) {
+  .settings-fullscreen-panel .settings-panel-body {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .settings-panel-header {
   display: flex;
   justify-content: space-between;
@@ -2712,10 +2898,10 @@ input:checked + .toggle-slider:before {
 /* Avatar dynamic border styling */
 .border-bronze {
   border: 4px solid transparent !important;
-  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #cd7f32, #dca77a, #9c5a1f) !important;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #10b981, #34d399, #059669) !important;
   background-origin: border-box !important;
   background-clip: padding-box, border-box !important;
-  box-shadow: 0 0 10px rgba(205, 127, 50, 0.35) !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35) !important;
 }
 
 .border-silver {
@@ -3042,26 +3228,5 @@ input:checked + .toggle-slider:before {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--on-surface-variant);
-}
-
-.list-follow-btn {
-  background-color: var(--primary);
-  color: #ffffff;
-}
-
-.list-follow-btn:hover {
-  filter: brightness(1.1);
-}
-
-.list-follow-btn.following {
-  background-color: transparent;
-  border: 1px solid var(--outline-variant) !important;
-  color: var(--on-surface-variant);
-}
-
-.list-follow-btn.following:hover {
-  background-color: rgba(239, 68, 68, 0.05);
-  color: #ef4444;
-  border-color: #fca5a5 !important;
 }
 </style>

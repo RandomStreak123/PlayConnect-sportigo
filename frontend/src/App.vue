@@ -37,6 +37,28 @@ const selectedMatch = ref(null)
 
 const showSearchModal = ref(false)
 const showNotifications = ref(false)
+const showEmailVerificationModal = ref(false)
+const hasDismissedEmailWarning = ref(false)
+
+const goToProfile = () => {
+  hasDismissedEmailWarning.value = true
+  showEmailVerificationModal.value = false
+  switchTab('profile')
+}
+
+const dismissWarning = () => {
+  hasDismissedEmailWarning.value = true
+  showEmailVerificationModal.value = false
+}
+
+watch(() => store.state.currentUser, (newVal) => {
+  console.log('User state changed:', newVal ? { id: newVal.id, username: newVal.username, email: newVal.email } : null)
+  if (newVal && !newVal.email && !hasDismissedEmailWarning.value) {
+    showEmailVerificationModal.value = true
+  } else {
+    showEmailVerificationModal.value = false
+  }
+}, { immediate: true })
 
 // Toast Notifications state
 const showSnackbar = ref(false)
@@ -525,6 +547,33 @@ const isWomenTheme = computed(() => {
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Email Verification Mandatory Popup -->
+    <Transition name="fade">
+      <div v-if="showEmailVerificationModal" class="email-warning-backdrop">
+        <div class="email-warning-modal">
+          <div class="email-warning-icon-container">
+            <span class="email-warning-icon">📧</span>
+          </div>
+          <h3 class="email-warning-title">
+            {{ store.state.language === 'hi' ? 'ईमेल सत्यापन अनिवार्य है' : 'Email Verification Mandatory' }}
+          </h3>
+          <p class="email-warning-message">
+            {{ store.state.language === 'hi' 
+              ? 'पासवर्ड भूल जाने की स्थिति में सुरक्षित खाता पुनर्प्राप्ति और प्रमाणीकरण के लिए आपके प्रोफ़ाइल में ईमेल पंजीकरण अनिवार्य है।' 
+              : 'Email registration in profile is mandatory. We require a registered email address to assist with password recovery and verify your identity.' }}
+          </p>
+          <div class="email-warning-actions">
+            <button class="email-warning-btn primary" @click="goToProfile">
+              {{ store.state.language === 'hi' ? 'प्रोफ़ाइल पर जाएं' : 'Go to Profile' }}
+            </button>
+            <button class="email-warning-btn secondary" @click="dismissWarning">
+              {{ store.state.language === 'hi' ? 'बाद में' : 'Later' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -1117,6 +1166,117 @@ const isWomenTheme = computed(() => {
   background: #991b1b;
 }
 
+/* Email Verification Warning Modal */
+.email-warning-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.email-warning-modal {
+  width: 90%;
+  max-width: 440px;
+  background-color: var(--surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: 24px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.email-warning-icon-container {
+  width: 64px;
+  height: 64px;
+  background-color: rgba(26, 35, 126, 0.08);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 2rem;
+}
+
+.theme-women .email-warning-icon-container {
+  background-color: rgba(255, 77, 141, 0.1);
+}
+
+.email-warning-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  margin: 0 0 12px 0;
+}
+
+.email-warning-message {
+  font-size: 0.92rem;
+  color: var(--on-surface-variant);
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.email-warning-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.email-warning-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.email-warning-btn.primary {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.email-warning-btn.primary:hover {
+  filter: brightness(1.1);
+}
+
+.email-warning-btn.secondary {
+  background-color: transparent;
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline-variant);
+}
+
+.email-warning-btn.secondary:hover {
+  background-color: var(--surface-container-low);
+  color: var(--on-surface);
+}
+
+@keyframes scaleUp {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Transition fades */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.25s ease;
@@ -1127,3 +1287,4 @@ const isWomenTheme = computed(() => {
   opacity: 0;
 }
 </style>
+

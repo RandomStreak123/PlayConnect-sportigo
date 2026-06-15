@@ -1,0 +1,543 @@
+diff --git a/frontend/src/views/ProfileScreen.vue b/frontend/src/views/ProfileScreen.vue
+index 21c1ad0..b65c40a 100644
+--- a/frontend/src/views/ProfileScreen.vue
++++ b/frontend/src/views/ProfileScreen.vue
+@@ -170,36 +170,68 @@ const calculatedStreak = computed(() => {
+     uniqueDates.add(`${yyyy}-${mm}-${dd}`)
+   })
+ 
+-  const now = new Date()
+-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
++  // Determine reference date based on weekOffset
++  let refDate = new Date()
++  if (weekOffset.value < 0) {
++    const monday = getMonday(new Date())
++    monday.setDate(monday.getDate() + weekOffset.value * 7)
++    const sunday = new Date(monday)
++    sunday.setDate(monday.getDate() + 6)
++    sunday.setHours(23, 59, 59, 999)
++    refDate = sunday
++  }
++
++  const refYear = refDate.getFullYear()
++  const refMonth = String(refDate.getMonth() + 1).padStart(2, '0')
++  const refDay = String(refDate.getDate()).padStart(2, '0')
++  const refStr = `${refYear}-${refMonth}-${refDay}`
+   
+-  const yesterday = new Date(now)
+-  yesterday.setDate(now.getDate() - 1)
+-  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+-
+-  let currentStreak = 0
+-  let checkDate = new Date(now)
+-
+-  // Start check from today or yesterday, whichever is present, to allow today's grace period
+-  if (uniqueDates.has(todayStr)) {
+-    checkDate = new Date(now)
+-  } else if (uniqueDates.has(yesterdayStr)) {
+-    checkDate = new Date(yesterday)
++  const prevDate = new Date(refDate)
++  prevDate.setDate(refDate.getDate() - 1)
++  const prevStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}-${String(prevDate.getDate()).padStart(2, '0')}`
++
++  let checkDate = null
++
++  // 1. Determine anchor date (ref date or day before ref date)
++  if (uniqueDates.has(refStr)) {
++    checkDate = new Date(refDate)
++  } else if (uniqueDates.has(prevStr)) {
++    checkDate = new Date(prevDate)
+   } else {
+     return 0
+   }
+ 
++  // 2. Count backwards from the anchor date
++  let backwardCount = 0
++  let tempDate = new Date(checkDate)
+   while (true) {
+-    const checkStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`
++    const checkStr = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`
++    if (uniqueDates.has(checkStr)) {
++      backwardCount++
++      tempDate.setDate(tempDate.getDate() - 1)
++    } else {
++      break
++    }
++  }
++
++  // 3. Count forwards from the day after the anchor date (limited to target week's end if in the past)
++  let forwardCount = 0
++  tempDate = new Date(checkDate)
++  tempDate.setDate(tempDate.getDate() + 1)
++  const maxForwardDate = weekOffset.value === 0 ? new Date(3000, 0, 1) : refDate
++  maxForwardDate.setHours(23, 59, 59, 999)
++
++  while (tempDate <= maxForwardDate) {
++    const checkStr = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`
+     if (uniqueDates.has(checkStr)) {
+-      currentStreak++
+-      checkDate.setDate(checkDate.getDate() - 1)
++      forwardCount++
++      tempDate.setDate(tempDate.getDate() + 1)
+     } else {
+       break
+     }
+   }
+ 
+-  return currentStreak
++  return backwardCount + forwardCount
+ })
+ 
+ const showAllActivities = ref(false)
+@@ -689,7 +721,171 @@ const weekDaysStatus = computed(() => {
+   })
+ })
+ 
++const showRulesModal = ref(false)
++const selectedRulesSport = ref(null)
++
++watch(showRulesModal, (newVal) => {
++  if (!newVal) {
++    selectedRulesSport.value = null
++  }
++})
++
++const getSportSubtitle = (sportName) => {
++  const subs = {
++    'Football': store.state.language === 'hi' ? '5v5/7v7 टर्फ नियम और टैकल नीतियां' : '5v5/7v7 turf rules and tackle policies',
++    'Cricket': store.state.language === 'hi' ? 'ओवर सीमाएं, गेंदबाजी दिशा और नेट बाउंड्री' : 'Over limits, bowling direction, and net boundaries',
++    'Badminton': store.state.language === 'hi' ? 'सिंगल्स/डबल्स सर्विस और स्कोरिंग प्रणाली' : 'Singles/doubles service and scoring system',
++    'Basketball': store.state.language === 'hi' ? '3v3 हाफ-कोर्ट और 5v5 फुल-कोर्ट फाउल्स' : '3v3 half-court and 5v5 fouls',
++    'Tennis': store.state.language === 'hi' ? 'सेट, स्कोरिंग (15/30/40) और टाई-ब्रेकर' : 'Sets, scoring (15/30/40), and tie-breakers',
++    'Padel': store.state.language === 'hi' ? 'संलग्न ग्लास दीवार नियम और अंडरहैंड सर्विस' : 'Enclosed glass wall rules and underhand service'
++  }
++  return subs[sportName] || ''
++}
++
++const sportsRules = {
++  en: {
++    'Football': {
++      icon: '⚽',
++      color: '#10b981',
++      description: 'Guidelines for friendly turf matches, scrimmage games, and tournaments.',
++      rules: [
++        { title: 'Player Count', desc: 'Standard turf matches are 5v5 (min 8 players) or 7v7 (min 12 players).' },
++        { title: 'Match Duration', desc: 'Usually played as two halves of 25 or 30 minutes each, with a 5-minute break.' },
++        { title: 'Fair Play', desc: 'Slide tackles are strictly prohibited on artificial turf to prevent injuries.' },
++        { title: 'Equipments', desc: 'Molded studs or turf shoes only. Shin guards are highly recommended.' }
++      ]
++    },
++    'Cricket': {
++      icon: '🏏',
++      color: '#3b82f6',
++      description: 'Guidelines for box cricket, turf leagues, and net practice sessions.',
++      rules: [
++        { title: 'Overs Limit', desc: 'Matches are typically 6 to 12 overs per innings, depending on slot duration.' },
++        { title: 'Bowler Rules', desc: 'Each bowler can bowl a maximum of 2 overs in a standard 8-over match.' },
++        { title: 'Underarm/Overarm', desc: 'Specify bowling type (overarm or underarm) in the match description when organizing.' },
++        { title: 'Boundary Rules', desc: 'Direct hits on the net or walls may count as limited runs (e.g., 1 or 2 runs) or outs.' }
++      ]
++    },
++    'Badminton': {
++      icon: '🏸',
++      color: '#8b5cf6',
++      description: 'Rules for indoor singles and doubles badminton matches.',
++      rules: [
++        { title: 'Scoring Format', desc: 'Best of 3 games. Each game is played to 21 points using rally scoring.' },
++        { title: 'Deuce Rule', desc: 'If the score reaches 20-all, the side that gains a 2-point lead first wins the game.' },
++        { title: 'Service', desc: 'Underhand service only. The shuttle must be struck below the waist level.' },
++        { title: 'Double Play', desc: 'The service court changes dynamically between partners only when winning a point on service.' }
++      ]
++    },
++    'Basketball': {
++      icon: '🏀',
++      color: '#f97316',
++      description: 'Guidelines for half-court 3v3 or full-court 5v5 basketball games.',
++      rules: [
++        { title: 'Match Types', desc: '3v3 is played on a single hoop. 5v5 is played full-court.' },
++        { title: 'Scoring', desc: 'Standard baskets count as 2 points, shots from behind the arc count as 3 points.' },
++        { title: 'Fouls & Violations', desc: 'Double dribble, traveling, and high contact result in turnover of possession.' },
++        { title: 'Game Points', desc: 'First to 21 points (in 3v3) or highest score at the end of four 10-minute quarters.' }
++      ]
++    },
++    'Tennis': {
++      icon: '🎾',
++      color: '#06b6d4',
++      description: 'Singles and doubles rules for clay and hardcourt tennis.',
++      rules: [
++        { title: 'Scoring', desc: 'Points progress as 15, 30, 40, and Game. Deuce is active at 40-40.' },
++        { title: 'Advantage', desc: 'After deuce, a player must win two consecutive points to win the game.' },
++        { title: 'Sets & Match', desc: 'Played as best-of-3 sets. A set is won by the first player to win 6 games with a 2-game lead.' },
++        { title: 'Tie-breaker', desc: 'At 6-6 in games, a 7-point tiebreaker is played to decide the set.' }
++      ]
++    },
++    'Padel': {
++      icon: '🏓',
++      color: '#2563eb',
++      description: 'Rules for doubles padel matches played in enclosed courts.',
++      rules: [
++        { title: 'Doubles Format', desc: 'Padel is predominantly played as a doubles sport on an enclosed court.' },
++        { title: 'Service', desc: 'Must be underhand, struck at or below waist level, and bounce in the opponent\'s crosscourt box.' },
++        { title: 'Wall Play', desc: 'Ball must bounce on the ground before hitting any wall or fence.' },
++        { title: 'Rebounds', desc: 'Players can strike the ball after it rebounds off their own glass walls to return it.' }
++      ]
++    }
++  },
++  hi: {
++    'Football': {
++      icon: '⚽',
++      color: '#10b981',
++      description: 'टर्फ मैचों, स्क्रिमेज खेलों और टूर्नामेंटों के लिए दिशानिर्देश।',
++      rules: [
++        { title: 'खिलाड़ी संख्या', desc: 'टर्फ मैच आमतौर पर 5v5 (न्यूनतम 8 खिलाड़ी) या 7v7 (न्यूनतम 12 खिलाड़ी) होते हैं।' },
++        { title: 'मैच की अवधि', desc: 'आमतौर पर 25 या 30 मिनट के दो हिस्सों में खेला जाता है, जिसमें 5 मिनट का ब्रेक होता है।' },
++        { title: 'खेल भावना', desc: 'चोटों से बचने के लिए कृत्रिम टर्फ पर स्लाइड टैकल पूरी तरह से प्रतिबंधित हैं।' },
++        { title: 'उपकरण', desc: 'केवल मोल्डेड स्टड्स या टर्फ जूते। शिन गार्ड की अत्यधिक सिफारिश की जाती है।' }
++      ]
++    },
++    'Cricket': {
++      icon: '🏏',
++      color: '#3b82f6',
++      description: 'बॉक्स क्रिकेट, टर्फ लीग और नेट प्रैक्टिस सत्रों के लिए दिशानिर्देश।',
++      rules: [
++        { title: 'ओवर सीमा', desc: 'स्लॉट अवधि के आधार पर मैच आमतौर पर प्रति पारी 6 से 12 ओवर के होते हैं।' },
++        { title: 'गेंदबाज नियम', desc: 'प्रत्येक गेंदबाज एक मानक 8 ओवर के मैच में अधिकतम 2 ओवर फेंक सकता है।' },
++        { title: 'अंडरआर्म/ओवरआर्म', desc: 'मैच बनाते समय विवरण में गेंदबाजी के प्रकार (ओवरआर्म या अंडरआर्म) को स्पष्ट करें।' },
++        { title: 'बाउंड्री नियम', desc: 'नेट या दीवारों पर सीधे हिट सीमित रन (जैसे, 1 या 2 रन) या आउट माने जा सकते हैं।' }
++      ]
++    },
++    'Badminton': {
++      icon: '🏸',
++      color: '#8b5cf6',
++      description: 'इनडोर सिंगल्स और डबल्स बैडमिंटन मैचों के नियम।',
++      rules: [
++        { title: 'स्कोरिंग प्रारूप', desc: 'सर्वश्रेष्ठ 3 खेल। प्रत्येक खेल रैली स्कोरिंग का उपयोग करके 21 अंकों तक खेला जाता है।' },
++        { title: 'ड्यूस नियम', desc: 'यदि स्कोर 20-बराबर हो जाता है, तो जो पक्ष पहले 2 अंकों की बढ़त हासिल करता है, वह खेल जीतता है।' },
++        { title: 'सर्विस', desc: 'केवल अंडरहैंड सर्विस। शटल को कमर के स्तर से नीचे मारा जाना चाहिए।' },
++        { title: 'डबल्स खेल', desc: 'केवल सर्विस पर अंक जीतने पर ही सर्विस कोर्ट भागीदारों के बीच गतिशील रूप से बदलता है।' }
++      ]
++    },
++    'Basketball': {
++      icon: '🏀',
++      color: '#f97316',
++      description: 'हाफ-कोर्ट 3v3 या फुल-कोर्ट 5v5 बास्केटबॉल खेलों के लिए दिशानिर्देश।',
++      rules: [
++        { title: 'मैच प्रकार', desc: '3v3 एक ही हुप पर खेला जाता है। 5v5 पूरे कोर्ट पर खेला जाता है।' },
++        { title: 'स्कोरिंग', desc: 'सामान्य बास्केट 2 अंक के होते हैं, थ्री-पॉइंट लाइन के पीछे से किए गए शॉट 3 अंक के होते हैं।' },
++        { title: 'फाउल और उल्लंघन', desc: 'डबल ड्रिबल, ट्रैवलिंग और उच्च शारीरिक संपर्क के परिणामस्वरूप कब्जा विरोधी टीम को मिल जाता है।' },
++        { title: 'जीत के अंक', desc: 'पहले 21 अंक (3v3 में) तक पहुंचने वाली टीम या चार 10 मिनट के क्वार्टर के अंत में उच्चतम स्कोर वाली टीम जीतती है।' }
++      ]
++    },
++    'Tennis': {
++      icon: '🎾',
++      color: '#06b6d4',
++      description: 'मिट्टी (क्ले) और हार्डकोर्ट टेनिस के लिए सिंगल्स और डबल्स नियम।',
++      rules: [
++        { title: 'स्कोरिंग', desc: 'अंक 15, 30, 40 और गेम के रूप में बढ़ते हैं। 40-40 पर ड्यूस सक्रिय होता है।' },
++        { title: 'एडवांटेज', desc: 'ड्यूस के बाद, खिलाड़ी को गेम जीतने के लिए लगातार दो अंक जीतने होंगे।' },
++        { title: 'सेट और मैच', desc: 'सर्वश्रेष्ठ-ऑफ-3 सेट। एक सेट 2-गेम की बढ़त के साथ 6 गेम जीतने वाले पहले खिलाड़ी द्वारा जीता जाता है।' },
++        { title: 'टाई-ब्रेकर', desc: 'गेम 6-6 होने पर, सेट का फैसला करने के लिए 7-पॉइंट का टाईब्रेकर खेला जाता है।' }
++      ]
++    },
++    'Padel': {
++      icon: '🏓',
++      color: '#2563eb',
++      description: 'संलग्न कोर्ट में खेले जाने वाले डबल्स पैडल मैचों के नियम।',
++      rules: [
++        { title: 'डबल्स प्रारूप', desc: 'पैडल मुख्य रूप से एक संलग्न कोर्ट पर डबल्स खेल के रूप में खेला जाता है।' },
++        { title: 'सर्विस', desc: 'कमर के स्तर पर या उससे नीचे अंडरहैंड सर्विस होनी चाहिए, जो विरोधी के क्रॉसकोर्ट बॉक्स में टप्पा खाए।' },
++        { title: 'दीवार का खेल', desc: 'किसी भी दीवार या बाड़ से टकराने से पहले गेंद का जमीन पर टप्पा खाना अनिवार्य है।' },
++        { title: 'रिबाउंड', desc: 'खिलाड़ी गेंद को वापस करने के लिए अपने स्वयं के शीशे की दीवारों से टकराने के बाद भी मार सकते हैं।' }
++      ]
++    }
++  }
++}
+ 
++const currentSportRules = computed(() => {
++  if (!selectedRulesSport.value) return null
++  const lang = store.state.language === 'hi' ? 'hi' : 'en'
++  return sportsRules[lang]?.[selectedRulesSport.value] || sportsRules['en']?.[selectedRulesSport.value]
++})
+ </script>
+ 
+ <template>
+@@ -1087,7 +1283,7 @@ const weekDaysStatus = computed(() => {
+             </div>
+ 
+ 
+-            <div class="menu-tile" @click="handleSettingsInfo('Sportigo platform game guide coming soon! 📑')">
++            <div class="menu-tile" @click="() => { showSettingsModal = false; showRulesModal = true; }">
+               <span class="menu-icon">🛡️</span>
+               <div class="menu-info">
+                 <span class="menu-title">{{ t('gameRules') }}</span>
+@@ -1118,6 +1314,78 @@ const weekDaysStatus = computed(() => {
+       </div>
+     </Transition>
+ 
++    <!-- Game Rules Full-Screen Panel -->
++    <Transition name="settings-slide">
++      <div v-if="showRulesModal" class="rules-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
++        <!-- Main Sports Options List View -->
++        <div v-if="!selectedRulesSport" class="rules-main-view flex-col h-full" style="display: flex; flex-direction: column; height: 100%;">
++          <div class="settings-panel-header">
++            <h2 class="settings-panel-title modal-title" style="display: flex; align-items: center; gap: 8px;">
++              <span>🛡️</span>
++              <span>{{ store.state.language === 'hi' ? 'खेल के नियम' : 'Game Rules' }}</span>
++            </h2>
++            <button class="settings-close-btn close-btn" @click="showRulesModal = false">
++              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
++            </button>
++          </div>
++
++          <div class="settings-panel-body scrollable-y flex-1 no-scrollbar" style="flex: 1; overflow-y: auto;">
++            <p class="rules-intro-text">{{ store.state.language === 'hi' ? 'दिशानिर्देश और नियम देखने के लिए एक खेल चुनें:' : 'Select a sport to view its detailed rules and match guidelines:' }}</p>
++            
++            <div class="rules-sports-grid">
++              <div 
++                v-for="sport in sportsList" 
++                :key="sport.name" 
++                class="rules-sport-card-option"
++                :style="{ borderLeft: `5px solid ${getSportColor(sport.name)}` }"
++                @click="selectedRulesSport = sport.name"
++              >
++                <div class="rules-option-icon" :style="{ backgroundColor: `${getSportColor(sport.name)}1A`, color: getSportColor(sport.name) }">
++                  {{ sport.icon }}
++                </div>
++                <div class="rules-option-info">
++                  <span class="rules-option-title">{{ store.state.language === 'hi' ? t('sport_' + sport.name) : sport.name }}</span>
++                  <span class="rules-option-subtitle">{{ getSportSubtitle(sport.name) }}</span>
++                </div>
++                <span class="rules-option-arrow" :style="{ color: getSportColor(sport.name) }">➔</span>
++              </div>
++            </div>
++          </div>
++        </div>
++
++        <!-- Sport Detailed Rules View -->
++        <div v-else class="rules-detail-view flex-col h-full animate-fade-in" style="display: flex; flex-direction: column; height: 100%;" :key="selectedRulesSport">
++          <div class="settings-panel-header" :style="{ borderBottom: `2px solid ${currentSportRules.color}20` }">
++            <h2 class="settings-panel-title modal-title" style="display: flex; align-items: center; gap: 8px;">
++              <span :style="{ color: currentSportRules.color }">{{ currentSportRules.icon }}</span>
++              <span>{{ store.state.language === 'hi' ? t('sport_' + selectedRulesSport) : selectedRulesSport }} {{ store.state.language === 'hi' ? 'के नियम' : 'Rules' }}</span>
++            </h2>
++            <button class="settings-close-btn close-btn" @click="selectedRulesSport = null">
++              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
++            </button>
++          </div>
++
++          <div class="settings-panel-body scrollable-y flex-1 no-scrollbar" style="flex: 1; overflow-y: auto;">
++            <div class="rules-sport-info-card" :style="{ background: `linear-gradient(135deg, ${currentSportRules.color}15 0%, ${currentSportRules.color}05 100%)`, borderLeft: `4px solid ${currentSportRules.color}` }">
++              <div class="rules-card-text">
++                <p class="rules-card-desc" style="font-weight: 600; font-size: 0.95rem;">{{ currentSportRules.description }}</p>
++              </div>
++            </div>
++
++            <div class="rules-list-container">
++              <div v-for="(rule, index) in currentSportRules.rules" :key="index" class="rule-item-card">
++                <div class="rule-item-number" :style="{ backgroundColor: currentSportRules.color }">{{ index + 1 }}</div>
++                <div class="rule-item-content">
++                  <h4 class="rule-item-title">{{ rule.title }}</h4>
++                  <p class="rule-item-description">{{ rule.desc }}</p>
++                </div>
++              </div>
++            </div>
++          </div>
++        </div>
++      </div>
++    </Transition>
++
+     </div>
+ 
+     <!-- Edit Profile Modal -->
+@@ -1231,6 +1499,8 @@ const weekDaysStatus = computed(() => {
+         </div>
+       </Transition>
+     </Teleport>
++
++
+   </div>
+ </template>
+ 
+@@ -2745,4 +3015,181 @@ input:checked + .toggle-slider:before {
+   font-weight: 700;
+   color: var(--on-surface-variant);
+ }
+-</style>
++
++/* Rules Full-Screen Panel Styles */
++.rules-fullscreen-panel {
++  position: fixed;
++  top: 0;
++  right: 0;
++  width: calc(100% - 280px);
++  height: 100vh;
++  background-color: var(--scaffold-bg);
++  z-index: 1200;
++  display: flex;
++  flex-direction: column;
++  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.08);
++}
++
++@media (max-width: 768px) {
++  .rules-fullscreen-panel {
++    width: 100%;
++    left: 0;
++  }
++}
++
++.rules-intro-text {
++  font-size: 0.95rem;
++  color: var(--on-surface-variant);
++  margin: 0 0 24px;
++  line-height: 1.4;
++  text-align: left;
++  font-weight: 500;
++}
++
++.rules-sports-grid {
++  display: flex;
++  flex-direction: column;
++  gap: 12px;
++}
++
++.rules-sport-card-option {
++  display: flex;
++  align-items: center;
++  gap: 16px;
++  padding: 16px 20px;
++  border-radius: 16px;
++  background-color: var(--surface);
++  border: 1px solid var(--outline-variant);
++  cursor: pointer;
++  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
++  text-align: left;
++  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
++}
++
++.rules-sport-card-option:hover {
++  transform: translateX(6px);
++  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
++}
++
++.rules-sport-card-option:active {
++  transform: scale(0.99) translateX(4px);
++}
++
++.rules-option-icon {
++  width: 44px;
++  height: 44px;
++  border-radius: 12px;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  font-size: 1.4rem;
++  flex-shrink: 0;
++}
++
++.rules-option-info {
++  display: flex;
++  flex-direction: column;
++  gap: 2px;
++}
++
++.rules-option-title {
++  font-size: 1.05rem;
++  font-weight: 700;
++  color: var(--on-surface);
++}
++
++.rules-option-subtitle {
++  font-size: 0.8rem;
++  color: var(--on-surface-variant);
++  line-height: 1.25;
++}
++
++.rules-option-arrow {
++  font-size: 1rem;
++  margin-left: auto;
++  font-weight: bold;
++  transition: transform 0.2s ease;
++}
++
++.rules-sport-card-option:hover .rules-option-arrow {
++  transform: translateX(4px);
++}
++
++.rules-sport-info-card {
++  display: flex;
++  align-items: center;
++  gap: 16px;
++  padding: 18px 22px;
++  border-radius: 16px;
++  margin-bottom: 24px;
++  text-align: left;
++}
++
++.rules-card-text {
++  display: flex;
++  flex-direction: column;
++}
++
++.rules-card-desc {
++  font-size: 0.88rem;
++  color: var(--on-surface-variant);
++  margin: 0;
++  line-height: 1.4;
++}
++
++.rules-list-container {
++  display: flex;
++  flex-direction: column;
++  gap: 12px;
++}
++
++.rule-item-card {
++  display: flex;
++  gap: 16px;
++  padding: 16px;
++  border-radius: 16px;
++  background-color: var(--surface);
++  border: 1px solid var(--outline-variant);
++  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
++  transition: transform 0.2s ease, box-shadow 0.2s ease;
++  text-align: left;
++}
++
++.rule-item-card:hover {
++  transform: translateX(4px);
++  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
++}
++
++.rule-item-number {
++  width: 28px;
++  height: 28px;
++  border-radius: 50%;
++  color: #ffffff;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  font-size: 0.85rem;
++  font-weight: 800;
++  flex-shrink: 0;
++  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
++}
++
++.rule-item-content {
++  display: flex;
++  flex-direction: column;
++  gap: 4px;
++}
++
++.rule-item-title {
++  font-size: 0.95rem;
++  font-weight: 700;
++  color: var(--on-surface);
++  margin: 0;
++}
++
++.rule-item-description {
++  font-size: 0.82rem;
++  color: var(--on-surface-variant);
++  margin: 0;
++  line-height: 1.4;
++}

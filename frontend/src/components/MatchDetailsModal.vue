@@ -445,11 +445,11 @@ const saveRatings = async () => {
         <div v-else>
           <!-- Past match controls -->
           <div v-if="isPastMatch && !showResultsPanel && !showRatingPanel" class="action-btn-group">
-            <button v-if="isCreator" class="action-btn record-results-btn" @click="openResultsPanel">
-              🏆 {{ hasRecordedResults ? 'Update Results' : 'Record Results' }}
+            <button v-if="isCreator" :disabled="hasRecordedResults" class="action-btn record-results-btn" @click="openResultsPanel">
+              🏆 {{ hasRecordedResults ? 'Results Recorded' : 'Record Results' }}
             </button>
-            <button v-if="otherParticipants.length > 0" class="action-btn rate-players-btn" @click="openRatingPanel">
-              ⭐ Rate Players
+            <button v-if="otherParticipants.length > 0" :disabled="hasRatedAlready" class="action-btn rate-players-btn" @click="openRatingPanel">
+              ⭐ {{ hasRatedAlready ? 'Ratings Submitted' : 'Rate Players' }}
             </button>
             <div v-else-if="!isCreator" class="status-indicator-box">
               ✅ Match Completed
@@ -1028,6 +1028,14 @@ const saveRatings = async () => {
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(0.5) brightness(0.9) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .join-btn {

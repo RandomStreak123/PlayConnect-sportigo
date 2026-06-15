@@ -310,7 +310,6 @@ const handleDragEnd = (e) => {
     <!-- Nearby Matches -->
     <div class="section-row">
       <h3 class="section-title">{{ t('nearbyMatches') }}</h3>
-      <button class="see-all-btn">{{ t('seeAll') }}</button>
     </div>
 
     <!-- Loading skeletons for matches -->
@@ -343,7 +342,6 @@ const handleDragEnd = (e) => {
     <!-- Trending Matches -->
     <div class="section-row trending-row">
       <h3 class="section-title">{{ t('trendingMatches') }}</h3>
-      <button class="see-all-btn">{{ t('seeAll') }}</button>
     </div>
 
     <div v-if="store.state.isLoading" class="nearby-slider">

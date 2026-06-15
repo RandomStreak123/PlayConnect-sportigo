@@ -38,7 +38,7 @@ class UserController extends Controller
 
     public function publicProfile($id)
     {
-        $user = \App\Models\User::with(['joinedMatches.participants', 'joinedMatches.user', 'tournaments'])->findOrFail($id);
+        $user = \App\Models\User::with(['joinedMatches', 'tournaments'])->findOrFail($id);
         $hostedMatches = \App\Models\SportsMatch::with(['user', 'participants'])->where('creator_id', $user->id)->get();
         
         // Merge hosted and joined matches for their public activity feed
