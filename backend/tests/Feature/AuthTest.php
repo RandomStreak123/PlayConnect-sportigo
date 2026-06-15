@@ -96,7 +96,7 @@ class AuthTest extends TestCase
                  ]);
     }
 
-    public function test_login_allows_simultaneous_tokens()
+    public function test_login_revokes_existing_tokens()
     {
         $user = User::factory()->create([
             'username' => 'neymar',
@@ -115,14 +115,14 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200);
 
-        // Verify that the first token is NOT deleted and both tokens remain
-        $this->assertEquals(2, $user->tokens()->count());
+        // Verify that the first token IS deleted and only the new token remains
+        $this->assertEquals(1, $user->tokens()->count());
         
-        // Try accessing an authenticated endpoint with the old token
+        // Try accessing an authenticated endpoint with the old token (should fail)
         $userJson = $this->withHeaders([
             'Authorization' => 'Bearer ' . $token1,
         ])->getJson('/api/user');
         
-        $userJson->assertStatus(200);
+        $userJson->assertStatus(401);
     }
 }

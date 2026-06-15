@@ -1205,7 +1205,7 @@ const handleListFollowToggle = async (user) => {
               </div>
               <select 
                 :value="selectedTheme" 
-                class="language-select-dropdown" 
+                class="theme-select-dropdown" 
                 @change="handleThemeChange"
               >
                 <option value="default">Default (Sport Gradient)</option>
@@ -2094,7 +2094,8 @@ const handleListFollowToggle = async (user) => {
   gap: 12px;
 }
 
-.language-select-dropdown {
+.language-select-dropdown,
+.theme-select-dropdown {
   padding: 8px 12px;
   background-color: var(--surface);
   border: 1px solid var(--outline-variant);
@@ -2108,12 +2109,14 @@ const handleListFollowToggle = async (user) => {
   transition: all 0.2s ease;
 }
 
-.language-select-dropdown:hover {
+.language-select-dropdown:hover,
+.theme-select-dropdown:hover {
   background-color: var(--scaffold-bg);
   border-color: var(--outline);
 }
 
-.language-select-dropdown:focus {
+.language-select-dropdown:focus,
+.theme-select-dropdown:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.1);
 }
