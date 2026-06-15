@@ -288,7 +288,6 @@ const profileStats = computed(() => {
     progressPct: 0,
     winRate: 0,
     streak: 0,
-    playStyle: 'All-Rounder',
     averageRating: 0.0,
     totalGames: 0
   }
@@ -945,15 +944,15 @@ const currentSportRules = computed(() => {
         <div class="stat-card-value">{{ profileStats.winRate }}%</div>
       </div>
       
-      <!-- Card 2: Play Style -->
+      <!-- Card 2: Primary Sport -->
       <div class="new-stat-card">
         <div class="stat-header">
-          <span class="stat-card-title">{{ t('playStyle') }}</span>
+          <span class="stat-card-title">{{ t('primarySport') }}</span>
           <span class="stat-svg-container">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
           </span>
         </div>
-        <div class="stat-card-value">{{ profileStats.playStyle }}</div>
+        <div class="stat-card-value">{{ currentUser.primary_sport || 'None' }}</div>
       </div>
 
       <!-- Card 3: Total Games -->
