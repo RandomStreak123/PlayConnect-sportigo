@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { getSportImage, getPlayerAvatar } from '../utils/sportImageHelper'
 import { store } from '../store'
 import { t } from '../utils/i18n'
@@ -239,6 +239,7 @@ const saveRatings = async () => {
       const xpEarned = ratings.length * 10
       emit('action-success', `Ratings saved! You earned +${xpEarned} XP ⭐`)
       showRatingPanel.value = false
+      hasRatedAlready.value = true
     } else {
       emit('action-success', 'Failed to save ratings ❌')
     }
@@ -248,6 +249,32 @@ const saveRatings = async () => {
     isSavingRatings.value = false
   }
 }
+// Check if user has already rated this match
+const checkUserRatingStatus = async () => {
+  if (!store.state.currentUser || !props.match?.id) return
+  try {
+    const data = await store.getMatchRatings(props.match.id)
+    if (data && Array.isArray(data)) {
+      const myId = store.state.currentUser.id
+      const hasRated = data.some(r => Number(r.rater_id) === Number(myId))
+      hasRatedAlready.value = hasRated
+    }
+  } catch (e) {
+    hasRatedAlready.value = false
+  }
+}
+
+watch(() => props.show, (newVal) => {
+  if (newVal) {
+    checkUserRatingStatus()
+  }
+}, { immediate: true })
+
+watch(() => props.match, () => {
+  if (props.show) {
+    checkUserRatingStatus()
+  }
+})
 </script>
 
 <template>

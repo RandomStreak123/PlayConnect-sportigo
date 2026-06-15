@@ -79,17 +79,6 @@ export const getPlayerAvatar = (profilePicture, gender) => {
     }
   }
 
-  // Otherwise, use high-quality seeded random portraits from randomuser.me.
-  // Seed the index using the profilePicture path or gender to keep the avatar stable for each user.
-  let hash = 0
-  const seedString = String(profilePicture || gender || 'player')
-  for (let i = 0; i < seedString.length; i++) {
-    hash = seedString.charCodeAt(i) + ((hash << 5) - hash)
-  }
-
-  const isFemale = String(gender || '').toLowerCase() === 'female' || seedString.toLowerCase().includes('female')
-  const genderDir = isFemale ? 'women' : 'men'
-  const index = (Math.abs(hash) % 90) + 1 // randomuser.me has portraits 1-99
-
-  return `https://randomuser.me/api/portraits/${genderDir}/${index}.jpg`
+  // Otherwise, use a clean static SVG placeholder for users without a profile picture
+  return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NiZDVlMSI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgM2MxLjY2IDAgMyAxLjM0IDMgM3MtMS4zNCAzLTMgMy0zLTEuMzQtMy0zIDEuMzQtMyAzLTN6bTAgMTQuMmMtMi41IDAtNC43MS0xLjI4LTYtMy4yMi4wMy0xLjk5IDQtMy4wOCA2LTMuMDggMS45OSAwIDUuOTcgMS4wOSA2IDMuMDgtMS4yOSAxLjk0LTMuNSAzLjIyLTYgMy4yMnoiLz48L3N2Zz4='
 }

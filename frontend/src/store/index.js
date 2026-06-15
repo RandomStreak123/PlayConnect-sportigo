@@ -181,11 +181,7 @@ const register = async (name, username, password, gender) => {
   })
 
   const data = await res.json().catch(() => null)
-  if (res.ok && data && data.access_token) {
-    state.currentUser = data.user
-    sessionStorage.setItem('sportigo_user', JSON.stringify(data.user))
-    sessionStorage.setItem('sportigo_token', data.access_token)
-    await init()
+  if (res.ok) {
     return true
   }
 

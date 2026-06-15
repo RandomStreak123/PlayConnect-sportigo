@@ -330,6 +330,14 @@ class MatchController extends Controller
             return response()->json(['message' => 'Cannot submit ratings for a match that has not yet been played.'], 422);
         }
 
+        // Check if ratings have already been submitted by this user for this match
+        $alreadyRated = \App\Models\PlayerRating::where('match_id', $match->id)
+            ->where('rater_id', $user->id)
+            ->exists();
+        if ($alreadyRated) {
+            return response()->json(['message' => 'You have already submitted ratings for this match and cannot edit them.'], 422);
+        }
+
         $request->validate([
             'ratings' => 'required|array|min:1',
             'ratings.*.user_id' => 'required|integer',

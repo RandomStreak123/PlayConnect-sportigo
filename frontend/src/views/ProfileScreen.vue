@@ -941,7 +941,7 @@ const weekDaysStatus = computed(() => {
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stat-card-svg"><circle cx="12" cy="12" r="10"/><path d="m12 2-1.91 3.42L6.2 5.09M12 22l1.91-3.42 3.89.33M2.05 12.5l3.82-.76-.36-3.89M21.95 11.5l-3.82.76.36 3.89M12 7.5 9 9.5v3l3 2 3-2v-3Z"/><path d="M9 9.5 6.2 5.09M9 12.5l-3.48 2.54M12 14.5v3.42M15 12.5l3.48 2.54M15 9.5l2.8-4.41"/></svg>
           </span>
         </div>
-        <div class="stat-card-value">{{ profileStats.totalGames }} {{ t('played') }}</div>
+        <div class="stat-card-value">{{ profileStats.totalGames }}</div>
       </div>
 
       <!-- Card 4: Average Rating -->
