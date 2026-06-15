@@ -148,16 +148,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                           size: AppIconSize.sm,
                         ),
                       ),
-                      title: Row(
-                        children: [
-                          Text(
-                            'Elegant Lavender Theme',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
-                          ),
-                          const SizedBox(width: AppSpacing.xxs + 2),
-                          if (isLavender)
-                            const Text('🌸', style: TextStyle(fontSize: 14)),
-                        ],
+                      title: Text(
+                        'Elegant Lavender Theme',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
                       ),
                       subtitle: Text(
                         isLavender
