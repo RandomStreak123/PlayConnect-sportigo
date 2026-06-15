@@ -4,12 +4,15 @@ import '../widgets/app_loading_indicator.dart';
 import '../widgets/match_card.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../logic/blocs/matches/match_bloc.dart';
+import '../logic/blocs/notification/notification_bloc.dart';
+import '../logic/blocs/notification/notification_state.dart';
 import 'notifications_screen.dart';
 import 'advanced_search_screen.dart';
 import 'create_match_screen.dart';
 import '../core/utils/responsive_util.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_radius.dart';
+import '../core/constants/colors.dart';
 import '../core/utils/avatar_image_helper.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -116,19 +119,52 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 actions: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.notifications_outlined,
-                      color: Theme.of(context).colorScheme.onSurface,
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: BlocBuilder<NotificationBloc, NotificationState>(
+                      builder: (context, notificationState) {
+                        final hasUnread = notificationState.notifications.any((n) => !n.isRead);
+                        
+                        return Center(
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.notifications_outlined,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const NotificationsScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
+                              if (hasUnread)
+                                Positioned(
+                                  top: 10,
+                                  right: 10,
+                                  child: Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.deepBlue,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Theme.of(context).colorScheme.surface,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationsScreen(),
-                        ),
-                      );
-                    },
                   ),
                 ],
               ),
