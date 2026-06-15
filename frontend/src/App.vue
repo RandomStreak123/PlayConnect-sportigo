@@ -224,6 +224,16 @@ const confirmUnfollow = async () => {
   }
 }
 
+const handleWaveSuccess = async (player) => {
+  if (!player || !player.id) return
+  triggerSnackbar(`Waved at ${player.name}! 👋`)
+  try {
+    await store.wavePlayer(player.id)
+  } catch (err) {
+    console.error('Failed to send wave:', err)
+  }
+}
+
 const openMatchDetails = (match) => {
   selectedMatch.value = match
   showDetailsModal.value = true
@@ -480,11 +490,10 @@ const isWomenTheme = computed(() => {
       :player="selectedPlayer || {}"
       :sport-type="selectedPlayerSport"
       @close="showPlayerCard = false"
-      @wave-success="triggerSnackbar"
+      @wave-success="handleWaveSuccess"
       @view-profile="(p) => { 
         viewUserProfile(p);
       }"
-      @toggle-follow="handleToggleFollow"
     />
 
     <!-- Create Match Modal -->
@@ -517,6 +526,7 @@ const isWomenTheme = computed(() => {
     <NotificationsModal 
       :show="showNotifications"
       @close="showNotifications = false"
+      @open-match-details="openMatchDetails"
     />
 
     <!-- Toast message box -->

@@ -142,4 +142,28 @@ class UserController extends Controller
         }
         return response()->json($following);
     }
+
+    public function wave($id)
+    {
+        $targetUser = \App\Models\User::findOrFail($id);
+        $currentUser = auth()->user();
+
+        if ($currentUser->id === $targetUser->id) {
+            return response()->json(['message' => 'You cannot wave at yourself'], 422);
+        }
+
+        // Create notification for B (the target user)
+        \App\Models\Notification::create([
+            'user_id' => $targetUser->id,
+            'type' => 'social',
+            'title' => 'New Wave',
+            'message' => $currentUser->name . ' waved a hii 👋',
+            'meta' => ['sender_id' => $currentUser->id, 'sender_name' => $currentUser->name],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Waved successfully'
+        ]);
+    }
 }

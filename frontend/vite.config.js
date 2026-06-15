@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import mkcert from 'vite-plugin-mkcert'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), mkcert()],
   server: {
+    https: true,
     proxy: {
       '/api': {
         target: 'https://playconnect-backend.ddev.site',

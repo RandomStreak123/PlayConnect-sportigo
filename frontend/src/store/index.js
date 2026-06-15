@@ -507,6 +507,16 @@ const unfollowPlayer = async (playerId) => {
   return null
 }
 
+const wavePlayer = async (playerId) => {
+  if (!state.currentUser) return null
+  const data = await safeFetch(`${API_URL}/users/${playerId}/wave`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  })
+  return data
+}
+
+
 export const store = {
   state,
   isWomenMode,
@@ -533,5 +543,6 @@ export const store = {
   fetchPlayers,
   fetchMatches,
   followPlayer,
-  unfollowPlayer
+  unfollowPlayer,
+  wavePlayer
 }

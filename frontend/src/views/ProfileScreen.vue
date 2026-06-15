@@ -26,8 +26,6 @@ const props = defineProps({
   }
 })
 
-const selectedTheme = ref(localStorage.getItem('profile_theme_key') || 'default')
-
 const showUnfollowConfirm = ref(false)
 const playerToUnfollow = ref(null)
 const unfollowSource = ref('main') // 'main' or 'list'
@@ -501,11 +499,9 @@ const showRulesModal = ref(false)
 const showPoliciesModal = ref(false)
 const selectedRulesSport = ref(null)
 
-const handleThemeChange = (e) => {
-  const theme = e.target.value
-  selectedTheme.value = theme
-  localStorage.setItem('profile_theme_key', theme)
-  emit('toast-message', `Profile theme updated to ${theme.replace('_', ' ')}! 🎨`)
+const handleThemeToggle = (e) => {
+  const checked = e.target.checked
+  store.setThemePreference(checked ? 'elegantLavender' : 'activeSteelBlue')
 }
 
 const showLogoutConfirm = ref(false)
@@ -769,33 +765,10 @@ const achievementsList = computed(() => {
   ]
 })
 
-// Active profile theme resolution
-const activeTheme = computed(() => {
-  const lvl = profileStats.value.level || 1
-  if (props.isCurrentUser) {
-    const theme = selectedTheme.value
-    if (theme === 'golden_legend' && lvl >= 25) return 'golden_legend'
-    if (theme === 'gold_rush' && lvl >= 10) return 'gold_rush'
-    if (theme === 'lavender_dusk' && lvl >= 5) return 'lavender_dusk'
-    return 'default'
-  } else {
-    // Public profile auto-resolves to highest unlocked
-    if (lvl >= 25) return 'golden_legend'
-    if (lvl >= 10) return 'gold_rush'
-    if (lvl >= 5) return 'lavender_dusk'
-    return 'default'
-  }
-})
-
 // Profile Background Style
 const profileBackgroundStyle = computed(() => {
-  const theme = activeTheme.value
-  if (theme === 'lavender_dusk') {
+  if (isLavenderTheme.value) {
     return { background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.18) 0%, rgba(224, 204, 250, 0.08) 150px, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)' }
-  } else if (theme === 'gold_rush') {
-    return { background: 'linear-gradient(180deg, rgba(234, 179, 8, 0.18) 0%, rgba(254, 240, 138, 0.08) 150px, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)' }
-  } else if (theme === 'golden_legend') {
-    return { background: 'linear-gradient(180deg, rgba(212, 175, 55, 0.22) 0%, rgba(255, 223, 0, 0.1) 150px, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)' }
   }
   // Default sport-based background
   return { background: `linear-gradient(180deg, ${currentSportColor.value}2E 0%, var(--scaffold-bg) 350px, var(--scaffold-bg) 100%)` }
@@ -849,9 +822,6 @@ const weekDaysStatus = computed(() => {
     class="profile-container scrollable-y animate-fade-in"
     :style="profileBackgroundStyle"
   >
-    <!-- Golden Legend Pulsing Radial Glow Overlay -->
-    <div v-if="activeTheme === 'golden_legend'" class="golden-radial-glow"></div>
-
     <div class="profile-content-wrap">
       <!-- Custom Header -->
     <div class="profile-header">
@@ -956,35 +926,7 @@ const weekDaysStatus = computed(() => {
       </div>
     </div>
 
-    <!-- Followers & Share Card -->
-    <div class="friends-card">
-      <div class="friends-left">
-        <div class="stat-follow-block" style="cursor: pointer;" @click="openFollowModal('followers')">
-          <span class="follow-num">{{ currentUser.followersCount || 0 }}</span>
-          <span class="follow-label">Followers</span>
-        </div>
-        <div class="follow-divider"></div>
-        <div class="stat-follow-block" style="cursor: pointer;" @click="openFollowModal('following')">
-          <span class="follow-num">{{ currentUser.followingCount || 0 }}</span>
-          <span class="follow-label">Following</span>
-        </div>
-      </div>
-      <div class="profile-actions-row">
-        <button 
-          v-if="!isCurrentUser" 
-          class="follow-btn" 
-          :class="{ 'following': currentUser.isFollowed }"
-          @click="handleFollowToggle"
-        >
-          <span v-if="currentUser.isFollowed">✓ Following</span>
-          <span v-else>+ Follow</span>
-        </button>
-        <button class="share-pill-btn" @click="handleShareProfile">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="share-icon-svg"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-          {{ t('share') }}
-        </button>
-      </div>
-    </div>
+
 
     <!-- Favorite Sports Interests -->
     <div class="sports-rating-section">
@@ -1226,24 +1168,14 @@ const weekDaysStatus = computed(() => {
             <div class="setting-switch-tile">
               <div class="setting-switch-info">
                 <span class="tile-title">🌸 {{ t('elegantLavender') }}</span>
-                <span class="tile-desc">{{ isLavenderTheme ? t('lavenderActive') : t('switchLavender') }}</span>
+                <span class="tile-desc">
+                  {{ isLavenderTheme ? t('lavenderActive') : t('switchLavender') }}
+                </span>
               </div>
-              <select 
-                :value="selectedTheme" 
-                class="theme-select-dropdown" 
-                @change="handleThemeChange"
-              >
-                <option value="default">Default (Sport Gradient)</option>
-                <option value="lavender_dusk" :disabled="profileStats.level < 5">
-                  Lavender Dusk {{ profileStats.level < 5 ? '(Lvl 5+ 🔒)' : '' }}
-                </option>
-                <option value="gold_rush" :disabled="profileStats.level < 10">
-                  Gold Rush {{ profileStats.level < 10 ? '(Lvl 10+ 🔒)' : '' }}
-                </option>
-                <option value="golden_legend" :disabled="profileStats.level < 25">
-                  Golden Legend {{ profileStats.level < 25 ? '(Lvl 25+ 🔒)' : '' }}
-                </option>
-              </select>
+              <label class="toggle-control">
+                <input :checked="isLavenderTheme" type="checkbox" @change="handleThemeToggle" />
+                <span class="toggle-slider"></span>
+              </label>
             </div>
           </div>
 

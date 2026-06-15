@@ -94,7 +94,7 @@ const handleComment = (e, act) => {
 
         <!-- Description body -->
         <p class="activity-msg">
-          <span class="user-bold">{{ act.userName }}</span> 
+          <span class="user-bold">{{ act.userName }}</span>&nbsp;
           <template v-if="act.type === 'follow'">
             {{ act.message }}
           </template>

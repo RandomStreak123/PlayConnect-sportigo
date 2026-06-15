@@ -9,7 +9,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'open-match-details'])
 
 const notificationList = computed(() => {
   return store.state.notifications || []
@@ -38,6 +38,22 @@ const handleMarkAllRead = async () => {
 const handleMarkRead = async (item) => {
   if (!item.read) {
     await store.markNotificationAsRead(item.id)
+  }
+
+  if (item.meta) {
+    const matchId = item.meta.match_id ? Number(item.meta.match_id) : null
+    const matchTitle = item.meta.title || ''
+    
+    // Find matching match in store
+    const match = store.state.matches.find(m => 
+      (matchId && Number(m.id) === matchId) || 
+      (matchTitle && m.title === matchTitle)
+    )
+    
+    if (match) {
+      emit('open-match-details', match)
+      emit('close')
+    }
   }
 }
 </script>
