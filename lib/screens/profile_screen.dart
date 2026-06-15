@@ -729,28 +729,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               ),
                             ),
                           ),
-                          
-                          // Dynamic active online badge
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Container(
-                              width: 22,
-                              height: 22,
-                              decoration: BoxDecoration(
-                                color: AppColors.sportsGreen,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 3),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.sportsGreen.withValues(alpha: 0.5),
-                                    blurRadius: 8,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
 
                           // Floating Edit Photo Button
                           if (widget.isCurrentUser) Positioned(

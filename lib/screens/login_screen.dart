@@ -104,8 +104,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                   password: _passwordController.text,
                                 );
                           } catch (e) {
+                            var errMsg = e.toString().replaceAll('Exception: ', '').trim();
+                            if (errMsg.toLowerCase().contains('invalid credential') ||
+                                errMsg.toLowerCase().contains('invalid login details') ||
+                                errMsg.toLowerCase().contains('login failed')) {
+                              errMsg = 'invalid credentials';
+                            }
                             messenger.showSnackBar(
-                              SnackBar(content: Text(e.toString())),
+                              SnackBar(content: Text(errMsg)),
                             );
                           } finally {
                             if (mounted) setState(() => _isLoading = false);

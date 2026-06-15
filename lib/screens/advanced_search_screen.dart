@@ -269,7 +269,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
               _buildFilterSection(
                 context,
                 'Sport Type',
-                ['All', 'Football', 'Basketball', 'Tennis', 'Padel', 'Badminton'],
+                ['All', 'Football', 'Cricket', 'Basketball', 'Tennis', 'Padel', 'Badminton'],
                 _selectedSport,
                 (val) => setState(() => _selectedSport = val),
               ),
