@@ -205,14 +205,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             'Nearby Matches',
                             style: Theme.of(context).textTheme.headlineMedium,
                           ),
-                          TextButton(
-                            onPressed: () {},
-                            child: Text(
-                              'See All',
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(color: Theme.of(context).colorScheme.primaryContainer),
-                            ),
-                          ),
+                          // TextButton(
+                          //   onPressed: () {},
+                          //   child: Text(
+                          //     'See All',
+                          //     style: Theme.of(context).textTheme.labelLarge
+                          //         ?.copyWith(color: Theme.of(context).colorScheme.primaryContainer),
+                          //   ),
+                          // ),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.md),

@@ -533,6 +533,23 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                     ),
                   ],
                 );
+              } else if (isJoined) {
+                return SizedBox(
+                  height: 52,
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showRatePlayersBottomSheet(context),
+                    icon: const Icon(Icons.star, size: 20),
+                    label: const Text('Rate Players', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.warmOrange,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                    ),
+                  ),
+                );
               } else {
                 return SizedBox(
                   height: 52,

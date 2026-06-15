@@ -803,9 +803,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   builder: (context, state) {
                     final userName = _publicProfileData?['name'] as String? ??
                         (widget.isCurrentUser ? (state.user?.name ?? 'Sportigo Champ') : (widget.playerName ?? 'Player'));
-                    final skillTierStr = _publicProfileData?['skill_tier'] as String? ??
-                        (widget.isCurrentUser ? state.user?.skillTier : null);
-                    final isPro = skillTierStr == 'Professional' || skillTierStr == 'Advanced';
                     return Column(
                       children: [
                         Row(
@@ -834,39 +831,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                 Icons.check,
                                 color: Theme.of(context).colorScheme.primary,
                                 size: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              isPro ? '🔥 PRO PLAYER' : '🔥 PLAYER',
-                              style: TextStyle(
-                                color: sportColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              width: 4,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.outline,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '🇮🇳 Kochi, IN',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
                               ),
                             ),
                           ],

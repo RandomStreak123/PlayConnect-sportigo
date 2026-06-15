@@ -78,23 +78,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.xs,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Nearby Players',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  TextButton(
-                    onPressed: _loadPlayers,
-                    child: Text(
-                      'Refresh list',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                      ),
-                    ),
-                  ),
-                ],
+              child: Text(
+                'Nearby Players',
+                style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
             SizedBox(
