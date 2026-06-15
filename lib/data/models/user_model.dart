@@ -163,7 +163,7 @@ class UserStats {
       streak: json['streak'] ?? 0,
       playStyle: json['playStyle'] ?? 'All-Rounder',
       globalRank: json['globalRank'] ?? '#1000 Kochi',
-      averageRating: (json['averageRating'] ?? 3.0).toDouble(),
+      averageRating: (json['averageRating'] ?? 0.0).toDouble(),
       totalGames: json['totalGames'] ?? 0,
     );
   }

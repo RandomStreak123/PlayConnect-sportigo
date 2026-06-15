@@ -37,6 +37,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
   String? _errorMessage;
   bool _isSubmitting = false;
   String? _pendingAction;
+  bool _hasRated = false;
 
   @override
   void initState() {
@@ -44,8 +45,28 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
     if (widget.match != null) {
       _match = widget.match!;
       _isInitialized = true;
+      _checkIfUserHasRated();
     } else if (widget.matchId != null) {
       _loadMatchDetails();
+    }
+  }
+
+  void _checkIfUserHasRated() async {
+    try {
+      final repo = context.read<MatchRepository>();
+      final currentUserId = context.read<AuthBloc>().state.user?.id;
+      final ratingsList = await repo.getRatings(_match.id);
+      if (mounted) {
+        setState(() {
+          _hasRated = ratingsList.any((r) {
+            final raterId = r['rater_id'];
+            final raterObj = r['rater'];
+            return raterId == currentUserId || (raterObj != null && raterObj['id'] == currentUserId);
+          });
+        });
+      }
+    } catch (_) {
+      // Fail silently
     }
   }
 
@@ -64,6 +85,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
           _isInitialized = true;
           _isLoading = false;
         });
+        _checkIfUserHasRated();
       }
     } catch (e) {
       if (mounted) {
@@ -143,6 +165,11 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
         if (state.isActionSuccess) {
           if (_pendingAction == 'recordResults' || _pendingAction == 'submitRatings') {
             context.read<AuthBloc>().add(const AuthCheckRequested(forceRefresh: true));
+          }
+          if (_pendingAction == 'submitRatings') {
+            setState(() {
+              _hasRated = true;
+            });
           }
           setState(() {
             _isSubmitting = false;
@@ -497,14 +524,15 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
             }
 
             if (_match.isPast) {
+              final hasResults = _match.participants.any((p) => p.result != null && p.result!.isNotEmpty);
               if (isCreator) {
                 return Row(
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _showRecordResultsBottomSheet(context),
+                        onPressed: hasResults ? null : () => _showRecordResultsBottomSheet(context),
                         icon: const Icon(Icons.emoji_events, size: 20),
-                        label: const Text('Update Results', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        label: Text(hasResults ? 'Results Updated' : 'Update Results', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2E7D32),
                           foregroundColor: Colors.white,
@@ -518,9 +546,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _showRatePlayersBottomSheet(context),
+                        onPressed: _hasRated ? null : () => _showRatePlayersBottomSheet(context),
                         icon: const Icon(Icons.star, size: 20),
-                        label: const Text('Rate Players', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        label: Text(_hasRated ? 'Ratings Submitted' : 'Rate Players', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.warmOrange,
                           foregroundColor: Colors.white,
@@ -538,9 +566,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                   height: 52,
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => _showRatePlayersBottomSheet(context),
+                    onPressed: _hasRated ? null : () => _showRatePlayersBottomSheet(context),
                     icon: const Icon(Icons.star, size: 20),
-                    label: const Text('Rate Players', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    label: Text(_hasRated ? 'Ratings Submitted' : 'Rate Players', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.warmOrange,
                       foregroundColor: Colors.white,

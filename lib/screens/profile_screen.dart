@@ -1038,18 +1038,57 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
+  Widget _buildConcentricIcon(Color color, double size) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Outer circle ring
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: color, width: 2),
+            ),
+          ),
+          // Middle circle ring
+          Container(
+            width: size * 0.6,
+            height: size * 0.6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: color, width: 2),
+            ),
+          ),
+          // Inner solid dot
+          Container(
+            width: size * 0.2,
+            height: size * 0.2,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatGrid(BuildContext context, Color sportColor) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final user = state.user;
         final winRate = _publicProfileData?['stats']?['winRate'] as int? ??
             (widget.isCurrentUser ? (user?.stats?.winRate ?? 72) : 0);
-        final playStyle = _publicProfileData?['stats']?['playStyle'] as String? ??
-            (widget.isCurrentUser ? (user?.stats?.playStyle ?? 'All-Rounder') : 'All-Rounder');
+        final primarySport = _publicProfileData?['primary_sport'] as String? ??
+            (widget.isCurrentUser ? user?.primarySport : null) ?? 'None';
         final totalGames = _publicProfileData?['stats']?['totalGames'] as int? ??
             (widget.isCurrentUser ? (user?.stats?.totalGames ?? 120) : 0);
         final averageRating = (_publicProfileData?['stats']?['averageRating'] as num?)?.toDouble() ??
-            (widget.isCurrentUser ? (user?.stats?.averageRating ?? 3.0) : 3.0);
+            (widget.isCurrentUser ? (user?.stats?.averageRating ?? 0.0) : 0.0);
         final averageRatingStr = averageRating.toStringAsFixed(1);
 
         return Padding(
@@ -1066,29 +1105,25 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 context,
                 'Win Rate',
                 '$winRate%',
-                Icons.emoji_events_rounded,
-                Colors.amber,
+                const Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 20),
               ),
               _buildGlassStatCard(
                 context,
-                'Play Style',
-                playStyle,
-                Icons.insights,
-                AppColors.electricCyan,
+                'Primary Sport',
+                primarySport,
+                _buildConcentricIcon(AppColors.electricCyan, 20),
               ),
               _buildGlassStatCard(
                 context,
                 'Total Games',
-                '$totalGames Played',
-                Icons.sports_soccer,
-                sportColor,
+                '$totalGames',
+                Icon(Icons.sports_soccer, color: sportColor, size: 20),
               ),
               _buildGlassStatCard(
                 context,
                 'Average Rating',
                 '$averageRatingStr ⭐',
-                Icons.star_border_rounded,
-                Colors.amber,
+                const Icon(Icons.star_border_rounded, color: Colors.amber, size: 20),
               ),
             ],
           ),
@@ -1101,8 +1136,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     BuildContext context,
     String title,
     String value,
-    IconData icon,
-    Color accentColor,
+    Widget iconWidget,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1132,7 +1166,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Icon(icon, color: accentColor, size: 20),
+              iconWidget,
             ],
           ),
           Text(
@@ -1406,7 +1440,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             final userStreak = _publicProfileData?['stats']?['streak'] as int? ??
                 (widget.isCurrentUser ? (userForStats?.stats?.streak ?? 0) : 0);
             final userRating = (_publicProfileData?['stats']?['averageRating'] as num?)?.toDouble() ??
-                (widget.isCurrentUser ? (userForStats?.stats?.averageRating ?? 3.0) : 3.0);
+                (widget.isCurrentUser ? (userForStats?.stats?.averageRating ?? 0.0) : 0.0);
 
             final targetUserId = widget.isCurrentUser
                 ? context.read<AuthBloc>().state.user?.id
