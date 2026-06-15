@@ -12,6 +12,7 @@ const loginPassword = ref('')
 const loginPasswordVisible = ref(false)
 const loginLoading = ref(false)
 const loginError = ref('')
+const loginSuccess = ref('')
 
 // Sign Up Fields
 const registerName = ref('')
@@ -42,6 +43,7 @@ const handleSignIn = async () => {
     return
   }
   loginError.value = ''
+  loginSuccess.value = ''
   loginLoading.value = true
   
   try {
@@ -88,7 +90,13 @@ const handleSignUp = async () => {
     )
     signupLoading.value = false
     if (success) {
-      emit('auth-success')
+      activeTab.value = 'signin'
+      loginSuccess.value = 'Registration successful! Please log in.'
+      loginError.value = ''
+      // Clear signup fields
+      registerName.value = ''
+      registerUsername.value = ''
+      registerPassword.value = ''
     } else {
       signupError.value = 'Registration failed'
     }
@@ -198,6 +206,11 @@ const initializeGoogleSignIn = () => {
 }
 
 watch(activeTab, () => {
+  loginError.value = ''
+  signupError.value = ''
+  if (activeTab.value !== 'signin') {
+    loginSuccess.value = ''
+  }
   nextTick(() => {
     renderGoogleButtons()
   })
@@ -253,6 +266,7 @@ onMounted(() => {
       <p class="form-subtitle">Sign in to join your next match</p>
 
       <div v-if="loginError" class="error-banner">{{ loginError }}</div>
+      <div v-if="loginSuccess" class="success-banner">{{ loginSuccess }}</div>
 
       <div class="input-group">
         <label class="input-label">Username</label>
@@ -496,6 +510,17 @@ onMounted(() => {
   font-weight: 600;
   margin-bottom: 16px;
   border: 1px solid rgba(186, 26, 26, 0.2);
+}
+
+.success-banner {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .input-group {

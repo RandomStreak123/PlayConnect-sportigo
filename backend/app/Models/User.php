@@ -194,7 +194,7 @@ class User extends Authenticatable
         $rankNum = max(1, 1000 - floor($xp / 5));
 
         $avgRating = \App\Models\PlayerRating::where('rated_id', $uid)->avg('rating');
-        $averageRating = $avgRating !== null ? round((float) $avgRating, 1) : 3.0;
+        $averageRating = $avgRating !== null ? round((float) $avgRating, 1) : 0.0;
 
         return [
             'xp' => (int) $xp,
