@@ -132,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               IconButton(
                                 icon: Icon(
                                   Icons.notifications_outlined,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color: const Color(0xFFFFD700), // Golden yellow
                                 ),
                                 onPressed: () {
                                   Navigator.push(
