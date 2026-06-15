@@ -16,12 +16,14 @@ class MatchCard extends StatefulWidget {
   final MatchModel match;
   final bool isHorizontal;
   final EdgeInsetsGeometry? margin;
+  final bool fromPastMatches;
 
   const MatchCard({
     super.key,
     required this.match,
     this.isHorizontal = false,
     this.margin,
+    this.fromPastMatches = false,
   });
 
   @override
@@ -331,6 +333,7 @@ class _MatchCardState extends State<MatchCard> {
             MaterialPageRoute(
               builder: (context) => MatchDetailsScreen(
                 match: match,
+                fromPastMatches: widget.fromPastMatches,
               ),
             ),
           );

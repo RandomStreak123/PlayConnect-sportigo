@@ -167,7 +167,10 @@ class _MatchesScreenState extends State<MatchesScreen> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: filteredMatches.length,
                         itemBuilder: (context, index) {
-                          return MatchCard(match: filteredMatches[index]);
+                          return MatchCard(
+                            match: filteredMatches[index],
+                            fromPastMatches: !isUpcoming,
+                          );
                         },
                       );
                     } else {
@@ -182,7 +185,10 @@ class _MatchesScreenState extends State<MatchesScreen> {
                         ),
                         itemCount: filteredMatches.length,
                         itemBuilder: (context, index) {
-                          return MatchCard(match: filteredMatches[index]);
+                          return MatchCard(
+                            match: filteredMatches[index],
+                            fromPastMatches: !isUpcoming,
+                          );
                         },
                       );
                     }

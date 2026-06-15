@@ -19,11 +19,13 @@ import 'package:url_launcher/url_launcher.dart';
 class MatchDetailsScreen extends StatefulWidget {
   final MatchModel? match;
   final String? matchId;
+  final bool fromPastMatches;
 
   const MatchDetailsScreen({
     super.key,
     this.match,
     this.matchId,
+    this.fromPastMatches = false,
   }) : assert(match != null || matchId != null, 'Either match or matchId must be provided');
 
   @override
@@ -524,82 +526,83 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
             }
 
             if (_match.isPast) {
-              final hasResults = _match.participants.any((p) => p.result != null && p.result!.isNotEmpty);
-              if (isCreator) {
-                return Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: hasResults ? null : () => _showRecordResultsBottomSheet(context),
-                        icon: const Icon(Icons.emoji_events, size: 20),
-                        label: Text(hasResults ? 'Results Updated' : 'Update Results', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.md),
+              if (widget.fromPastMatches) {
+                final hasResults = _match.participants.any((p) => p.result != null && p.result!.isNotEmpty);
+                if (isCreator) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: hasResults ? null : () => _showRecordResultsBottomSheet(context),
+                          icon: const Icon(Icons.emoji_events, size: 20),
+                          label: Text(hasResults ? 'Results Updated' : 'Update Results', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2E7D32),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _hasRated ? null : () => _showRatePlayersBottomSheet(context),
-                        icon: const Icon(Icons.star, size: 20),
-                        label: Text(_hasRated ? 'Ratings Submitted' : 'Rate Players', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.warmOrange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.md),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _hasRated ? null : () => _showRatePlayersBottomSheet(context),
+                          icon: const Icon(Icons.star, size: 20),
+                          label: Text(_hasRated ? 'Ratings Submitted' : 'Rate Players', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.warmOrange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                );
-              } else if (isJoined) {
-                return SizedBox(
-                  height: 52,
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _hasRated ? null : () => _showRatePlayersBottomSheet(context),
-                    icon: const Icon(Icons.star, size: 20),
-                    label: Text(_hasRated ? 'Ratings Submitted' : 'Rate Players', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.warmOrange,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                    ),
-                  ),
-                );
-              } else {
-                return SizedBox(
-                  height: 52,
-                  width: double.infinity,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'MATCH COMPLETED',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ],
+                  );
+                } else if (isJoined) {
+                  return SizedBox(
+                    height: 52,
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _hasRated ? null : () => _showRatePlayersBottomSheet(context),
+                      icon: const Icon(Icons.star, size: 20),
+                      label: Text(_hasRated ? 'Ratings Submitted' : 'Rate Players', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.warmOrange,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                       ),
                     ),
-                  ),
-                );
+                  );
+                }
               }
+              return SizedBox(
+                height: 52,
+                width: double.infinity,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'MATCH COMPLETED',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              );
             }
 
             if (isJoined && !isCreator) {
