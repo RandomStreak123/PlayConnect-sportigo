@@ -284,6 +284,13 @@ const leaveMatch = async (matchId) => {
     const idx = state.matches.findIndex(m => m.id === matchId)
     if (idx !== -1) state.matches[idx] = data.match
   }
+  // Refresh activities
+  const acts = await safeFetch(`${API_URL}/activities`, { headers: getAuthHeaders() })
+  if (acts) {
+    state.activities = Array.isArray(acts)
+      ? acts
+      : (Array.isArray(acts.data) ? acts.data : [])
+  }
 }
 
 const recordResults = async (matchId, results) => {

@@ -364,14 +364,29 @@ const isPastMatch = (match) => {
   return matchDate < new Date()
 }
 
+const userActivities = computed(() => {
+  if (props.isCurrentUser) {
+    const myId = store.state.currentUser?.id
+    if (!myId) return []
+    return (store.state.activities || []).filter(act => {
+      const isMatchAct = ['match_created', 'match_joined', 'match_left'].includes(act.type)
+      const isMyAct = Number(act.user_id || act.userId) === Number(myId)
+      return isMatchAct && isMyAct
+    })
+  } else {
+    return (profileUser.value?.activities || []).filter(act => {
+      return ['match_created', 'match_joined', 'match_left'].includes(act.type)
+    })
+  }
+})
+
 const sortedActivities = computed(() => {
-  const uid = props.isCurrentUser ? store.state.currentUser?.id : props.userId
-  if (!uid) return []
-  return [...userMatches.value].sort((a, b) => {
-    const timeA = a.pivot?.created_at || a.created_at || a.date_time || a.date || ''
-    const timeB = b.pivot?.created_at || b.created_at || b.date_time || b.date || ''
-    return new Date(timeB) - new Date(timeA)
+  const sorted = [...userActivities.value].sort((a, b) => {
+    const timeA = new Date(String(a.created_at || 0).replace(' ', 'T'))
+    const timeB = new Date(String(b.created_at || 0).replace(' ', 'T'))
+    return timeB - timeA
   })
+  return sorted
 })
 
 const visibleActivities = computed(() => {
@@ -424,6 +439,21 @@ const getMatchXp = (match) => {
   matchXp += 15                       // Complete
   if (result === true) matchXp += 25  // Win (only real recorded wins)
   return matchXp
+}
+
+const getActivityXp = (act) => {
+  if (act.type === 'match_left') return -20
+  
+  const matches = props.isCurrentUser ? store.state.matches : (profileUser.value?.matches || [])
+  const matchId = act.meta?.match_id || act.meta?.matchId
+  const match = matches.find(m => Number(m.id) === Number(matchId))
+  
+  if (match) {
+    return getMatchXp(match)
+  }
+  
+  const isCreator = act.type === 'match_created'
+  return isCreator ? 35 : 20
 }
 
 // Date Formatting Helper
@@ -1237,25 +1267,25 @@ const weekDaysStatus = computed(() => {
       <!-- Activity -->
       <div v-if="activeSegmentTab === 0" class="panel-content-new animate-fade-in">
         <template v-if="sortedActivities.length > 0">
-          <div v-for="match in visibleActivities" :key="match.id" class="activity-tile-new">
+          <div v-for="act in visibleActivities" :key="act.id" class="activity-tile-new">
             <div class="activity-left">
               <span 
                 class="activity-icon-circle"
-                :class="Number(match.creator_id || match.user_id) === Number(props.isCurrentUser ? store.state.currentUser?.id : props.userId) ? 'bg-light-green' : 'bg-light-blue'"
+                :class="act.type === 'match_created' ? 'bg-light-green' : act.type === 'match_left' ? 'bg-light-red' : 'bg-light-blue'"
                 style="display: flex; align-items: center; justify-content: center; font-size: 1.1rem;"
               >
-                <span>{{ match.sport_type === 'Football' ? '⚽' : match.sport_type === 'Cricket' ? '🏏' : match.sport_type === 'Basketball' ? '🏀' : match.sport_type === 'Tennis' ? '🎾' : match.sport_type === 'Badminton' ? '🏸' : match.sport_type === 'Padel' ? '🏓' : '🏃' }}</span>
+                <span>{{ act.sportType === 'Football' ? '⚽' : act.sportType === 'Cricket' ? '🏏' : act.sportType === 'Basketball' ? '🏀' : act.sportType === 'Tennis' ? '🎾' : act.sportType === 'Badminton' ? '🏸' : act.sportType === 'Padel' ? '🏓' : '🏃' }}</span>
               </span>
               <div class="activity-info-new">
                 <span class="activity-title-new">
-                  {{ Number(match.creator_id || match.user_id) === Number(props.isCurrentUser ? store.state.currentUser?.id : props.userId) ? 'Organized' : 'Joined' }} 
-                  {{ match.sport_type || 'Sports' }} Match
+                  {{ act.type === 'match_created' ? 'Organized' : act.type === 'match_left' ? 'Left' : 'Joined' }} 
+                  {{ act.sportType || 'Sports' }} Match
                 </span>
-                <span class="activity-desc-new">{{ match.title }} at {{ match.location }} • {{ formatDate(match.date_time || match.date) }}</span>
+                <span class="activity-desc-new">{{ act.matchTitle }} at {{ act.meta?.location || 'Unknown' }} • {{ formatDate(act.created_at) }}</span>
               </div>
             </div>
-            <span class="xp-badge-new">
-              +{{ getMatchXp(match) }} XP
+            <span class="xp-badge-new" :class="{ 'negative-xp': act.type === 'match_left' }">
+              {{ getActivityXp(act) > 0 ? '+' : '' }}{{ getActivityXp(act) }} XP
             </span>
           </div>
           <div v-if="sortedActivities.length > 4" class="see-all-container">
@@ -2314,6 +2344,10 @@ const weekDaysStatus = computed(() => {
   background-color: #fffde7;
 }
 
+.activity-icon-circle.bg-light-red {
+  background-color: #ffebee;
+}
+
 .activity-info-new {
   display: flex;
   flex-direction: column;
@@ -2338,6 +2372,11 @@ const weekDaysStatus = computed(() => {
   font-weight: 800;
   padding: 6px 12px;
   border-radius: 12px;
+}
+
+.xp-badge-new.negative-xp {
+  background-color: #ffebee;
+  color: #c62828;
 }
 
 .see-all-container {
