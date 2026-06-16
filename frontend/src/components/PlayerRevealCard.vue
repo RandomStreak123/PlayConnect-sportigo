@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { getPlayerAvatar } from '../utils/sportImageHelper'
 
 const props = defineProps({
@@ -60,7 +60,33 @@ const bannerStyle = computed(() => {
   }
 })
 
+const flyingWaves = ref([])
+
 const handleWave = () => {
+  const id = Math.random()
+  const targetX = 0
+  const targetY = -85
+  const targetRot = 0
+  const duration = (3.5 + Math.random() * 1.0).toFixed(2)
+  
+  const newWave = {
+    id,
+    char: '👋',
+    style: {
+      '--target-x': '0px',
+      '--target-y': `${targetY}vh`,
+      '--target-rot': '0deg',
+      animationDuration: `${duration}s`,
+      animationDelay: '0s'
+    }
+  }
+  
+  flyingWaves.value.push(newWave)
+  
+  setTimeout(() => {
+    flyingWaves.value = flyingWaves.value.filter(w => w.id !== id)
+  }, 5000)
+  
   emit('wave-success', props.player)
 }
 
@@ -120,6 +146,15 @@ const handleViewProfile = () => {
           <button class="action-btn wave-btn pulse-glow" @click="handleWave">
             <span class="wave-emoji wave-shake">👋</span>
             Send a Quick Wave
+            
+            <span 
+              v-for="w in flyingWaves" 
+              :key="w.id" 
+              class="flying-emoji"
+              :style="w.style"
+            >
+              {{ w.char }}
+            </span>
           </button>
 
 
@@ -170,7 +205,7 @@ const handleViewProfile = () => {
     max-width: 460px;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
-    overflow: hidden;
+    overflow: visible;
   }
 }
 
@@ -350,10 +385,43 @@ const handleViewProfile = () => {
   justify-content: center;
   align-items: center;
   gap: 8px;
+  position: relative;
+  overflow: visible;
 }
 
 .wave-emoji {
   font-size: 1.1rem;
+}
+
+.flying-emoji {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2.5rem;
+  pointer-events: none;
+  z-index: 2000;
+  animation-name: flyToTop;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.4, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes flyToTop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, calc(-50% + var(--target-y))) scale(1.0);
+    opacity: 0;
+  }
 }
 
 .profile-btn {

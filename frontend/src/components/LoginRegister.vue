@@ -225,13 +225,22 @@ watch(activeTab, () => {
 onMounted(() => {
   loginUsername.value = ''
   loginPassword.value = ''
+  registerName.value = ''
+  registerUsername.value = ''
+  registerPassword.value = ''
   setTimeout(() => {
     loginUsername.value = ''
     loginPassword.value = ''
+    registerName.value = ''
+    registerUsername.value = ''
+    registerPassword.value = ''
   }, 100)
   setTimeout(() => {
     loginUsername.value = ''
     loginPassword.value = ''
+    registerName.value = ''
+    registerUsername.value = ''
+    registerPassword.value = ''
   }, 500)
 
   if (typeof window !== 'undefined') {
@@ -367,15 +376,27 @@ onMounted(() => {
 
       <div v-if="signupError" class="error-banner">{{ signupError }}</div>
 
+      <!-- Decoy inputs to trap browser autofill on signup -->
+      <input type="text" name="signup_name" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
+      <input type="text" name="signup_username" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
+      <input type="password" name="signup_password" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
+
       <div class="input-group">
         <label class="input-label">Full Name</label>
         <div class="input-wrapper">
           <span class="input-icon">👤</span>
           <input 
             v-model="registerName" 
-            type="text" 
+            type="text"
+            id="real-register-name-input"
+            name="real_register_name_input"
             placeholder="Enter your full name" 
             class="form-input"
+            :readonly="isReadonly"
+            @focus="removeReadonly"
+            @mousedown="removeReadonly"
+            @touchstart="removeReadonly"
+            autocomplete="off"
           />
         </div>
       </div>
@@ -386,9 +407,16 @@ onMounted(() => {
           <span class="input-icon">📧</span>
           <input 
             v-model="registerUsername" 
-            type="text" 
+            type="text"
+            id="real-register-username-input"
+            name="real_register_username_input"
             placeholder="Choose a username" 
             class="form-input"
+            :readonly="isReadonly"
+            @focus="removeReadonly"
+            @mousedown="removeReadonly"
+            @touchstart="removeReadonly"
+            autocomplete="off"
           />
         </div>
       </div>
@@ -399,9 +427,16 @@ onMounted(() => {
           <span class="input-icon">🔒</span>
           <input 
             v-model="registerPassword" 
-            :type="registerPasswordVisible ? 'text' : 'password'" 
+            :type="registerPasswordVisible ? 'text' : 'password'"
+            id="real-register-password-input"
+            name="real_register_password_input"
             placeholder="Create a password" 
             class="form-input"
+            :readonly="isReadonly"
+            @focus="removeReadonly"
+            @mousedown="removeReadonly"
+            @touchstart="removeReadonly"
+            autocomplete="new-password"
           />
           <button class="password-toggle-btn" @click="toggleRegisterPassword">
             {{ registerPasswordVisible ? '👁️' : '🙈' }}

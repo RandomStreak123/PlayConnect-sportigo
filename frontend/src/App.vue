@@ -226,7 +226,6 @@ const confirmUnfollow = async () => {
 
 const handleWaveSuccess = async (player) => {
   if (!player || !player.id) return
-  triggerSnackbar(`Waved at ${player.name}! 👋`)
   try {
     await store.wavePlayer(player.id)
   } catch (err) {
