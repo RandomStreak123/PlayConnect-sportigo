@@ -166,9 +166,11 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                     children: [
                       Icon(Icons.calendar_today, color: Theme.of(context).colorScheme.primary, size: AppIconSize.sm),
                       const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        DateFormat('MMM dd, yyyy - hh:mm a').format(_selectedDate),
-                        style: Theme.of(context).textTheme.bodyLarge,
+                      Expanded(
+                        child: Text(
+                          DateFormat('MMM dd, yyyy - hh:mm a').format(_selectedDate),
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
                       ),
                     ],
                   ),

@@ -314,12 +314,16 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              activity.user?.name ?? 'Player',
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
+                            Expanded(
+                              child: Text(
+                                activity.user?.name ?? 'Player',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: AppSpacing.xs),
                             Text(
                               _getRelativeTime(activity.createdAt),
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(

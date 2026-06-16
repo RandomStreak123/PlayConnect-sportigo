@@ -21,9 +21,7 @@ class SportRulesDetailScreen extends StatelessWidget {
         slivers: [
           // Elegant Sport Banner Header
           SliverAppBar(
-            expandedHeight: 180,
             pinned: true,
-            stretch: true,
             elevation: 0,
             backgroundColor: sport.color,
             leading: BackButton(
@@ -32,92 +30,72 @@ class SportRulesDetailScreen extends StatelessWidget {
                 backgroundColor: WidgetStateProperty.all(Colors.black.withValues(alpha: 0.2)),
               ),
             ),
-            flexibleSpace: FlexibleSpaceBar(
-              stretchModes: const [
-                StretchMode.zoomBackground,
-                StretchMode.fadeTitle,
-              ],
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Gradient Overlay
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          sport.color,
-                          sport.color.withValues(alpha: 0.7),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+          ),
+          SliverToBoxAdapter(
+            child: Stack(
+              children: [
+                Container(
+                  color: sport.color,
+                  width: double.infinity,
+                  padding: const EdgeInsets.only(bottom: 24, top: 8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Big emoji badge
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          sport.emoji,
+                          style: const TextStyle(fontSize: 36),
+                        ),
                       ),
-                    ),
-                  ),
-                  // Background design elements (subtle circles)
-                  Positioned(
-                    right: -20,
-                    top: -20,
-                    child: CircleAvatar(
-                      radius: 80,
-                      backgroundColor: Colors.white.withValues(alpha: 0.07),
-                    ),
-                  ),
-                  Positioned(
-                    left: -30,
-                    bottom: -30,
-                    child: CircleAvatar(
-                      radius: 100,
-                      backgroundColor: Colors.white.withValues(alpha: 0.05),
-                    ),
-                  ),
-                  // Main Banner Content
-                  SafeArea(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 20),
-                        // Big emoji badge
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            sport.emoji,
-                            style: const TextStyle(fontSize: 36),
-                          ),
+                      const SizedBox(height: 10),
+                      Text(
+                        sport.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
                         ),
-                        const SizedBox(height: 10),
-                        Text(
-                          sport.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                      ),
+                      const SizedBox(height: 4),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Text(
+                          sport.subtitle,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
                           ),
+                          textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 4),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                          child: Text(
-                            sport.subtitle,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Positioned(
+                  right: -20,
+                  top: -20,
+                  child: CircleAvatar(
+                    radius: 80,
+                    backgroundColor: Colors.white.withValues(alpha: 0.07),
+                  ),
+                ),
+                Positioned(
+                  left: -30,
+                  bottom: -30,
+                  child: CircleAvatar(
+                    radius: 100,
+                    backgroundColor: Colors.white.withValues(alpha: 0.05),
+                  ),
+                ),
+              ],
             ),
           ),
           

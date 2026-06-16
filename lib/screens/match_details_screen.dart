@@ -851,10 +851,13 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        participant.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          participant.name,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (isOrganizer) ...[

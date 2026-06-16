@@ -227,7 +227,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   SizedBox(
-                    height: 150,
+                    height: MediaQuery.textScalerOf(context).scale(150),
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: _searchResultsPlayers.length,

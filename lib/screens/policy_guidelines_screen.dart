@@ -142,67 +142,68 @@ class PolicyGuidelinesScreen extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left border accent color
-            Container(
-              width: 5,
-              height: 130, // will stretch naturally using intrinsic height or we can use padding
-              color: policy.color,
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        // Icon Circle
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: policy.color.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            policy.icon,
-                            color: policy.color,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Number & Title
-                        Expanded(
-                          child: Text(
-                            '${policy.number}. ${policy.title}',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF0F1E4A),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left border accent color
+              Container(
+                width: 5,
+                color: policy.color,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          // Icon Circle
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: policy.color.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              policy.icon,
+                              color: policy.color,
+                              size: 18,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Description
-                    Text(
-                      policy.description,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.5,
-                        color: isDark ? Colors.grey.shade300 : const Color(0xFF475569),
+                          const SizedBox(width: 12),
+                          // Number & Title
+                          Expanded(
+                            child: Text(
+                              '${policy.number}. ${policy.title}',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F1E4A),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      // Description
+                      Text(
+                        policy.description,
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.5,
+                          color: isDark ? Colors.grey.shade300 : const Color(0xFF475569),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

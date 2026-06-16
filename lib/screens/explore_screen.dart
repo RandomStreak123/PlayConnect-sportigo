@@ -84,7 +84,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ),
             ),
             SizedBox(
-              height: 160,
+              height: MediaQuery.textScalerOf(context).scale(160),
               child: _isLoadingPlayers
                   ? const Center(child: AppLoadingIndicator())
                   : _players.isEmpty

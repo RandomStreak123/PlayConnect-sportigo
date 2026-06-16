@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../services/api_service.dart';
@@ -117,67 +118,71 @@ class _BookingScreenState extends State<BookingScreen> {
       ),
       body: _isLoading
           ? const Center(child: AppLoadingIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    "Choose an Available Court/Slot",
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  DropdownButtonFormField<Map<String, dynamic>>(
-                    value: _selectedSlot,
-                    hint: const Text("Select Slot"),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                    ),
-                    items: _slots.map((slot) {
-                      final time = slot['time'] as String;
-                      final status = slot['status'] as String;
-                      return DropdownMenuItem<Map<String, dynamic>>(
-                        value: slot,
-                        child: Text("$time ($status)"),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedSlot = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  SizedBox(
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _selectedSlot == null || _isUpdating
-                          ? null
-                          : _bookSlot,
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                        ),
-                      ),
-                      child: _isUpdating
-                          ? const AppLoadingIndicator()
-                          : const Text(
-                              "Confirm Booking",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+          : Center(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        "Choose an Available Court/Slot",
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
-                    ),
-                  )
-                ],
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      DropdownButtonFormField<Map<String, dynamic>>(
+                        value: _selectedSlot,
+                        hint: const Text("Select Slot"),
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        ),
+                        items: _slots.map((slot) {
+                          final time = slot['time'] as String;
+                          final status = slot['status'] as String;
+                          return DropdownMenuItem<Map<String, dynamic>>(
+                            value: slot,
+                            child: Text("$time ($status)"),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSlot = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      SizedBox(
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: _selectedSlot == null || _isUpdating
+                              ? null
+                              : _bookSlot,
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                          ),
+                          child: _isUpdating
+                              ? const AppLoadingIndicator()
+                              : const Text(
+                                  "Confirm Booking",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
               ),
             ),
     );

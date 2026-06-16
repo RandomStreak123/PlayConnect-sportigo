@@ -287,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   return SliverToBoxAdapter(
                     child: SizedBox(
-                      height: 380,
+                      height: MediaQuery.textScalerOf(context).scale(380),
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         padding: EdgeInsets.zero,
@@ -296,7 +296,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           final match = upcomingMatches[index];
                           return SizedBox(
                             width: 312,
-                            height: 364,
+                            height: MediaQuery.textScalerOf(context).scale(364),
                             child: MatchCard(
                               match: match,
                               isHorizontal: true,

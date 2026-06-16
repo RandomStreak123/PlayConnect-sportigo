@@ -413,13 +413,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                             // Primary Sport
                             Text('Primary Sport', style: labelStyle),
                             const SizedBox(height: 12),
-                            GridView.count(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 8,
-                              mainAxisSpacing: 8,
-                              childAspectRatio: 2.6,
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
                               children: sports.map((sport) {
                                 final name = sport['name']!;
                                 final emoji = sport['emoji']!;
@@ -441,12 +437,14 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                     });
                                   },
                                   child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                     decoration: BoxDecoration(
                                       color: pillBgColor,
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(color: pillBorderColor, width: 1),
                                     ),
                                     child: Row(
+                                      mainAxisSize: MainAxisSize.min,
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Text(emoji, style: const TextStyle(fontSize: 14)),

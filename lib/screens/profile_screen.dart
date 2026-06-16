@@ -786,11 +786,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              userName,
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                color: Theme.of(context).colorScheme.onSurface,
+                            Flexible(
+                              child: Text(
+                                userName,
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -989,8 +993,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
               const SizedBox(height: 12),
               // Completion meter helper text
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 8,
+                runSpacing: 4,
                 children: [
                   Text(
                     'Progress to Level ${level + 1}: $progressPct%',
@@ -1056,6 +1062,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildStatGrid(BuildContext context, Color sportColor) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final int crossAxisCount = screenWidth > 600 ? 4 : 2;
+    final double childAspectRatio = screenWidth < 360 ? 1.35 : 1.6;
+
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final user = state.user;
@@ -1074,10 +1084,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           child: GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
+            crossAxisCount: crossAxisCount,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.6,
+            childAspectRatio: childAspectRatio,
             children: [
               _buildGlassStatCard(
                 context,
@@ -1250,14 +1260,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       children: [
         // Tab Headers
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildTabButton(0, 'Activity Log', sportColor),
-              _buildTabButton(1, 'Achievements', sportColor),
-              _buildTabButton(2, 'Streaks', sportColor),
-            ],
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                _buildTabButton(0, 'Activity Log', sportColor),
+                const SizedBox(width: 12),
+                _buildTabButton(1, 'Achievements', sportColor),
+                const SizedBox(width: 12),
+                _buildTabButton(2, 'Streaks', sportColor),
+              ],
+            ),
           ),
         ),
         
