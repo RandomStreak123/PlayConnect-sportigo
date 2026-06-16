@@ -499,6 +499,266 @@ const showRulesModal = ref(false)
 const showPoliciesModal = ref(false)
 const selectedRulesSport = ref(null)
 
+const getSportSubtitle = (sport) => {
+  switch (sport) {
+    case 'Football': return store.state.language === 'hi' ? 'स्लाइड टैकल, गोलकीपर और क्षेत्र नियम' : 'Slide tackles, goalkeeper rules & pitch play'
+    case 'Cricket': return store.state.language === 'hi' ? 'ओवर, अतिरिक्त रन, रन और विकेट' : 'Overs, extras, runs & wickets'
+    case 'Badminton': return store.state.language === 'hi' ? 'सर्विस नियम, स्कोरिंग और फॉल्ट कॉल' : 'Serving rules, scoring & fault calls'
+    case 'Basketball': return store.state.language === 'hi' ? 'स्कोरिंग, ड्रिब्लिंग और व्यक्तिगत फाउल' : 'Scoring, dribbling & personal fouls'
+    case 'Tennis': return store.state.language === 'hi' ? 'सर्विस अनुक्रम, स्कोरिंग और लाइन कॉल' : 'Serving sequences, scoring & line calls'
+    case 'Padel': return store.state.language === 'hi' ? 'कोर्ट की दीवारें, अंडरहैंड सर्व और गोल्डन पॉइंट' : 'Court walls, underhand serves & golden point'
+    default: return store.state.language === 'hi' ? 'सामान्य खेल नियम और आचार संहिता' : 'General game rules & code of conduct'
+  }
+}
+
+const getSportSVG = (sport) => {
+  const name = (sport || '').toLowerCase().trim()
+  if (name === 'football') {
+    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
+      <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#1e293b" stroke-width="3"/>
+      <polygon points="50,30 38,38 42,54 58,54 62,38" fill="#1e293b"/>
+      <path d="M50,30 L50,4 M38,38 L18,30 M42,54 L26,70 M58,54 L74,70 M62,38 L82,30" stroke="#1e293b" stroke-width="3"/>
+      <polygon points="50,4 35,12 35,26 50,30" fill="none" stroke="#1e293b" stroke-width="3"/>
+      <polygon points="50,4 65,12 65,26 50,30" fill="none" stroke="#1e293b" stroke-width="3"/>
+      <polygon points="18,30 8,44 18,58 38,38" fill="none" stroke="#1e293b" stroke-width="3"/>
+      <polygon points="82,30 92,44 82,58 62,38" fill="none" stroke="#1e293b" stroke-width="3"/>
+      <polygon points="26,70 42,88 50,88 42,54" fill="none" stroke="#1e293b" stroke-width="3"/>
+      <polygon points="74,70 58,88 50,88 58,54" fill="none" stroke="#1e293b" stroke-width="3"/>
+    </svg>`
+  } else if (name === 'cricket') {
+    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
+      <g transform="rotate(-45 50 50)">
+        <rect x="47" y="5" width="6" height="35" rx="3" fill="#d97706" stroke="#451a03" stroke-width="2"/>
+        <rect x="46" y="25" width="8" height="15" fill="#1e293b"/>
+        <path d="M44,40 L56,40 L54,90 L46,90 Z" fill="#f59e0b" stroke="#451a03" stroke-width="2"/>
+      </g>
+      <circle cx="75" cy="40" r="12" fill="#dc2626" stroke="#7f1d1d" stroke-width="2"/>
+      <path d="M66,33 Q75,40 84,33" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="2,2"/>
+      <path d="M66,47 Q75,40 84,47" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="2,2"/>
+    </svg>`
+  } else if (name === 'badminton') {
+    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
+      <g transform="rotate(-30 50 50)">
+        <rect x="48" y="45" width="4" height="50" rx="2" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
+        <rect x="47" y="85" width="6" height="10" fill="#1e293b" rx="1"/>
+        <ellipse cx="50" cy="28" rx="18" ry="22" fill="none" stroke="#475569" stroke-width="3"/>
+        <path d="M35,28 L65,28 M38,18 L62,18 M38,38 L62,38 M44,10 L44,46 M50,6 L50,50 M56,10 L56,46" stroke="#cbd5e1" stroke-width="1"/>
+      </g>
+      <g transform="translate(15, 15)">
+        <path d="M35,45 C35,55 45,55 45,45 Z" fill="#ffffff" stroke="#475569" stroke-width="2"/>
+        <rect x="35" y="42" width="10" height="3" fill="#dc2626"/>
+        <path d="M35,42 L25,15 L55,15 L45,42 Z" fill="#f8fafc" stroke="#475569" stroke-width="2"/>
+        <path d="M30,42 L20,15 M35,42 L30,15 M40,42 L40,15 M45,42 L50,15" stroke="#cbd5e1" stroke-width="1.5"/>
+      </g>
+    </svg>`
+  } else if (name === 'basketball') {
+    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
+      <circle cx="50" cy="50" r="46" fill="#ea580c" stroke="#431407" stroke-width="3"/>
+      <path d="M4,50 L96,50 M50,4 L50,96" stroke="#431407" stroke-width="3"/>
+      <path d="M18,18 Q50,50 18,82" fill="none" stroke="#431407" stroke-width="3"/>
+      <path d="M82,18 Q50,50 82,82" fill="none" stroke="#431407" stroke-width="3"/>
+    </svg>`
+  } else if (name === 'tennis') {
+    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
+      <g transform="rotate(-40 50 50)">
+        <rect x="48" y="45" width="4" height="50" rx="2" fill="#d1d5db" stroke="#374151" stroke-width="1.5"/>
+        <rect x="46" y="85" width="8" height="10" fill="#2563eb" rx="1"/>
+        <circle cx="50" cy="26" r="22" fill="none" stroke="#dc2626" stroke-width="3.5"/>
+        <path d="M30,26 L70,26 M32,16 L68,16 M32,36 L68,36 M40,8 L40,44 M50,4 L50,48 M60,8 L60,44" stroke="#e5e7eb" stroke-width="1"/>
+      </g>
+      <circle cx="35" cy="35" r="10" fill="#ccff00" stroke="#4d7c0f" stroke-width="2"/>
+      <path d="M27,29 Q35,35 35,45" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+      <path d="M43,29 Q35,35 35,45" fill="none" stroke="#ffffff" stroke-width="1.5" transform="rotate(180 35 35)"/>
+    </svg>`
+  } else if (name === 'padel') {
+    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
+      <g transform="rotate(-35 50 50)">
+        <rect x="47" y="55" width="6" height="40" rx="3" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+        <rect x="45" y="85" width="10" height="10" fill="#ef4444" rx="2"/>
+        <path d="M32,32 C32,12 68,12 68,32 C68,52 32,52 32,32 Z" fill="#ef4444" stroke="#0f172a" stroke-width="3"/>
+        <circle cx="44" cy="26" r="2" fill="#0f172a"/>
+        <circle cx="50" cy="26" r="2" fill="#0f172a"/>
+        <circle cx="56" cy="26" r="2" fill="#0f172a"/>
+        <circle cx="40" cy="32" r="2" fill="#0f172a"/>
+        <circle cx="46" cy="32" r="2" fill="#0f172a"/>
+        <circle cx="54" cy="32" r="2" fill="#0f172a"/>
+        <circle cx="60" cy="32" r="2" fill="#0f172a"/>
+        <circle cx="44" cy="38" r="2" fill="#0f172a"/>
+        <circle cx="50" cy="38" r="2" fill="#0f172a"/>
+        <circle cx="56" cy="38" r="2" fill="#0f172a"/>
+      </g>
+      <circle cx="72" cy="40" r="8" fill="#ccff00" stroke="#4d7c0f" stroke-width="1.5"/>
+      <path d="M66,35 Q72,40 72,48" fill="none" stroke="#ffffff" stroke-width="1"/>
+      <path d="M78,35 Q72,40 72,48" fill="none" stroke="#ffffff" stroke-width="1" transform="rotate(180 72 40)"/>
+    </svg>`
+  }
+  return ''
+}
+
+const currentSportRules = computed(() => {
+  const sport = selectedRulesSport.value
+  if (!sport) return null
+  
+  const color = getSportColor(sport)
+  const icon = getSportEmoji(sport)
+  
+  let description = ''
+  let rules = []
+  
+  if (sport === 'Football') {
+    description = store.state.language === 'hi' 
+      ? 'सुंदर खेल। घास या टर्फ पर 11v11, 7v7 या 5v5 का मुकाबला।'
+      : 'The beautiful game. 11v11, 7v7 or 5v5 action on grass or turf.'
+    rules = [
+      { 
+        title: store.state.language === 'hi' ? 'फेयर प्ले (स्लाइड्स वर्जित)' : 'Fair Play (No Slides)', 
+        desc: store.state.language === 'hi' ? 'चोट से बचने के लिए मनोरंजक खेलों में स्लाइड टैकल पूरी तरह से प्रतिबंधित हैं। अपने पैरों पर रहें!' : 'Slide tackles are strictly prohibited in recreational play to prevent injury. Stay on your feet!' 
+      },
+      { 
+        title: store.state.language === 'hi' ? 'गोल क्षेत्र और रक्षक' : 'Goal Area & Keepers', 
+        desc: store.state.language === 'hi' ? 'गोलकीपर केवल निर्धारित पेनल्टी क्षेत्र के भीतर ही गेंद को छू सकते हैं। बैक-पास हाथ से नहीं पकड़े जा सकते।' : 'Goalkeepers can only handle the ball inside the designated penalty area. No back-passes can be handled.' 
+      },
+      { 
+        title: store.state.language === 'hi' ? 'रीस्टार्ट' : 'Restarts', 
+        desc: store.state.language === 'hi' ? 'स्थल शैली के आधार पर टचलाइन से किक-इन या थ्रो-इन। सभी फ्री किक में सुरक्षात्मक दूरी का सम्मान किया जाना चाहिए।' : 'Kick-ins or throw-ins from the touchline depending on venue style. All free kicks must respect defensive distance.' 
+      },
+      { 
+        title: store.state.language === 'hi' ? 'ऑफसाइड नियम' : 'Offside Rule', 
+        desc: store.state.language === 'hi' ? 'आमतौर पर 5v5/7v7 छोटे आकार के मैचों में ऑफसाइड लागू नहीं होता है जब तक कि पहले से सहमति न हो।' : 'Offside is typically not enforced in 5v5/7v7 small-sided matches unless explicitly agreed beforehand.' 
+      }
+    ]
+  } else if (sport === 'Cricket') {
+    description = store.state.language === 'hi'
+      ? 'बल्ला, गेंद और क्षेत्ररक्षण। टी20 या आवश्यकतानुसार कस्टम ओवर प्रारूप।'
+      : 'Bat, bowl, field. T20 or custom overs format.'
+    rules = [
+      {
+        title: store.state.language === 'hi' ? 'प्रारूप और ओवर' : 'Format & Overs',
+        desc: store.state.language === 'hi' ? 'आमतौर पर टी20 या कस्टम ओवर प्रारूप में खेला जाता है। गेंदबाजों के लिए प्रति मैच अधिकतम 4 ओवर की सीमा है।' : 'Usually played as T20 or custom overs format. Bowlers are restricted to a maximum of 4 overs per match.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'रन बनाना' : 'Scoring Runs',
+        desc: store.state.language === 'hi' ? 'रन विकेटों के बीच दौड़कर या सीमा पार (टप्पा खाकर 4 रन, हवा में 6 रन) मारकर बनाए जाते हैं।' : 'Runs are scored by running between wickets or hitting boundaries (4 runs on bounce, 6 runs aerial).'
+      },
+      {
+        title: store.state.language === 'hi' ? 'अतिरिक्त दंड' : 'Extra Penalties',
+        desc: store.state.language === 'hi' ? 'वाइड और नो-बॉल बल्लेबाजी टीम को 1 अतिरिक्त रन प्रदान करते हैं, और नो-बॉल पर अगली गेंद फ्री हिट होती है।' : 'Wides and No-balls grant 1 extra run to the batting team, and No-balls grant a Free Hit on the next delivery.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'बर्खास्तगी (आउट) के प्रकार' : 'Dismissal Types',
+        desc: store.state.language === 'hi' ? 'बल्लेबाज को बोल्ड, कैच, एलबीडब्ल्यू, रन आउट, स्टंप्ड, या हित विकेट के माध्यम से आउट किया जा सकता है।' : 'Batsmen can be dismissed via Bowled, Caught, LBW, Run Out, Stumped, or Hit Wicket.'
+      }
+    ]
+  } else if (sport === 'Badminton') {
+    description = store.state.language === 'hi'
+      ? 'शटलकॉक के साथ जाल के ऊपर खेला जाने वाला तेज गति वाला रैकेट खेल।'
+      : 'Fast-paced racket sport played over a net with shuttlecocks.'
+    rules = [
+      {
+        title: store.state.language === 'hi' ? 'अंडरहैंड सर्विस' : 'Underhand Serve',
+        desc: store.state.language === 'hi' ? 'सर्विस सर्वर की कमर के नीचे से अंडरहैंड होनी चाहिए। शटलकॉक प्रतिद्वंद्वी के विपरीत सर्विस कोर्ट में जानी चाहिए।' : 'The serve must be hit underhand from below the server\'s waist. The shuttlecock must travel diagonally into the opponent\'s service court.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'स्कोरिंग प्रारूप' : 'Scoring Format',
+        desc: store.state.language === 'hi' ? 'मैच 21 अंकों के सर्वश्रेष्ठ 3 खेलों के रूप में खेले जाते हैं। प्रत्येक रैली में एक अंक प्राप्त होता है।' : 'Matches are played as best of 3 games of 21 points. A point is scored on every rally (rally scoring).'
+      },
+      {
+        title: store.state.language === 'hi' ? 'फाउल (त्रुटि)' : 'Fault Calls',
+        desc: store.state.language === 'hi' ? 'यदि शटलकॉक जाल को छूती है, बाहर गिरती है, या यदि खिलाड़ी अपने शरीर या रैकेट से जाल को छूता है तो फाउल होता।' : 'It is a fault if the shuttlecock touches the net, lands out of bounds, or if a player touches the net with their body or racket.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'अंदर या बाहर' : 'In or Out',
+        desc: store.state.language === 'hi' ? 'सीमा रेखा पर गिरने वाले शटलकॉक को इन-बाउंड (अंदर) माना जाता है।' : 'Shuttlecocks landing on the boundary line are considered in-bounds.'
+      }
+    ]
+  } else if (sport === 'Basketball') {
+    description = store.state.language === 'hi'
+      ? 'हूप एक्शन। 5v5 फुल-कोर्ट या 3v3 हाफ-कोर्ट खेल।'
+      : 'Hoop action. 5v5 full-court or 3v3 half-court play.'
+    rules = [
+      {
+        title: store.state.language === 'hi' ? 'स्कोरिंग प्रणाली' : 'Scoring System',
+        desc: store.state.language === 'hi' ? 'मैच 5v5 फुल-कोर्ट या 3v3 हाफ-कोर्ट हो सकते हैं। आर्क के अंदर टोकरी 2 अंक, बाहर 3 अंक दिलाती है।' : 'Matches can be 5v5 full-court or 3v3 half-court. Baskets inside the arc count for 2 points, outside for 3.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'ड्रिब्लिंग नियम' : 'Dribbling Rules',
+        desc: store.state.language === 'hi' ? 'डबल ड्रिब्लिंग और ट्रैवलिंग (ड्रिबल किए बिना 2 से अधिक कदम उठाना) उल्लंघन हैं।' : 'Double dribbling and traveling (taking more than 2 steps without dribbling) are violations.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'व्यक्तिगत फाउल' : 'Personal Fouls',
+        desc: store.state.language === 'hi' ? 'अत्यधिक शारीरिक संपर्क से बचें। रक्षकों को बिना ब्लॉक किए कानूनी रक्षात्मक स्थिति बनानी चाहिए।' : 'Avoid excessive physical contact. Defenders must establish legal guarding position without reaching/blocking.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'कब्जा और घड़ी' : 'Possession & Clock',
+        desc: store.state.language === 'hi' ? 'मानक 24-सेकंड शॉट क्लॉक (यदि लागू हो) या स्वयं-रेफरी मोड। 3v3 में गेंद मिलने पर आर्क के पार ले जाएं।' : 'Standard 24-second shot clock (if applicable) or self-refereed turnover flow. Clear the ball past the arc on changes in 3v3.'
+      }
+    ]
+  } else if (sport === 'Tennis') {
+    description = store.state.language === 'hi'
+      ? 'मिट्टी, घास या हार्ड कोर्ट पर क्लासिक एकल या युगल रैकेट खेल।'
+      : 'Classic singles or doubles racket game on clay, grass, or hard court.'
+    rules = [
+      {
+        title: store.state.language === 'hi' ? 'सर्विस अनुक्रम' : 'Serving Sequence',
+        desc: store.state.language === 'hi' ? 'बेसलाइन के पीछे से तिरछे सर्विस करें। यदि गेंद जाल के ऊपरी हिस्से को छूकर सही बॉक्स में गिरती है, तो लेट (दोबारा खेल) होता है।' : 'Serve diagonally behind the baseline. If it hits the net tape and lands in the correct box, it is a let (replay).'
+      },
+      {
+        title: store.state.language === 'hi' ? 'स्कोरिंग प्रारूप' : 'Scoring Format',
+        desc: store.state.language === 'hi' ? 'खेलों को 15, 30, 40, गेम के रूप में स्कोर किया जाता है। सेट जीतने के लिए 6 खेल जीतने होते हैं, कम से कम 2 खेलों की बढ़त के साथ।' : 'Games are scored 15, 30, 40, Game. Winning a set requires winning 6 games, with at least a 2-game lead.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'Line Calls' : 'Line Calls',
+        desc: store.state.language === 'hi' ? 'सीमा रेखा के किसी भी हिस्से पर गिरने वाली गेंद को अंदर माना जाता है। खिलाड़ी अपनी तरफ की लाइन कॉल करते हैं।' : 'Any ball landing on any part of the boundary line is considered in. Players call lines on their side of the net.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'नेट प्ले' : 'Net Play',
+        desc: store.state.language === 'hi' ? 'गेंद खेल में रहने के दौरान कोई भी खिलाड़ी या उसका रैकेट जाल को नहीं छू सकता है। गेंद मारने के लिए नेट के ऊपर पहुंचना फाउल है।' : 'No player or their racket may touch the net while the ball is in play. Reaching over the net to hit a ball is a foul.'
+      }
+    ]
+  } else if (sport === 'Padel') {
+    description = store.state.language === 'hi'
+      ? 'तेजी से बढ़ता हुआ बंद युगल रैकेट खेल जिसमें टेनिस और स्क्वैश का संयोजन है।'
+      : 'Fast-growing enclosed doubles racket sport combining tennis and squash.'
+    rules = [
+      {
+        title: store.state.language === 'hi' ? 'कोर्ट और उपकरण' : 'Court & Equipment',
+        desc: store.state.language === 'hi' ? 'कांच की दीवारों वाले 10x20 मीटर के बंद कोर्ट में युगल में खेला जाता है। पैडल रैकेट बिना तार के ठोस होते हैं।' : 'Played in doubles on an enclosed 10x20m court with glass walls. Padel rackets are solid with no strings.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'अंडरहैंड सर्विस' : 'Underhand Service',
+        desc: store.state.language === 'hi' ? 'सर्विस कमर या उससे नीचे के स्तर पर अंडरहैंड की जानी चाहिए। गेंद प्रतिद्वंद्वी के विपरीत सर्विस बॉक्स में टप्पा खानी चाहिए।' : 'Serves must be hit underhand at or below waist level. The ball must bounce once in the diagonally opposite service box.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'दीवार बाउंस नियम' : 'Wall Bounce Rules',
+        desc: store.state.language === 'hi' ? 'प्रतिद्वंद्वी के कोर्ट में टप्पा खाने के बाद, गेंद कांच या जालीदार दीवार से टकरा सकती है। जाली/कांच पर सीधी हिट बाहर (आउट) मानी जाती है।' : 'After bouncing in the opponent\'s court, the ball may strike any glass or mesh wall. Direct hits to mesh/glass are out.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'निर्णायक अंक (स्वर्ण)' : 'Deciding Point (Gold)',
+        desc: store.state.language === 'hi' ? 'यदि स्कोर ड्यूस (40-40) तक पहुंच जाता है, तो एकल निर्णायक स्वर्ण बिंदु खेला जाता है। रिसीवर अपनी पसंद की दिशा चुनते हैं।' : 'If the score reaches Deuce (40-40), a single deciding Golden Point is played. Receivers choose the side.'
+      }
+    ]
+  } else {
+    description = store.state.language === 'hi' ? 'सामान्य खेल नियम और दिशा-निर्देश।' : 'General game rules and match guidelines.'
+    rules = [
+      {
+        title: store.state.language === 'hi' ? 'ईमानदारी और खेल भावना' : 'Fair Play',
+        desc: store.state.language === 'hi' ? 'हमेशा ईमानदारी से खेलें, विरोधियों और आयोजन स्थल के कर्मचारियों का सम्मान करें।' : 'Play with integrity and show respect for opponents, teammates, and venue staff.'
+      },
+      {
+        title: store.state.language === 'hi' ? 'सुरक्षा प्रथम' : 'Safety First',
+        desc: store.state.language === 'hi' ? 'सुरक्षा को खतरे में डालने वाले लापरवाह टकराव या खतरनाक कार्यों से बचें।' : 'Avoid dangerous actions, reckless collisions, and play that threatens player safety.'
+      }
+    ]
+  }
+  
+  return {
+    color,
+    icon,
+    description,
+    rules
+  }
+})
+
 const handleThemeToggle = (e) => {
   const checked = e.target.checked
   store.setThemePreference(checked ? 'elegantLavender' : 'activeSteelBlue')
@@ -1251,7 +1511,7 @@ const weekDaysStatus = computed(() => {
                 @click="selectedRulesSport = sport.name"
               >
                 <div class="rules-option-icon" :style="{ backgroundColor: `${getSportColor(sport.name)}1A`, color: getSportColor(sport.name) }">
-                  {{ sport.icon }}
+                  <div class="rules-option-icon-svg" v-html="getSportSVG(sport.name)"></div>
                 </div>
                 <div class="rules-option-info">
                   <span class="rules-option-title">{{ store.state.language === 'hi' ? t('sport_' + sport.name) : sport.name }}</span>
@@ -1267,7 +1527,7 @@ const weekDaysStatus = computed(() => {
         <div v-else class="rules-detail-view flex-col h-full animate-fade-in" style="display: flex; flex-direction: column; height: 100%;" :key="selectedRulesSport">
           <div class="settings-panel-header" :style="{ borderBottom: `2px solid ${currentSportRules.color}20` }">
             <h2 class="settings-panel-title modal-title" style="display: flex; align-items: center; gap: 8px;">
-              <span :style="{ color: currentSportRules.color }">{{ currentSportRules.icon }}</span>
+              <div class="rules-header-icon-svg" v-html="getSportSVG(selectedRulesSport)"></div>
               <span>{{ store.state.language === 'hi' ? t('sport_' + selectedRulesSport) : selectedRulesSport }} {{ store.state.language === 'hi' ? 'के नियम' : 'Rules' }}</span>
             </h2>
             <button class="settings-close-btn close-btn" @click="selectedRulesSport = null">
@@ -1276,16 +1536,14 @@ const weekDaysStatus = computed(() => {
           </div>
 
           <div class="settings-panel-body scrollable-y flex-1 no-scrollbar" style="flex: 1; overflow-y: auto;">
-            <div class="rules-sport-info-card" :style="{ background: `linear-gradient(135deg, ${currentSportRules.color}15 0%, ${currentSportRules.color}05 100%)`, borderLeft: `4px solid ${currentSportRules.color}` }">
-              <div class="rules-card-text" style="flex: 1;">
-                <p class="rules-card-desc" style="font-weight: 600; font-size: 0.95rem;">{{ currentSportRules.description }}</p>
+            <div class="rules-sport-info-card" :style="{ background: getSportGradient(selectedRulesSport) }">
+              <div class="rules-sport-info-header-wrap">
+                <div class="rules-sport-avatar-circle">
+                  <div class="rules-sport-avatar-svg" v-html="getSportSVG(selectedRulesSport)"></div>
+                </div>
+                <h3 class="rules-sport-title-text">{{ store.state.language === 'hi' ? t('sport_' + selectedRulesSport) : selectedRulesSport }}</h3>
+                <p class="rules-sport-desc-text">{{ currentSportRules.description }}</p>
               </div>
-              <img 
-                v-if="currentSportRules.image" 
-                :src="currentSportRules.image" 
-                class="rules-sport-banner" 
-                alt="Sport Banner" 
-              />
             </div>
 
             <div class="rules-list-container">
@@ -3160,5 +3418,334 @@ input:checked + .toggle-slider:before {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--on-surface-variant);
+}
+/* Rules & Policies Modals styling */
+.rules-fullscreen-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: calc(100% - 280px);
+  height: 100vh;
+  background-color: var(--scaffold-bg, #f8fafc);
+  z-index: 1250;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+  .rules-fullscreen-panel {
+    width: 100%;
+    left: 0;
+  }
+}
+
+.rules-fullscreen-panel .settings-panel-body {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 32px 40px !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 768px) {
+  .rules-fullscreen-panel .settings-panel-body {
+    padding: 20px 24px !important;
+  }
+}
+
+.rules-main-view, .rules-detail-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.rules-intro-text {
+  font-size: 0.95rem;
+  color: var(--on-surface-variant, #64748b);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.rules-sports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.rules-sport-card-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background-color: var(--surface, #ffffff);
+  border-radius: 16px;
+  border: 1px solid var(--outline-variant, #e2e8f0);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.015);
+  position: relative;
+  overflow: hidden;
+}
+
+.rules-sport-card-option:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  background-color: var(--surface-dim, #f1f5f9);
+}
+
+.rules-option-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.rules-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-grow: 1;
+}
+
+.rules-option-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--on-surface, #0f172a);
+}
+
+.rules-option-subtitle {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant, #64748b);
+}
+
+.rules-option-arrow {
+  font-size: 1.1rem;
+  transition: transform 0.2s ease;
+}
+
+.rules-sport-card-option:hover .rules-option-arrow {
+  transform: translateX(4px);
+}
+
+/* Detailed rules view */
+.rules-sport-info-card {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 24px;
+  border-radius: 24px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+  color: #ffffff;
+  text-align: center;
+}
+
+.rules-sport-info-card::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: -60px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+  pointer-events: none;
+}
+
+.rules-sport-info-card::after {
+  content: '';
+  position: absolute;
+  bottom: -90px;
+  right: -50px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
+  pointer-events: none;
+}
+
+.rules-sport-info-header-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  z-index: 2;
+  max-width: 600px;
+  width: 100%;
+}
+
+.rules-sport-avatar-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  animation: avatarBounce 3s ease-in-out infinite alternate;
+}
+
+.rules-sport-title-text {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rules-sport-desc-text {
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  margin: 0;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+@keyframes avatarBounce {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-4px);
+  }
+}
+
+.rules-list-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.rule-item-card {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background-color: var(--surface, #ffffff);
+  border-radius: 16px;
+  border: 1px solid var(--outline-variant, #e2e8f0);
+  align-items: flex-start;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
+  transition: all 0.2s ease;
+}
+
+.rule-item-card:hover {
+  transform: translateX(3px);
+  border-color: var(--outline, #94a3b8);
+}
+
+.rule-item-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.rule-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.rule-item-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--on-surface, #0f172a);
+  margin: 0;
+}
+
+.rule-item-description {
+  font-size: 0.88rem;
+  color: var(--on-surface-variant, #64748b);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Policies tab */
+.policies-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.policy-item-card {
+  padding: 24px;
+  background-color: var(--surface, #ffffff);
+  border-radius: 16px;
+  border: 1px solid var(--outline-variant, #e2e8f0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+  transition: all 0.25s ease;
+}
+
+.policy-item-card:hover {
+  border-color: var(--primary, #6366f1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.02);
+}
+
+.policy-header-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.policy-item-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--primary, #6366f1);
+  margin: 0;
+}
+
+.policy-item-description {
+  font-size: 0.9rem;
+  color: var(--on-surface-variant, #64748b);
+  line-height: 1.6;
+  margin: 0;
+}
+/* SVG Icon Wrapper styles */
+.rules-option-icon-svg {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rules-sport-avatar-svg {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rules-header-icon-svg {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

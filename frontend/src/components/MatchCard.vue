@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { getSportImage, getPlayerAvatar } from '../utils/sportImageHelper'
 import { store } from '../store'
 
@@ -65,9 +65,22 @@ const remainingParticipantsCount = computed(() => {
   return props.match.participants.length - 3
 })
 
-const handleJoin = (e) => {
+const isJoining = ref(false)
+
+const handleJoin = async (e) => {
   e.stopPropagation()
-  store.joinMatch(props.match.id)
+  isJoining.value = true
+  try {
+    await Promise.all([
+      store.joinMatch(props.match.id),
+      new Promise(resolve => setTimeout(resolve, 600))
+    ])
+  } catch (err) {
+    console.error('Failed to join match:', err)
+  } finally {
+    await nextTick()
+    isJoining.value = false
+  }
 }
 </script>
 
@@ -160,10 +173,14 @@ const handleJoin = (e) => {
         <button 
           v-if="slotsLeft > 0 && !isJoined && !isRestricted" 
           class="join-match-btn"
+          :disabled="isJoining"
           @click="handleJoin"
         >
-          Join Match
+          <span v-if="isJoining" class="loader small-loader"></span>
+          <span v-else>Join Match</span>
         </button>
+
+
       </div>
     </div>
   </div>
@@ -476,15 +493,61 @@ const handleJoin = (e) => {
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.join-match-btn:hover {
+.join-match-btn:hover:not(:disabled) {
   filter: brightness(1.1);
   transform: translateY(-1px);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
 }
 
-.join-match-btn:active {
+.join-match-btn:active:not(:disabled) {
   transform: translateY(0);
+}
+
+.join-match-btn:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.loader {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ffffff;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  animation: rotation 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.joined-match-btn {
+  width: 100%;
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  color: #10b981 !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 11px 0;
+  border-radius: 12px;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: none;
+  transition: all 0.3s ease;
 }
 </style>

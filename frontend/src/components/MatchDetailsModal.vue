@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { getSportImage, getPlayerAvatar } from '../utils/sportImageHelper'
 import { store } from '../store'
 import { t } from '../utils/i18n'
@@ -17,6 +17,10 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'open-player', 'action-success'])
 
+const match = computed(() => {
+  return store.state.matches.find(m => m.id === props.match.id) || props.match
+})
+
 const isSubmitting = ref(false)
 const showResultsPanel = ref(false)
 const showRatingPanel = ref(false)
@@ -28,32 +32,32 @@ const existingRatings = ref(null) // ratings already submitted by this user
 const hasRatedAlready = ref(false)
 
 const slotsLeft = computed(() => {
-  const maxSlots = props.match.maxSlots ?? props.match.max_slots ?? 0
-  const joinedCount = props.match.joinedCount ?? props.match.joined_count ?? props.match.participants?.length ?? 0
+  const maxSlots = match.value.maxSlots ?? match.value.max_slots ?? 0
+  const joinedCount = match.value.joinedCount ?? match.value.joined_count ?? match.value.participants?.length ?? 0
   return Math.max(0, maxSlots - joinedCount)
 })
 
 const isJoined = computed(() => {
   if (!store.state.currentUser) return false
-  const participants = props.match.participants || []
+  const participants = match.value.participants || []
   return participants.some(p => p.id === store.state.currentUser.id)
 })
 
 const isCreator = computed(() => {
   if (!store.state.currentUser) return false
-  const matchCreatorId = props.match.creatorId ?? props.match.creator_id ?? props.match.user_id
+  const matchCreatorId = match.value.creatorId ?? match.value.creator_id ?? match.value.user_id
   return Number(matchCreatorId) === Number(store.state.currentUser.id)
 })
 
 const isRestricted = computed(() => {
-  const womenOnly = props.match.womenOnly ?? props.match.women_only ?? props.match.is_women_only
+  const womenOnly = match.value.womenOnly ?? match.value.women_only ?? match.value.is_women_only
   if (!womenOnly) return false
   return store.state.currentUser?.gender !== 'female'
 })
 
 const isPastMatch = computed(() => {
   try {
-    const dateStr = props.match.dateTime || props.match.date_time || props.match.date
+    const dateStr = match.value.dateTime || match.value.date_time || match.value.date
     if (!dateStr) return false
     const dt = new Date(dateStr.replace(' ', 'T'))
     return dt < new Date()
@@ -61,41 +65,55 @@ const isPastMatch = computed(() => {
 })
 
 const hasRecordedResults = computed(() => {
-  const participants = props.match.participants || []
+  const participants = match.value.participants || []
   return participants.some(p => p.pivot?.result)
 })
 
 const imageSrc = computed(() => {
-  const sportType = props.match.sportType || props.match.sport_type || props.match.category || 'Football'
-  const raw = getSportImage(sportType, props.match.id)
+  const sportType = match.value.sportType || match.value.sport_type || match.value.category || 'Football'
+  const raw = getSportImage(sportType, match.value.id)
   if (!raw) return ''
   return raw.split('/').map(s => encodeURIComponent(s)).join('/')
 })
 
 // Chat history and scroll-to-bottom handlers removed as chat is disabled
 
-const handleJoin = () => {
+const handleJoin = async () => {
   if (isRestricted.value) return
   isSubmitting.value = true
-  setTimeout(() => {
-    store.joinMatch(props.match.id)
-    isSubmitting.value = false
+  try {
+    await Promise.all([
+      store.joinMatch(match.value.id),
+      new Promise(resolve => setTimeout(resolve, 500))
+    ])
     emit('action-success', 'Successfully joined match! 🥳')
-  }, 500)
+  } catch (err) {
+    console.error('Failed to join match:', err)
+  } finally {
+    await nextTick()
+    isSubmitting.value = false
+  }
 }
 
-const handleLeave = () => {
+const handleLeave = async () => {
   isSubmitting.value = true
-  setTimeout(() => {
-    store.leaveMatch(props.match.id)
-    isSubmitting.value = false
+  try {
+    await Promise.all([
+      store.leaveMatch(match.value.id),
+      new Promise(resolve => setTimeout(resolve, 500))
+    ])
     emit('action-success', 'Left the match.')
-  }, 500)
+  } catch (err) {
+    console.error('Failed to leave match:', err)
+  } finally {
+    await nextTick()
+    isSubmitting.value = false
+  }
 }
 
 const openResultsPanel = () => {
   const existing = {}
-  const participants = props.match.participants || []
+  const participants = match.value.participants || []
   participants.forEach(p => {
     existing[p.id] = p.pivot?.result || null
   })
@@ -119,7 +137,7 @@ const saveResults = async () => {
 
   isSavingResults.value = true
   try {
-    const data = await store.recordResults(props.match.id, results)
+    const data = await store.recordResults(match.value.id, results)
     if (data) {
       emit('action-success', 'Match results saved! 🏆')
       showResultsPanel.value = false
@@ -136,13 +154,13 @@ const saveResults = async () => {
 // sendChat removed
 
 const handleShare = async () => {
-  const shareUrl = `${window.location.origin}/?match=${props.match.id}`
+  const shareUrl = `${window.location.origin}/?match=${match.value.id}`
   
   if (navigator.share) {
     try {
       await navigator.share({
-        title: props.match.title,
-        text: `Join this match: "${props.match.title}" on PlayConnect! ⚡`,
+        title: match.value.title,
+        text: `Join this match: "${match.value.title}" on PlayConnect! ⚡`,
         url: shareUrl
       })
       return
@@ -181,7 +199,7 @@ const handleShare = async () => {
 // Player Rating Logic
 const otherParticipants = computed(() => {
   if (!store.state.currentUser) return []
-  const participants = props.match.participants || []
+  const participants = match.value.participants || []
   return participants.filter(p => Number(p.id) !== Number(store.state.currentUser.id))
 })
 
@@ -196,7 +214,7 @@ const openRatingPanel = async () => {
 
   // Load existing ratings by this user for this match
   try {
-    const data = await store.getMatchRatings(props.match.id)
+    const data = await store.getMatchRatings(match.value.id)
     if (data && Array.isArray(data)) {
       const myId = store.state.currentUser.id
       const myRatings = data.filter(r => Number(r.rater_id) === Number(myId))
@@ -234,7 +252,7 @@ const saveRatings = async () => {
 
   isSavingRatings.value = true
   try {
-    const data = await store.submitPlayerRatings(props.match.id, ratings)
+    const data = await store.submitPlayerRatings(match.value.id, ratings)
     if (data) {
       const xpEarned = ratings.length * 10
       emit('action-success', `Ratings saved! You earned +${xpEarned} XP ⭐`)
@@ -251,9 +269,9 @@ const saveRatings = async () => {
 }
 // Check if user has already rated this match
 const checkUserRatingStatus = async () => {
-  if (!store.state.currentUser || !props.match?.id) return
+  if (!store.state.currentUser || !match.value?.id) return
   try {
-    const data = await store.getMatchRatings(props.match.id)
+    const data = await store.getMatchRatings(match.value.id)
     if (data && Array.isArray(data)) {
       const myId = store.state.currentUser.id
       const hasRated = data.some(r => Number(r.rater_id) === Number(myId))
@@ -270,7 +288,7 @@ watch(() => props.show, (newVal) => {
   }
 }, { immediate: true })
 
-watch(() => props.match, () => {
+watch(() => match.value, () => {
   if (props.show) {
     checkUserRatingStatus()
   }

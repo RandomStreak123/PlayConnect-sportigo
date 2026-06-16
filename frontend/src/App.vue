@@ -894,12 +894,12 @@ const isWomenTheme = computed(() => {
 }
 
 .sidebar-link.active .nav-svg {
-  stroke: var(--primary);
+  stroke: #ffffff;
   transform: scale(1.05);
 }
 
 .theme-women .sidebar-link.active .nav-svg {
-  stroke: var(--primary);
+  stroke: #ffffff;
 }
 
 .link-icon {
