@@ -1394,7 +1394,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       return _buildTimelineActivity(
                         title: title,
                         subtitle: subtitle,
-                        xpReward: '+$xp XP',
+                        xpReward: xp >= 0 ? '+$xp XP' : '$xp XP',
                         sportEmoji: sportEmoji,
                         sportColor: dynamicColor,
                       );
@@ -2033,6 +2033,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     required String sportEmoji,
     required Color sportColor,
   }) {
+    final isNegative = xpReward.startsWith('-');
+    final pillColor = isNegative ? Colors.redAccent : AppColors.sportsGreen;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -2081,13 +2083,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.sportsGreen.withValues(alpha: 0.1),
+              color: pillColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               xpReward,
-              style: const TextStyle(
-                color: AppColors.sportsGreen,
+              style: TextStyle(
+                color: pillColor,
                 fontWeight: FontWeight.w900,
                 fontSize: 11,
               ),
@@ -2131,8 +2133,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   int _getActivityXp(String type) {
-    if (type == 'match_created') return 20;
-    if (type == 'match_joined') return 5;
+    if (type == 'match_created') return 35;
+    if (type == 'match_joined') return 20;
+    if (type == 'match_left') return -20;
     return 0;
   }
 
