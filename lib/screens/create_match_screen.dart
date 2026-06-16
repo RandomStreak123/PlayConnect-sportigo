@@ -188,11 +188,11 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
               ),
               const SizedBox(height: 20),
 
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final useVertical = constraints.maxWidth < 320;
+                  final children = [
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildLabel('Available Slots'),
@@ -209,10 +209,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildLabel('Skill Level'),
@@ -223,8 +220,28 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  ];
+
+                  if (useVertical) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        children[0],
+                        const SizedBox(height: 20),
+                        children[1],
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: children[0]),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(child: children[1]),
+                    ],
+                  );
+                },
               ),
               
               // Women-Only Match Toggle (only for female users)

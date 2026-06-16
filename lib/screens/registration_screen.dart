@@ -166,14 +166,31 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            _buildGenderCard('male', 'Male', Icons.male, Colors.blue),
-            const SizedBox(width: AppSpacing.sm),
-            _buildGenderCard('female', 'Female', Icons.female, Colors.pink),
-            const SizedBox(width: AppSpacing.sm),
-            _buildGenderCard('other', 'Other', Icons.transgender, Colors.purple),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final useVertical = constraints.maxWidth < 320;
+            if (useVertical) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildGenderCard('male', 'Male', Icons.male, Colors.blue),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildGenderCard('female', 'Female', Icons.female, Colors.pink),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildGenderCard('other', 'Other', Icons.transgender, Colors.purple),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: _buildGenderCard('male', 'Male', Icons.male, Colors.blue)),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(child: _buildGenderCard('female', 'Female', Icons.female, Colors.pink)),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(child: _buildGenderCard('other', 'Other', Icons.transgender, Colors.purple)),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -181,13 +198,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildGenderCard(String value, String label, IconData icon, Color activeColor) {
     final isSelected = _selectedGender == value;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedGender = value;
-          });
-        },
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedGender = value;
+        });
+      },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
@@ -227,9 +243,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
   Widget _buildTextField({
     required String label,
