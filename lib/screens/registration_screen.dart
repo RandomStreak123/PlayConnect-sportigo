@@ -166,31 +166,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final useVertical = constraints.maxWidth < 320;
-            if (useVertical) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildGenderCard('male', 'Male', Icons.male, Colors.blue),
-                  const SizedBox(height: AppSpacing.sm),
-                  _buildGenderCard('female', 'Female', Icons.female, Colors.pink),
-                  const SizedBox(height: AppSpacing.sm),
-                  _buildGenderCard('other', 'Other', Icons.transgender, Colors.purple),
-                ],
-              );
-            }
-            return Row(
-              children: [
-                Expanded(child: _buildGenderCard('male', 'Male', Icons.male, Colors.blue)),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(child: _buildGenderCard('female', 'Female', Icons.female, Colors.pink)),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(child: _buildGenderCard('other', 'Other', Icons.transgender, Colors.purple)),
-              ],
-            );
-          },
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _buildGenderCard('male', 'Male', Icons.male, Colors.blue)),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: _buildGenderCard('female', 'Female', Icons.female, Colors.pink)),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: _buildGenderCard('other', 'Other', Icons.transgender, Colors.purple)),
+            ],
+          ),
         ),
       ],
     );
@@ -204,47 +190,51 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           _selectedGender = value;
         });
       },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          decoration: BoxDecoration(
-            color: isSelected 
-                ? activeColor.withValues(alpha: 0.15) 
-                : Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(
-              color: isSelected ? activeColor : Colors.transparent,
-              width: 2,
-            ),
-            boxShadow: isSelected ? [
-              BoxShadow(
-                color: activeColor.withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              )
-            ] : [],
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? activeColor.withValues(alpha: 0.15) 
+              : Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: isSelected ? activeColor : Colors.transparent,
+            width: 2,
           ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? activeColor : Theme.of(context).colorScheme.onSurfaceVariant,
-                size: 28,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: activeColor.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ] : [],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? activeColor : Theme.of(context).colorScheme.onSurfaceVariant,
+              size: 28,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
                 label,
                 style: TextStyle(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected ? activeColor : Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                 ),
+                maxLines: 1,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
   Widget _buildTextField({
     required String label,
