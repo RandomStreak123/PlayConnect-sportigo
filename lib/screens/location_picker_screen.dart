@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../core/theme/app_radius.dart';
 
@@ -58,6 +59,93 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     _searchController.dispose();
     _mapController.dispose();
     super.dispose();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isGeocoding = true;
+      _address = 'Locating...';
+    });
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location services are disabled. Please enable them in settings.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        setState(() {
+          _isGeocoding = false;
+          _address = 'Location services disabled';
+        });
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Location permission denied.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          setState(() {
+            _isGeocoding = false;
+            _address = 'Permission denied';
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location permissions are permanently denied. We cannot request permissions.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        setState(() {
+          _isGeocoding = false;
+          _address = 'Permission denied permanently';
+        });
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      final newCenter = LatLng(position.latitude, position.longitude);
+      setState(() {
+        _currentCenter = newCenter;
+      });
+      _mapController.move(newCenter, 15.0);
+      await _reverseGeocode(newCenter);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not get current location: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      setState(() {
+        _isGeocoding = false;
+        _address = 'Failed to locate user';
+      });
+    }
   }
 
   String _sanitizeAddress(String address) {
@@ -138,9 +226,21 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _isSearching = true;
     });
 
+    final lat = _currentCenter.latitude;
+    final lon = _currentCenter.longitude;
+    final left = lon - 0.5;
+    final right = lon + 0.5;
+    final top = lat + 0.5;
+    final bottom = lat - 0.5;
+
     try {
       final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(query)}&limit=1',
+        'https://nominatim.openstreetmap.org/search'
+        '?format=json'
+        '&q=${Uri.encodeComponent(query)}'
+        '&countrycodes=in'
+        '&viewbox=$left,$top,$right,$bottom'
+        '&limit=5',
       );
       final response = await http.get(url, headers: {
         'User-Agent': 'sportigo-app/1.0',
@@ -397,6 +497,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+          Positioned(
+            bottom: 250,
+            right: 16,
+            child: FloatingActionButton(
+              mini: true,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              foregroundColor: Theme.of(context).colorScheme.primary,
+              onPressed: _isGeocoding ? null : _getCurrentLocation,
+              child: const Icon(Icons.my_location),
             ),
           ),
         ],
