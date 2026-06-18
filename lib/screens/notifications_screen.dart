@@ -284,6 +284,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       iconWidget = SportIconHelper.widgetForSport(
                         sportType ?? '',
                         size: 32,
+                        color: iconColor,
                       );
                     } else {
                       iconData = _getIconForType(notification.type, sportType);

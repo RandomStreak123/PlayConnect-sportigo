@@ -417,6 +417,7 @@ class _MatchCardState extends State<MatchCard> {
                                     SportIconHelper.widgetForSport(
                                       match.sportType,
                                       size: 16,
+                                      color: Colors.white,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(

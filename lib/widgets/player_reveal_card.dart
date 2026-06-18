@@ -209,6 +209,7 @@ class _PlayerRevealCardState extends State<PlayerRevealCard> {
                     SportIconHelper.widgetForSport(
                       sportType,
                       size: 14,
+                      color: theme.colorScheme.primaryContainer,
                     ),
                     const SizedBox(width: 5),
                     Text(

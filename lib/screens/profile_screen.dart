@@ -1234,6 +1234,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       SportIconHelper.widgetForSport(
                         sportItem['name']!,
                         size: 16,
+                        color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -1398,6 +1399,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         iconWidget: SportIconHelper.widgetForSport(
                           sportType,
                           size: 28,
+                          color: dynamicColor,
                         ),
                         sportColor: dynamicColor,
                       );

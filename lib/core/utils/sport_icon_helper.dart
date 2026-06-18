@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 class SportIconHelper {
-  static final Map<String, String> _sportIconUrls = {
-    'football': 'https://cdn-icons-png.flaticon.com/128/1165/1165187.png',
-    'basketball': 'https://cdn-icons-png.flaticon.com/128/1041/1041168.png',
-    'badminton': 'https://cdn-icons-png.flaticon.com/128/11865/11865449.png',
-    'tennis': 'https://cdn-icons-png.flaticon.com/128/7430/7430195.png',
-    'padel': 'https://cdn-icons-png.flaticon.com/128/19030/19030325.png',
-    'pedal': 'https://cdn-icons-png.flaticon.com/128/19030/19030325.png',
-    'cricket': 'https://cdn-icons-png.flaticon.com/128/2160/2160064.png',
+  static final Map<String, String> _sportIconAssetPaths = {
+    'football': 'assets/images/football_icon.png',
+    'basketball': 'assets/images/basketball_icon.png',
+    'badminton': 'assets/images/badminton_icon.png',
+    'tennis': 'assets/images/tennis_icon.png',
+    'padel': 'assets/images/padel_icon.png',
+    'pedal': 'assets/images/padel_icon.png',
+    'cricket': 'assets/images/cricket_icon.png',
   };
 
   static IconData iconForSport(String sportType) {
@@ -31,13 +31,27 @@ class SportIconHelper {
     }
   }
 
-  static Widget widgetForSport(String sportType, {double size = 24}) {
+  static Widget widgetForSport(String sportType, {double size = 24, Color? color}) {
     final lowerSport = sportType.toLowerCase().trim();
-    final url = _sportIconUrls[lowerSport];
-    return Image.network(
-      url ?? '',
+    final assetPath = _sportIconAssetPaths[lowerSport];
+    if (assetPath == null) {
+      return Icon(
+        iconForSport(sportType),
+        size: size,
+        color: color,
+      );
+    }
+    return Image.asset(
+      assetPath,
       width: size,
       height: size,
+      errorBuilder: (context, error, stackTrace) {
+        return Icon(
+          iconForSport(sportType),
+          size: size,
+          color: color,
+        );
+      },
     );
   }
 }
