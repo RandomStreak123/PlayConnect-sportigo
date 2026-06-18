@@ -10,6 +10,7 @@ import '../logic/blocs/notification/notification_event.dart';
 import '../logic/blocs/notification/notification_state.dart';
 import '../widgets/app_loading_indicator.dart';
 import 'match_details_screen.dart';
+import 'profile_screen.dart';
 import '../core/utils/sport_icon_helper.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -125,6 +126,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     final meta = notification.meta;
     if (meta == null) return;
+
+    if (notification.type == 'social') {
+      final senderIdStr = meta['sender_id']?.toString();
+      final senderId = senderIdStr != null ? int.tryParse(senderIdStr) : null;
+      final senderName = meta['sender_name'] as String?;
+      
+      if (senderId != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfileScreen(
+              isCurrentUser: false,
+              userId: senderId,
+              playerName: senderName,
+            ),
+          ),
+        );
+      }
+      return;
+    }
 
     final matchId = meta['match_id']?.toString() ?? meta['match_id'];
     if (matchId == null) return;
