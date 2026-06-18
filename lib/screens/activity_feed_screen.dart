@@ -10,6 +10,7 @@ import 'match_details_screen.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_icon_size.dart';
 import '../core/theme/app_radius.dart';
+import '../core/utils/sport_icon_helper.dart';
 
 class ActivityFeedScreen extends StatefulWidget {
   const ActivityFeedScreen({super.key});
@@ -140,43 +141,39 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
   }
 
   Widget _getActivityIcon(String type, String? sportType, Color color) {
-    IconData iconData;
     if (type == 'match_created') {
-      iconData = Icons.add_circle_outline;
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.xs + 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
+        ),
+        child: Icon(Icons.add_circle_outline, color: color, size: AppIconSize.md),
+      );
     } else if (type == 'match_left') {
-      iconData = Icons.exit_to_app_rounded;
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.xs + 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
+        ),
+        child: Icon(Icons.exit_to_app_rounded, color: color, size: AppIconSize.md),
+      );
     } else {
-      // Joined
-      switch (sportType?.toLowerCase()) {
-        case 'football':
-          iconData = Icons.sports_soccer_rounded;
-          break;
-        case 'basketball':
-          iconData = Icons.sports_basketball_rounded;
-          break;
-        case 'tennis':
-          iconData = Icons.sports_tennis_rounded;
-          break;
-        case 'badminton':
-          iconData = Icons.sports_tennis; // Icon for badminton
-          break;
-        case 'cricket':
-          iconData = Icons.sports_cricket_rounded;
-          break;
-        default:
-          iconData = Icons.sports_rounded;
-      }
+      // Joined or other sport-based feed item - no circle background, original image color
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: Center(
+          child: SportIconHelper.widgetForSport(
+            sportType ?? '',
+            size: 32,
+          ),
+        ),
+      );
     }
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xs + 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
-      ),
-      child: Icon(iconData, color: color, size: AppIconSize.md),
-    );
   }
 
   @override
@@ -341,29 +338,7 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                             height: 1.4,
                           ),
                         ),
-                        if (meta != null && meta['location'] != null) ...[
-                          const SizedBox(height: AppSpacing.xs),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.location_on_outlined,
-                                size: AppIconSize.xs,
-                                color: Theme.of(context).colorScheme.outline,
-                              ),
-                              const SizedBox(width: AppSpacing.xxs),
-                              Expanded(
-                                child: Text(
-                                  meta['location'].toString(),
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.outline,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+
                       ],
                     ),
                   ),

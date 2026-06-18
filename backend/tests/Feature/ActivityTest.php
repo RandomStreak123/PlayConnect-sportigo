@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\Activity;
+use App\Models\SportsMatch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,24 +15,52 @@ class ActivityTest extends TestCase
     public function test_can_retrieve_activities()
     {
         $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        // 1. A match organized by this user
+        $match = SportsMatch::factory()->create(['creator_id' => $user->id]);
+
+        // 2. An activity: other user joined this match
+        Activity::create([
+            'user_id' => $otherUser->id,
+            'type' => 'match_joined',
+            'message' => "{$otherUser->name} joined your match",
+            'meta' => ['match_id' => $match->id, 'sport_type' => $match->sport_type, 'title' => $match->title]
+        ]);
+
+        // 3. An activity: other user left this match
+        Activity::create([
+            'user_id' => $otherUser->id,
+            'type' => 'match_left',
+            'message' => "{$otherUser->name} left your match",
+            'meta' => ['match_id' => $match->id, 'sport_type' => $match->sport_type, 'title' => $match->title]
+        ]);
+
+        // 4. An activity: other user created a match (should not show)
+        Activity::create([
+            'user_id' => $otherUser->id,
+            'type' => 'match_created',
+            'message' => "{$otherUser->name} created a match",
+            'meta' => ['match_id' => 999, 'sport_type' => 'Football', 'title' => 'Friendly Football']
+        ]);
+
+        // 5. An activity: this user created a match (should not show)
         Activity::create([
             'user_id' => $user->id,
             'type' => 'match_created',
-            'message' => 'John Doe created a Football match',
-            'meta' => ['sport_type' => 'Football', 'title' => 'Friendly Football']
+            'message' => "{$user->name} created a match",
+            'meta' => ['match_id' => $match->id, 'sport_type' => $match->sport_type, 'title' => $match->title]
         ]);
 
         $response = $this->actingAs($user, 'sanctum')->getJson('/api/activities');
 
         $response->assertStatus(200);
-        if ($response->json('data') !== null) {
-            $this->assertCount(1, $response->json('data'));
-        } else {
-            $response->assertJsonCount(1);
-        }
-        $response->assertJsonFragment([
-            'message' => 'John Doe created a Football match'
-        ]);
+        $data = $response->json('data');
+        $this->assertCount(2, $data);
+        
+        $messages = collect($data)->pluck('message');
+        $this->assertTrue($messages->contains("{$otherUser->name} joined your match"));
+        $this->assertTrue($messages->contains("{$otherUser->name} left your match"));
     }
 
     public function test_can_create_activity()

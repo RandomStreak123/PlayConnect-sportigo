@@ -510,10 +510,11 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
-              child: Icon(
-                SportIconHelper.iconForSport(match.sportType),
-                color: Theme.of(context).colorScheme.primaryContainer,
-                size: AppIconSize.md,
+              child: Center(
+                child: SportIconHelper.widgetForSport(
+                  match.sportType,
+                  size: AppIconSize.md,
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.md),

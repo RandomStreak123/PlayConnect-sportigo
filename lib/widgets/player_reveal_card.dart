@@ -101,10 +101,9 @@ class _PlayerRevealCardState extends State<PlayerRevealCard> {
                       top: -15,
                       child: Opacity(
                         opacity: 0.12,
-                        child: Icon(
-                          SportIconHelper.iconForSport(sportType),
+                        child: SportIconHelper.widgetForSport(
+                          sportType,
                           size: 150,
-                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -207,9 +206,8 @@ class _PlayerRevealCardState extends State<PlayerRevealCard> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      SportIconHelper.iconForSport(sportType),
-                      color: theme.colorScheme.primaryContainer,
+                    SportIconHelper.widgetForSport(
+                      sportType,
                       size: 14,
                     ),
                     const SizedBox(width: 5),

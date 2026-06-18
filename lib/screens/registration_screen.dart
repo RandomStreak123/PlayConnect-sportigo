@@ -82,13 +82,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 'Create Account',
                 style: Theme.of(context).textTheme.displayLarge,
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Join the Sportigo community',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
+
               const SizedBox(height: AppSpacing.xl + 4),
               _buildTextField(
                 label: 'Full Name',

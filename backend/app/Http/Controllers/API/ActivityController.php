@@ -10,7 +10,13 @@ class ActivityController extends Controller
 {
     public function index()
     {
+        $userId = auth()->id();
+        $matchIds = \App\Models\SportsMatch::where('creator_id', $userId)->pluck('id');
+
         $paginated = Activity::with('user:id,name,profile_picture,profile_photo,gender')
+            ->whereIn('type', ['match_joined', 'match_left'])
+            ->whereIn('meta->match_id', $matchIds)
+            ->where('user_id', '!=', $userId)
             ->latest()
             ->paginate(15);
 

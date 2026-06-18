@@ -10,6 +10,7 @@ import '../logic/blocs/notification/notification_event.dart';
 import '../logic/blocs/notification/notification_state.dart';
 import '../widgets/app_loading_indicator.dart';
 import 'match_details_screen.dart';
+import '../core/utils/sport_icon_helper.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -275,14 +276,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     final notification = item as NotificationModel;
                     final meta = notification.meta;
                     final sportType = meta?['sport_type'] as String?;
-                    final icon = _getIconForType(notification.type, sportType);
                     final iconColor = _getColorForType(context, notification.type, sportType);
+
+                    Widget? iconWidget;
+                    IconData? iconData;
+                    if (notification.type == 'match_joined') {
+                      iconWidget = SportIconHelper.widgetForSport(
+                        sportType ?? '',
+                        size: 32,
+                      );
+                    } else {
+                      iconData = _getIconForType(notification.type, sportType);
+                    }
 
                     return GestureDetector(
                       onTap: () => _handleNotificationTap(notification),
                       child: _buildNotificationItem(
                         context,
-                        icon: icon,
+                        iconWidget: iconWidget,
+                        icon: iconData,
                         iconColor: iconColor,
                         title: notification.title,
                         message: notification.message,
@@ -337,7 +349,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _buildNotificationItem(
     BuildContext context, {
-    required IconData icon,
+    Widget? iconWidget,
+    IconData? icon,
     required Color iconColor,
     required String title,
     required String message,
@@ -361,14 +374,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: iconColor, size: AppIconSize.sm),
-          ),
+          iconWidget != null
+              ? SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Center(child: iconWidget),
+                )
+              : Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon!, color: iconColor, size: AppIconSize.sm),
+                ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(

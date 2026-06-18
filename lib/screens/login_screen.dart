@@ -148,6 +148,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     GestureDetector(
                       onTap: () {
+                        _usernameController.clear();
+                        _passwordController.clear();
                         Navigator.push(
                           context,
                           MaterialPageRoute(

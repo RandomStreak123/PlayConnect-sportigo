@@ -414,9 +414,8 @@ class _MatchCardState extends State<MatchCard> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
-                                      SportIconHelper.iconForSport(match.sportType),
-                                      color: Colors.white,
+                                    SportIconHelper.widgetForSport(
+                                      match.sportType,
                                       size: 16,
                                     ),
                                     const SizedBox(width: 4),

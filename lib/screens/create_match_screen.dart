@@ -8,6 +8,7 @@ import '../logic/blocs/matches/match_bloc.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_icon_size.dart';
 import '../core/theme/app_radius.dart';
+import 'location_picker_screen.dart';
 
 class CreateMatchScreen extends StatefulWidget {
   const CreateMatchScreen({super.key});
@@ -27,6 +28,8 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   DateTime _selectedDate = DateTime.now().add(const Duration(hours: 2));
   bool _womenOnly = false;
   bool _isSubmitting = false;
+  double? _selectedLatitude;
+  double? _selectedLongitude;
 
   final List<String> _sports = ['Football', 'Basketball', 'Tennis', 'Padel', 'Badminton', 'Cricket'];
   final List<String> _skills = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
@@ -74,8 +77,28 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     }
   }
 
+  Future<void> _pickLocation() async {
+    final result = await Navigator.push<LocationResult>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialAddress: _locationController.text,
+        ),
+      ),
+    );
+
+    if (result != null && result.address.isNotEmpty) {
+      setState(() {
+        _locationController.text = result.address;
+        _selectedLatitude = result.latitude;
+        _selectedLongitude = result.longitude;
+      });
+    }
+  }
+
   void _submitForm() {
     if (_formKey.currentState!.validate() && !_isSubmitting) {
+      debugPrint('Selected coordinates: $_selectedLatitude, $_selectedLongitude');
       final openSlots = int.parse(_slotsController.text);
       final match = MatchModel(
         id: '',
@@ -182,8 +205,10 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
               _buildLabel('Location'),
               _buildTextField(
                 controller: _locationController,
-                hint: 'e.g., Central Park Court 2',
-                icon: Icons.location_on_outlined,
+                hint: 'Choose location from map',
+                icon: Icons.location_on,
+                readOnly: true,
+                onTap: _pickLocation,
                 validator: (val) => val!.isEmpty ? 'Please enter a location' : null,
               ),
               const SizedBox(height: 20),
@@ -369,20 +394,29 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     required TextEditingController controller,
     required String hint,
     IconData? icon,
+    Widget? suffixIcon,
     TextInputType? keyboardType,
     bool fixedHeight = false,
     String? Function(String?)? validator,
+    bool readOnly = false,
+    VoidCallback? onTap,
   }) {
     final field = TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
+      readOnly: readOnly,
+      onTap: onTap,
       style: Theme.of(context).textTheme.bodyLarge,
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: icon != null
-            ? Icon(icon, color: Theme.of(context).colorScheme.outline)
+            ? GestureDetector(
+                onTap: onTap,
+                child: Icon(icon, color: Theme.of(context).colorScheme.outline),
+              )
             : null,
+        suffixIcon: suffixIcon,
         filled: true,
         fillColor: Theme.of(context).colorScheme.surface,
         contentPadding: EdgeInsets.symmetric(

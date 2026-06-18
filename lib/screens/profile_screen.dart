@@ -12,6 +12,7 @@ import '../logic/blocs/matches/match_bloc.dart';
 import '../data/models/match_model.dart';
 import '../data/models/activity_model.dart';
 import 'package:intl/intl.dart';
+import '../core/utils/sport_icon_helper.dart';
 import 'dart:math' as math;
 
 class ProfileScreen extends StatefulWidget {
@@ -1230,9 +1231,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   ),
                   child: Row(
                     children: [
-                      Text(
-                        sportItem['icon']!,
-                        style: const TextStyle(fontSize: 16),
+                      SportIconHelper.widgetForSport(
+                        sportItem['name']!,
+                        size: 16,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -1388,14 +1389,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       }
 
                       final xp = _getActivityXp(activity.type);
-                      final sportEmoji = _getSportEmoji(sportType);
                       final dynamicColor = _getSportColor(context, sportType);
 
                       return _buildTimelineActivity(
                         title: title,
                         subtitle: subtitle,
                         xpReward: xp >= 0 ? '+$xp XP' : '$xp XP',
-                        sportEmoji: sportEmoji,
+                        iconWidget: SportIconHelper.widgetForSport(
+                          sportType,
+                          size: 28,
+                        ),
                         sportColor: dynamicColor,
                       );
                     },
@@ -2030,7 +2033,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     required String title,
     required String subtitle,
     required String xpReward,
-    required String sportEmoji,
+    required Widget iconWidget,
     required Color sportColor,
   }) {
     final isNegative = xpReward.startsWith('-');
@@ -2045,16 +2048,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: sportColor.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              sportEmoji,
-              style: const TextStyle(fontSize: 18),
-            ),
+          SizedBox(
+            width: 38,
+            height: 38,
+            child: Center(child: iconWidget),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -2140,24 +2137,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
 
-  String _getSportEmoji(String sport) {
-    switch (sport) {
-      case 'Football':
-        return '⚽';
-      case 'Cricket':
-        return '🏏';
-      case 'Badminton':
-        return '🏸';
-      case 'Basketball':
-        return '🏀';
-      case 'Tennis':
-        return '🎾';
-      case 'Padel':
-        return '🏓';
-      default:
-        return '🏃';
-    }
-  }
+
 
   String _formatDateTime(String dateTimeStr) {
     try {
