@@ -267,6 +267,15 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
     final sportType = meta?['sport_type'] as String?;
     final color = _getActivityColor(activity.type, sportType);
 
+    final Color leftBarColor;
+    if (activity.type == 'match_joined') {
+      leftBarColor = AppColors.sportsGreen;
+    } else if (activity.type == 'match_left') {
+      leftBarColor = Colors.redAccent;
+    } else {
+      leftBarColor = Colors.transparent;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
@@ -290,62 +299,76 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
           color: Colors.transparent,
           child: InkWell(
             onTap: meta != null && meta['match_id'] != null ? () => _handleActivityTap(activity) : null,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
+            child: IntrinsicHeight(
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // User Avatar
-                  AvatarImageHelper.circleAvatar(
-                    path: activity.user?.profilePicture,
-                    radius: 24,
-                    backgroundColor: Theme.of(context).colorScheme.surfaceDim,
-                  ),
-                  const SizedBox(width: AppSpacing.sm + 2),
-
-                  // Content
+                  if (leftBarColor != Colors.transparent)
+                    Container(
+                      width: 4,
+                      color: leftBarColor,
+                    ),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                activity.user?.name ?? 'Player',
-                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              _getRelativeTime(activity.createdAt),
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: Theme.of(context).colorScheme.outline,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          activity.message,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            height: 1.4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // User Avatar
+                          AvatarImageHelper.circleAvatar(
+                            path: activity.user?.profilePicture,
+                            radius: 24,
+                            backgroundColor: Theme.of(context).colorScheme.surfaceDim,
                           ),
-                        ),
+                          const SizedBox(width: AppSpacing.sm + 2),
 
-                      ],
+                          // Content
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        activity.user?.name ?? 'Player',
+                                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.xs),
+                                    Text(
+                                      _getRelativeTime(activity.createdAt),
+                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.outline,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  activity.message,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    height: 1.4,
+                                  ),
+                                ),
+
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+
+                          // Sport Icon Indicator
+                          _getActivityIcon(activity.type, sportType, color),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-
-                  // Sport Icon Indicator
-                  _getActivityIcon(activity.type, sportType, color),
                 ],
               ),
             ),
