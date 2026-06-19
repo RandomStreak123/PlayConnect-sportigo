@@ -66,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/photo', [\App\Http\Controllers\API\ProfileController::class, 'uploadProfilePhoto']);
     Route::put('/profile',        [\App\Http\Controllers\API\ProfileController::class, 'updateProfile']);
     Route::get('/players',        [\App\Http\Controllers\API\ProfileController::class, 'players']);
+    Route::get('/activities/my-matches', [\App\Http\Controllers\API\ActivityController::class, 'forMyMatches']);
     Route::get('/activities',     [\App\Http\Controllers\API\ActivityController::class, 'index']);
     Route::get('/notifications',  [\App\Http\Controllers\API\NotificationController::class, 'index']);
     Route::put('/notifications/read-all', [\App\Http\Controllers\API\NotificationController::class, 'markAllAsRead']);

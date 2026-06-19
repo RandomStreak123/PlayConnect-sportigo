@@ -82,3 +82,23 @@ export const getPlayerAvatar = (profilePicture, gender) => {
   // Otherwise, use a clean static SVG placeholder for users without a profile picture
   return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NiZDVlMSI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgM2MxLjY2IDAgMyAxLjM0IDMgM3MtMS4zNCAzLTMgMy0zLTEuMzQtMy0zIDEuMzQtMyAzLTN6bTAgMTQuMmMtMi41IDAtNC43MS0xLjI4LTYtMy4yMi4wMy0xLjk5IDQtMy4wOCA2LTMuMDggMS45OSAwIDUuOTcgMS4wOSA2IDMuMDgtMS4yOSAxLjk0LTMuNSAzLjIyLTYgMy4yMnoiLz48L3N2Zz4='
 }
+
+export const getSportIconUrl = (sportOrType) => {
+  const lower = String(sportOrType || '').toLowerCase().trim()
+  const mappings = {
+    football:   'https://cdn-icons-png.flaticon.com/128/1165/1165187.png',
+    basketball: 'https://cdn-icons-png.flaticon.com/128/1041/1041168.png',
+    tennis:     'https://cdn-icons-png.flaticon.com/128/7430/7430195.png',
+    padel:      'https://cdn-icons-png.flaticon.com/128/19030/19030325.png',
+    pedal:      'https://cdn-icons-png.flaticon.com/128/19030/19030325.png',
+    badminton:  'https://cdn-icons-png.flaticon.com/128/11865/11865449.png',
+    cricket:    'https://cdn-icons-png.flaticon.com/128/2160/2160064.png',
+    // Actions & Notifications
+    left:       'https://cdn-icons-png.flaticon.com/128/1828/1828490.png',
+    wave:       'https://cdn-icons-png.flaticon.com/128/4650/4650393.png',
+    bell:       'https://cdn-icons-png.flaticon.com/128/3602/3602145.png',
+    default:    'https://cdn-icons-png.flaticon.com/128/3602/3602145.png'
+  }
+  return mappings[lower] || mappings.default
+}
+

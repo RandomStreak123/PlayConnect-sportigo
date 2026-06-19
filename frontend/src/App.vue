@@ -101,6 +101,23 @@ const currentUser = computed(() => {
   return store.state.currentUser || { name: 'Champ', gender: 'male', profilePhotoUrl: null }
 })
 
+const profileStats = computed(() => {
+  if (store.state.currentUser && store.state.currentUser.stats) {
+    return store.state.currentUser.stats
+  }
+  return {
+    xp: 0,
+    level: 1,
+    currentLevelXp: 0,
+    nextLevelXp: 1000,
+    progressPct: 0,
+    winRate: 0,
+    streak: 0,
+    averageRating: 0.0,
+    totalGames: 0
+  }
+})
+
 const currentUserAvatar = computed(() => {
   return getPlayerAvatar(currentUser.value.profilePhotoUrl, currentUser.value.gender)
 })
@@ -115,9 +132,21 @@ const switchTab = (tabName) => {
 }
 
 const viewUserProfile = (player) => {
-  if (player && (Number(player.id) === Number(currentUser.value.id) || player.name === currentUser.value.name)) {
+  console.log('App.vue: viewUserProfile called with player:', JSON.stringify(player))
+  const currentUserId = store.state.currentUser?.id
+  console.log('App.vue: currentUserId:', currentUserId)
+  
+  const isSelf = player && (
+    (player.id && currentUserId && Number(player.id) === Number(currentUserId)) ||
+    (!player.id && player.name === currentUser.value.name)
+  )
+  console.log('App.vue: isSelf resolved to:', isSelf)
+
+  if (isSelf) {
+    console.log('App.vue: redirecting to current user profile')
     switchTab('profile')
   } else {
+    console.log('App.vue: redirecting to another user profile:', player.id)
     profileTargetUser.value = player
     showDetailsModal.value = false
     currentTab.value = 'profile'
@@ -189,6 +218,18 @@ const openPlayerReveal = (player, sport) => {
 const showUnfollowConfirm = ref(false)
 const playerToUnfollow = ref(null)
 
+const showLogoutConfirm = ref(false)
+const isLoggingOut = ref(false)
+const handleLogout = () => {
+  showLogoutConfirm.value = false
+  isLoggingOut.value = true
+  setTimeout(() => {
+    isLoggingOut.value = false
+    store.logout()
+    triggerSnackbar('Successfully signed out.')
+  }, 1500)
+}
+
 const handleToggleFollow = async (player) => {
   if (player.isFollowed) {
     playerToUnfollow.value = player
@@ -255,7 +296,7 @@ const handleApplyFilters = async (filters) => {
 
 // Theme selector
 const isWomenTheme = computed(() => {
-  return store.isWomenMode.value
+  return isAuthenticated.value && store.isWomenMode.value
 })
 </script>
 
@@ -304,77 +345,79 @@ const isWomenTheme = computed(() => {
     <div v-else class="app-layout">
       <!-- Desktop Sidebar Navigation -->
       <aside class="desktop-sidebar">
-        <div class="sidebar-logo">
-          <span class="logo-icon">⚡</span>
-          <span class="logo-text">PlayConnect</span>
-        </div>
-        
-        <nav class="sidebar-nav">
-          <button 
-            class="sidebar-link" 
-            :class="{ active: currentTab === 'home' }"
-            @click="switchTab('home')"
-          >
-            <span class="link-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            </span>
-            <span class="link-label">{{ t('home') }}</span>
-          </button>
-
-          <button 
-            class="sidebar-link" 
-            :class="{ active: currentTab === 'explore' }"
-            @click="switchTab('explore')"
-          >
-            <span class="link-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-            </span>
-            <span class="link-label">{{ t('explore') }}</span>
-          </button>
-
-          <button 
-            class="sidebar-link" 
-            :class="{ active: currentTab === 'matches' }"
-            @click="switchTab('matches')"
-          >
-            <span class="link-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"/><path d="M12 2a6 6 0 0 1 6 6v3.5a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/></svg>
-            </span>
-            <span class="link-label">{{ t('matches') }}</span>
-          </button>
-
-          <button 
-            class="sidebar-link" 
-            :class="{ active: currentTab === 'activity' }"
-            @click="switchTab('activity')"
-          >
-            <span class="link-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="m18 8-6 3V5c0-1.1-.9-2-2-2h-3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h3c1.1 0 2-.9 2-2v-6l6 3Z"/><path d="M2 10h3v4H2z"/></svg>
-            </span>
-            <span class="link-label">{{ t('activity') }}</span>
-          </button>
-
-          <button 
-            class="sidebar-link" 
-            :class="{ active: currentTab === 'profile' }"
-            @click="switchTab('profile')"
-          >
-            <span class="link-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </span>
-            <span class="link-label">{{ t('profile') }}</span>
-          </button>
-        </nav>
-
-        <!-- Sidebar footer/user widget -->
-        <div class="sidebar-footer" @click="switchTab('profile')" style="cursor: pointer;">
-          <div class="footer-avatar-wrap">
-            <img :src="currentUserAvatar" class="footer-avatar" @error="(e) => e.target.src = '/assets/images/players/download.jpg'" />
-            <span class="online-indicator-dot"></span>
+        <div class="header-inner-container">
+          <div class="sidebar-logo" @click="switchTab('home')" style="cursor: pointer;">
+            <span class="logo-icon">⚡</span>
+            <span class="logo-text">PlayConnect</span>
           </div>
-          <div class="footer-user-details">
-            <span class="footer-username">{{ currentUser.name }}</span>
-            <span class="footer-user-lvl">Level 18 Player</span>
+          
+          <nav class="sidebar-nav">
+            <button 
+              class="sidebar-link" 
+              :class="{ active: currentTab === 'home' }"
+              @click="switchTab('home')"
+            >
+              <span class="link-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </span>
+              <span class="link-label">{{ t('home') }}</span>
+            </button>
+
+            <button 
+              class="sidebar-link" 
+              :class="{ active: currentTab === 'explore' }"
+              @click="switchTab('explore')"
+            >
+              <span class="link-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              </span>
+              <span class="link-label">{{ t('explore') }}</span>
+            </button>
+
+            <button 
+              class="sidebar-link" 
+              :class="{ active: currentTab === 'matches' }"
+              @click="switchTab('matches')"
+            >
+              <span class="link-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"/><path d="M12 2a6 6 0 0 1 6 6v3.5a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/></svg>
+              </span>
+              <span class="link-label">{{ t('matches') }}</span>
+            </button>
+
+            <button 
+              class="sidebar-link" 
+              :class="{ active: currentTab === 'activity' }"
+              @click="switchTab('activity')"
+            >
+              <span class="link-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="m18 8-6 3V5c0-1.1-.9-2-2-2h-3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h3c1.1 0 2-.9 2-2v-6l6 3Z"/><path d="M2 10h3v4H2z"/></svg>
+              </span>
+              <span class="link-label">{{ t('activity') }}</span>
+            </button>
+
+            <button 
+              class="sidebar-link" 
+              :class="{ active: currentTab === 'profile' }"
+              @click="switchTab('profile')"
+            >
+              <span class="link-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </span>
+              <span class="link-label">{{ t('profile') }}</span>
+            </button>
+          </nav>
+
+          <!-- Sidebar footer/user widget -->
+          <div class="sidebar-footer" @click="showLogoutConfirm = true" style="cursor: pointer;">
+            <div class="footer-avatar-wrap">
+              <img :src="currentUserAvatar" class="footer-avatar" @error="(e) => e.target.src = '/assets/images/players/download.jpg'" />
+              <span class="online-indicator-dot"></span>
+            </div>
+            <div class="footer-user-details">
+              <span class="footer-username">{{ currentUser.name }}</span>
+              <span class="footer-user-lvl">Level {{ profileStats.level }} Player</span>
+            </div>
           </div>
         </div>
       </aside>
@@ -411,11 +454,11 @@ const isWomenTheme = computed(() => {
           </div>
           <ProfileScreen 
             v-else-if="currentTab === 'profile'"
-            :is-current-user="!profileTargetUser || Number(profileTargetUser.id) === Number(currentUser.id)"
+            :is-current-user="!profileTargetUser || !profileTargetUser.id || Number(profileTargetUser.id) === Number(store.state.currentUser?.id)"
             :user-id="profileTargetUser ? profileTargetUser.id : null"
             :player-name="profileTargetUser ? profileTargetUser.name : ''"
             :profile-picture="profileTargetUser ? (profileTargetUser.profilePicture || profileTargetUser.profilePhotoUrl || profileTargetUser.avatar) : null"
-            @auth-logout="triggerSnackbar('Successfully signed out.')"
+            @auth-logout="handleLogout"
             @toast-message="triggerSnackbar"
             @view-profile="viewUserProfile"
           />
@@ -526,6 +569,7 @@ const isWomenTheme = computed(() => {
       :show="showNotifications"
       @close="showNotifications = false"
       @open-match-details="openMatchDetails"
+      @view-profile="viewUserProfile"
     />
 
     <!-- Toast message box -->
@@ -552,6 +596,42 @@ const isWomenTheme = computed(() => {
               <button class="logout-btn-no" @click="showUnfollowConfirm = false">Cancel</button>
               <button class="logout-btn-yes" style="background-color: #dc2626;" @click="confirmUnfollow">Unfollow</button>
             </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Logout Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showLogoutConfirm" class="logout-confirm-backdrop" @click="showLogoutConfirm = false">
+          <div class="logout-confirm-card animate-slide-up" @click.stop>
+            <div class="logout-confirm-handle"></div>
+            <div class="logout-confirm-icon-wrap" style="background-color: #fee2e2; display: flex; justify-content: center; align-items: center;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="stroke: #dc2626; width: 24px; height: 24px; display: block;">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </div>
+            <h3 class="logout-confirm-title">Sign Out?</h3>
+            <p class="logout-confirm-desc">You will need to log in again.</p>
+            <div class="logout-confirm-actions">
+              <button class="logout-btn-no" @click="showLogoutConfirm = false">Cancel</button>
+              <button class="logout-btn-yes" @click="handleLogout">Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Full-Screen Sign Out Loading Overlay -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="isLoggingOut" class="logout-loading-overlay">
+          <div class="logout-loading-card animate-scale-up">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Signing out...</p>
           </div>
         </div>
       </Transition>
@@ -795,30 +875,41 @@ const isWomenTheme = computed(() => {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   overflow: hidden;
   position: relative;
 }
 
-/* Sidebar navigation */
+/* Sidebar navigation converted to Top Header */
 .desktop-sidebar {
-  width: 280px;
-  height: 100%;
-  background: linear-gradient(180deg, var(--sidebar-bg) 0%, rgba(15, 23, 42, 0.9) 100%), var(--sidebar-bg);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  flex-direction: column;
-  padding: 32px 20px;
+  width: 100%;
+  height: 72px;
+  background: var(--sidebar-bg);
+  border-bottom: 1px solid var(--outline-variant);
+  border-right: none;
+  padding: 0 40px;
   flex-shrink: 0;
   z-index: 10;
   transition: all 0.3s ease;
 }
 
+/* Header Inner Container spans full width */
+.header-inner-container {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
 .sidebar-logo {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 36px;
-  padding-left: 8px;
+  margin-bottom: 0;
+  padding-left: 0;
 }
 
 .logo-icon {
@@ -839,42 +930,41 @@ const isWomenTheme = computed(() => {
   font-family: var(--font-display);
   font-size: 1.35rem;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--primary);
   letter-spacing: -0.5px;
-  background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 
 .sidebar-nav {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
-  flex: 1;
+  flex: 0 0 auto;
+  margin: 0;
 }
 
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   background: none;
-  border: none;
-  padding: 12px 18px;
-  border-radius: var(--radius-md);
+  border: 1.5px solid transparent;
+  padding: 8px 16px;
+  border-radius: 12px;
   font-family: var(--font-sans);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--sidebar-text);
   cursor: pointer;
-  text-align: left;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
+  transition: all 0.2s ease;
   position: relative;
 }
 
 .sidebar-link:hover {
   background-color: var(--sidebar-hover-bg);
-  color: #ffffff;
-  padding-left: 22px;
+  color: var(--sidebar-text-active);
 }
 
 .sidebar-link .nav-svg {
@@ -883,23 +973,23 @@ const isWomenTheme = computed(() => {
 }
 
 .sidebar-link:hover .nav-svg {
-  stroke: #ffffff;
+  stroke: var(--sidebar-text-active);
   transform: scale(1.1);
 }
 
 .sidebar-link.active {
   background-color: var(--sidebar-hover-bg);
-  color: #ffffff;
-  box-shadow: inset 4px 0 0 var(--primary), 0 4px 15px rgba(0, 0, 0, 0.15);
+  border-color: var(--outline-variant);
+  color: var(--sidebar-text-active);
 }
 
 .sidebar-link.active .nav-svg {
-  stroke: #ffffff;
+  stroke: var(--sidebar-text-active);
   transform: scale(1.05);
 }
 
 .theme-women .sidebar-link.active .nav-svg {
-  stroke: #ffffff;
+  stroke: var(--sidebar-text-active);
 }
 
 .link-icon {
@@ -909,11 +999,13 @@ const isWomenTheme = computed(() => {
 }
 
 .sidebar-footer {
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 14px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0;
+  border-top: none;
 }
 
 .footer-avatar-wrap {
@@ -928,7 +1020,7 @@ const isWomenTheme = computed(() => {
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--primary);
+  border: 2px solid var(--outline-variant);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
@@ -952,7 +1044,7 @@ const isWomenTheme = computed(() => {
 .footer-username {
   font-size: 0.92rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--on-surface);
 }
 
 .footer-user-lvl {
@@ -980,7 +1072,8 @@ const isWomenTheme = computed(() => {
 
 .desktop-content-container {
   width: 100%;
-  max-width: 1000px;
+  max-width: 100%;
+  padding: 0 40px;
   margin: 0 auto;
   min-height: 100%;
   position: relative;
@@ -1294,6 +1387,54 @@ const isWomenTheme = computed(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Full-Screen Sign Out Loading Overlay */
+.logout-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.logout-loading-card {
+  background-color: var(--surface-container-lowest, #ffffff);
+  border-radius: 2rem;
+  width: 240px;
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--outline-variant, rgba(241, 245, 249, 0.8));
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--outline-variant, #e2e8f0);
+  border-top-color: var(--primary, #0f172a);
+  border-radius: 50%;
+  animation: spinner-rotation 0.8s linear infinite;
+}
+
+.loading-text {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--on-surface, #0f172a);
+}
+
+@keyframes spinner-rotation {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>
 

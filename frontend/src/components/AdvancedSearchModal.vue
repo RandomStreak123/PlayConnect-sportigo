@@ -2,7 +2,7 @@
 import { ref, watch, onUnmounted } from 'vue'
 import { store } from '../store'
 import { t } from '../utils/i18n'
-import { getPlayerAvatar } from '../utils/sportImageHelper'
+import { getPlayerAvatar, getSportIconUrl } from '../utils/sportImageHelper'
 
 const props = defineProps({
   show: {
@@ -189,7 +189,9 @@ const formatMatchTime = (dateTimeStr) => {
                   @click="emit('open-details', match); emit('close');"
                 >
                   <div class="match-left">
-                    <span class="sport-icon-badge">{{ getSportIcon(match.sport_type || match.category) }}</span>
+                    <span class="sport-icon-badge">
+                      <img :src="getSportIconUrl(match.sport_type || match.category)" class="search-sport-icon-img" alt="" />
+                    </span>
                     <div class="match-meta">
                       <span class="match-title">{{ match.title }}</span>
                       <span class="match-sub">{{ match.location }} · 0.0 km</span>
@@ -655,6 +657,12 @@ const formatMatchTime = (dateTimeStr) => {
   justify-content: center;
   align-items: center;
   font-size: 1.1rem;
+}
+
+.search-sport-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 }
 
 .match-meta {

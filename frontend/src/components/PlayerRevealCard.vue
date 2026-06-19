@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { getPlayerAvatar } from '../utils/sportImageHelper'
+import { getPlayerAvatar, getSportIconUrl } from '../utils/sportImageHelper'
 
 const props = defineProps({
   player: {
@@ -106,7 +106,7 @@ const handleViewProfile = () => {
       
       <!-- Top banner block -->
       <div class="reveal-banner" :style="bannerStyle">
-        <div class="watermark-emoji">{{ getSportEmoji(sportType) }}</div>
+        <img :src="getSportIconUrl(sportType)" class="watermark-icon" alt="" />
         
         <button class="close-btn" @click="emit('close')">✕</button>
       </div>
@@ -125,7 +125,7 @@ const handleViewProfile = () => {
         <!-- Badges -->
         <div class="badge-row">
           <div class="sport-badge">
-            <span class="badge-icon">{{ getSportEmoji(sportType) }}</span>
+            <img :src="getSportIconUrl(sportType)" class="player-sport-badge-icon" alt="" />
             <span class="badge-label">{{ sportType.toUpperCase() }}</span>
           </div>
           <div class="status-badge">
@@ -229,13 +229,15 @@ const handleViewProfile = () => {
   overflow: hidden;
 }
 
-.watermark-emoji {
+.watermark-icon {
   position: absolute;
   right: -20px;
   top: -20px;
-  font-size: 8rem;
-  opacity: 0.15;
-  user-select: none;
+  width: 120px;
+  height: 120px;
+  opacity: 0.12;
+  pointer-events: none;
+  object-fit: contain;
 }
 
 .close-btn {
@@ -317,8 +319,10 @@ const handleViewProfile = () => {
   gap: 6px;
 }
 
-.badge-icon {
-  font-size: 0.85rem;
+.player-sport-badge-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 .badge-label {

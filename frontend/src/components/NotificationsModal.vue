@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { store } from '../store'
+import { getSportIconUrl } from '../utils/sportImageHelper'
 
 const props = defineProps({
   show: {
@@ -9,25 +10,106 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'open-match-details'])
+const emit = defineEmits(['close', 'open-match-details', 'view-profile'])
 
 const notificationList = computed(() => {
   return store.state.notifications || []
 })
 
-const getIcon = (title) => {
-  const t = String(title || '').toLowerCase()
-  if (t.includes('reminder') || t.includes('schedule')) return '📅'
-  if (t.includes('request') || t.includes('join') || t.includes('follower') || t.includes('follow')) return '👤'
-  if (t.includes('found')) return '🎾'
-  return '🔔'
+const groupedNotifications = computed(() => {
+  const groups = {}
+  notificationList.value.forEach(item => {
+    let groupName = 'Earlier'
+    const t = String(item.time || '').toLowerCase()
+    if (t.includes('sec') || t.includes('min') || t.includes('hour') || t.includes('hr') || t.includes('today')) {
+      groupName = 'Today'
+    } else if (t.includes('yesterday')) {
+      groupName = 'Yesterday'
+    } else {
+      groupName = 'Earlier'
+    }
+    if (!groups[groupName]) {
+      groups[groupName] = []
+    }
+    groups[groupName].push(item)
+  })
+  
+  // Sort groups
+  const sorted = {}
+  if (groups['Today'] && groups['Today'].length > 0) sorted['Today'] = groups['Today']
+  if (groups['Yesterday'] && groups['Yesterday'].length > 0) sorted['Yesterday'] = groups['Yesterday']
+  if (groups['Earlier'] && groups['Earlier'].length > 0) sorted['Earlier'] = groups['Earlier']
+  return sorted
+})
+
+const getNotificationSport = (title, body, meta) => {
+  if (meta && typeof meta === 'object') {
+    if (meta.sport_type) return meta.sport_type
+    if (meta.sport) return meta.sport
+  }
+  const text = `${title} ${body}`.toLowerCase()
+  if (text.includes('football') || text.includes('soccer')) return 'Football'
+  if (text.includes('cricket')) return 'Cricket'
+  if (text.includes('badminton')) return 'Badminton'
+  if (text.includes('basketball')) return 'Basketball'
+  if (text.includes('tennis')) return 'Tennis'
+  if (text.includes('padel')) return 'Padel'
+  return ''
 }
 
-const getIconClass = (title) => {
+const getNotificationType = (title) => {
   const t = String(title || '').toLowerCase()
-  if (t.includes('reminder')) return 'reminder'
-  if (t.includes('request') || t.includes('follower') || t.includes('follow')) return 'request'
-  if (t.includes('found')) return 'found'
+  if (t.includes('left')) return 'left'
+  if (t.includes('joined') || t.includes('join')) return 'joined'
+  if (t.includes('wave')) return 'wave'
+  return 'default'
+}
+
+const getNotificationEmoji = (title, body, meta) => {
+  const type = getNotificationType(title)
+  if (type === 'left') return '🏃'
+  if (type === 'wave') return '👋'
+  
+  const sport = getNotificationSport(title, body, meta)
+  const s = String(sport || '').toLowerCase().trim()
+  switch (s) {
+    case 'football': return '⚽'
+    case 'basketball': return '🏀'
+    case 'tennis': return '🎾'
+    case 'padel': return '🏓'
+    case 'badminton': return '🏸'
+    case 'cricket': return '🏏'
+    default: return '🔔'
+  }
+}
+
+const getNotificationIconKey = (title, body, meta) => {
+  const type = getNotificationType(title)
+  if (type === 'left') return 'left'
+  if (type === 'wave') return 'wave'
+  
+  const sport = getNotificationSport(title, body, meta)
+  if (sport) return sport
+  return 'bell'
+}
+
+const getNotificationColorClass = (title, body, meta) => {
+  const type = getNotificationType(title)
+  if (type === 'left') return 'left'
+  if (type === 'wave') return 'wave'
+  if (type === 'joined') {
+    const sport = getNotificationSport(title, body, meta)
+    const s = String(sport || '').toLowerCase().trim()
+    switch (s) {
+      case 'football': return 'football'
+      case 'basketball': return 'basketball'
+      case 'tennis': return 'tennis'
+      case 'padel': return 'padel'
+      case 'badminton': return 'badminton'
+      case 'cricket': return 'cricket'
+      default: return 'default'
+    }
+  }
   return 'default'
 }
 
@@ -35,14 +117,44 @@ const handleMarkAllRead = async () => {
   await store.markAllNotificationsAsRead()
 }
 
-const handleMarkRead = async (item) => {
+const handleMarkRead = (item) => {
+  console.log('--- NOTIFICATION CLICKED ---')
+  console.log('Item ID:', item.id)
+  console.log('Item Title:', item.title)
+  console.log('Item Message/Body:', item.body || item.message)
+  console.log('Item Meta Raw:', JSON.stringify(item.meta))
+
   if (!item.read) {
-    await store.markNotificationAsRead(item.id)
+    store.markNotificationAsRead(item.id)
   }
 
-  if (item.meta) {
-    const matchId = item.meta.match_id ? Number(item.meta.match_id) : null
-    const matchTitle = item.meta.title || ''
+  let meta = item.meta
+  if (meta && typeof meta === 'string') {
+    try {
+      meta = JSON.parse(meta)
+      console.log('Parsed Meta String to Object:', JSON.stringify(meta))
+    } catch (e) {
+      console.warn('Failed to parse notification meta:', e)
+    }
+  }
+
+  if (meta && typeof meta === 'object') {
+    const senderId = meta.sender_id || meta.follower_id
+    const senderName = meta.sender_name || meta.follower_name
+    console.log('Resolved senderId:', senderId, 'senderName:', senderName)
+
+    if (senderId) {
+      console.log('Emitting view-profile for user:', senderId, senderName)
+      emit('view-profile', {
+        id: Number(senderId),
+        name: senderName || 'Player'
+      })
+      emit('close')
+      return
+    }
+
+    const matchId = meta.match_id ? Number(meta.match_id) : null
+    const matchTitle = meta.title || ''
     
     // Find matching match in store
     const match = store.state.matches.find(m => 
@@ -65,7 +177,7 @@ const handleMarkRead = async (item) => {
         <!-- Header -->
         <div class="modal-header">
           <button class="back-btn" @click="emit('close')" aria-label="Close">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="close-icon"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="back-icon"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           </button>
           <h2 class="modal-title">Notifications</h2>
           <button v-if="notificationList.length > 0" class="read-all-btn" @click="handleMarkAllRead">All Read</button>
@@ -84,27 +196,32 @@ const handleMarkRead = async (item) => {
             <p class="empty-desc">You will get notified here when other players join or interact with your matches!</p>
           </div>
 
-          <div v-else class="notifications-group">
-            <div 
-              v-for="item in notificationList" 
-              :key="item.id"
-              class="notification-card"
-              :class="{ unread: !item.read }"
-              @click="handleMarkRead(item)"
-            >
-              <div class="card-icon-wrap" :class="getIconClass(item.title)">
-                {{ getIcon(item.title) }}
-              </div>
-              
-              <div class="card-content">
-                <div class="card-header-row">
-                  <span class="card-title">{{ item.title }}</span>
-                  <span class="card-time">{{ item.time }}</span>
-                </div>
-                <p class="card-body-text">{{ item.body }}</p>
-              </div>
+          <div v-else class="notifications-list-wrap">
+            <div v-for="(items, groupName) in groupedNotifications" :key="groupName" class="notifications-group-section">
+              <h4 class="group-header">{{ groupName }}</h4>
+              <div class="notifications-group">
+                <div 
+                  v-for="item in items" 
+                  :key="item.id"
+                  class="notification-card"
+                  :class="{ unread: !item.read }"
+                  @click="handleMarkRead(item)"
+                >
+                  <div class="card-icon-wrap" :class="getNotificationColorClass(item.title, item.body, item.meta)">
+                    <img :src="getSportIconUrl(getNotificationIconKey(item.title, item.body, item.meta))" class="notif-icon-img" alt="" />
+                  </div>
+                  
+                  <div class="card-content">
+                    <div class="card-header-row">
+                      <span class="card-title">{{ item.title }}</span>
+                      <span class="card-time">{{ item.time }}</span>
+                    </div>
+                    <p class="card-body-text">{{ item.body }}</p>
+                  </div>
 
-              <div v-if="!item.read" class="unread-dot"></div>
+                  <div v-if="!item.read" class="unread-dot"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -297,9 +414,18 @@ const handleMarkRead = async (item) => {
   border-color: rgba(46, 125, 50, 0.1);
 }
 
+.group-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  margin: 18px 0 12px;
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+}
+
 .card-icon-wrap {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   justify-content: center;
@@ -308,18 +434,21 @@ const handleMarkRead = async (item) => {
   flex-shrink: 0;
 }
 
-.card-icon-wrap.reminder {
-  background-color: rgba(26, 35, 126, 0.08);
+.notif-icon-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
-.card-icon-wrap.request {
-  background-color: rgba(123, 97, 255, 0.08);
-}
-.card-icon-wrap.found {
-  background-color: rgba(255, 145, 0, 0.08);
-}
-.card-icon-wrap.default {
-  background-color: var(--surface-dim);
-}
+
+.card-icon-wrap.football { background-color: rgba(46, 125, 50, 0.08); }
+.card-icon-wrap.basketball { background-color: rgba(255, 145, 0, 0.08); }
+.card-icon-wrap.tennis { background-color: rgba(205, 220, 57, 0.08); }
+.card-icon-wrap.padel { background-color: rgba(0, 150, 136, 0.08); }
+.card-icon-wrap.badminton { background-color: rgba(0, 188, 212, 0.08); }
+.card-icon-wrap.cricket { background-color: rgba(63, 81, 181, 0.08); }
+.card-icon-wrap.left { background-color: rgba(255, 82, 82, 0.08); }
+.card-icon-wrap.wave { background-color: rgba(63, 81, 181, 0.08); }
+.card-icon-wrap.default { background-color: var(--surface-dim); }
 
 .card-content {
   flex: 1;

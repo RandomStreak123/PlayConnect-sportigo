@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { store } from '../store'
-import { getPlayerAvatar } from '../utils/sportImageHelper'
+import { getPlayerAvatar, getSportIconUrl } from '../utils/sportImageHelper'
 import { supabase } from '../utils/supabase'
 import { t } from '../utils/i18n'
 
@@ -151,32 +151,42 @@ const profileUser = ref(null)
 const loadingProfileUser = ref(false)
 
 const loadUserProfile = async () => {
-  if (props.isCurrentUser) {
+  const userId = props.isCurrentUser ? store.state.currentUser?.id : props.userId
+  console.log('ProfileScreen.vue: loadUserProfile. userId:', userId, 'isCurrentUser:', props.isCurrentUser, 'props.userId:', props.userId)
+  if (!userId) {
+    console.log('ProfileScreen.vue: No userId, setting profileUser to null')
     profileUser.value = null
     return
   }
-  if (!props.userId) return
 
   loadingProfileUser.value = true
   try {
-    const res = await fetch(`/api/users/${props.userId}`, {
+    const url = `/api/users/${userId}`
+    console.log('ProfileScreen.vue: fetching profile from URL:', url)
+    const res = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${sessionStorage.getItem('sportigo_token')}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       }
     })
+    console.log('ProfileScreen.vue: fetch profile status:', res.status)
     if (res.ok) {
-      profileUser.value = await res.json()
+      const data = await res.json()
+      console.log('ProfileScreen.vue: fetch profile success:', JSON.stringify(data))
+      profileUser.value = data
+    } else {
+      console.error('ProfileScreen.vue: fetch profile failed with status:', res.status)
     }
   } catch (err) {
-    console.error('Failed to load public profile:', err)
+    console.error('Failed to load user profile:', err)
   } finally {
     loadingProfileUser.value = false
   }
 }
 
-watch(() => [props.userId, props.isCurrentUser], () => {
+watch(() => [props.userId, props.isCurrentUser, store.state.currentUser?.id], () => {
+  console.log('ProfileScreen.vue: watch triggered. props.userId:', props.userId, 'props.isCurrentUser:', props.isCurrentUser)
   profileUser.value = null
   loadUserProfile()
 }, { immediate: true })
@@ -364,26 +374,105 @@ const isPastMatch = (match) => {
   return matchDate < new Date()
 }
 
+const parseDate = (dateStr) => {
+  if (!dateStr) return new Date(0)
+  let formatted = String(dateStr).trim()
+  if (formatted.includes(' ')) {
+    formatted = formatted.replace(' ', 'T')
+  }
+  if (!formatted.includes('Z') && !formatted.includes('+') && formatted.length >= 19) {
+    formatted += 'Z'
+  }
+  const d = new Date(formatted)
+  return isNaN(d.getTime()) ? new Date(0) : d
+}
+
 const userActivities = computed(() => {
-  if (props.isCurrentUser) {
-    const myId = store.state.currentUser?.id
-    if (!myId) return []
-    return (store.state.activities || []).filter(act => {
+  const userId = props.isCurrentUser ? store.state.currentUser?.id : props.userId
+  if (!userId) return []
+
+  const list = []
+  const seenIds = new Set()
+
+  const addUniqueActivities = (acts) => {
+    if (!Array.isArray(acts)) return
+    acts.forEach(act => {
+      if (!act) return
       const isMatchAct = ['match_created', 'match_joined', 'match_left'].includes(act.type)
-      const isMyAct = Number(act.user_id || act.userId) === Number(myId)
-      return isMatchAct && isMyAct
-    })
-  } else {
-    return (profileUser.value?.activities || []).filter(act => {
-      return ['match_created', 'match_joined', 'match_left'].includes(act.type)
+      const isUserAct = Number(act.user_id || act.userId) === Number(userId)
+      if (isMatchAct && isUserAct) {
+        const id = act.id
+        if (id && !seenIds.has(id)) {
+          seenIds.add(id)
+          const normalized = {
+            ...act,
+            sportType: act.sportType || act.sport_type || act.meta?.sport_type || act.meta?.category || 'Sports',
+            matchTitle: act.matchTitle || act.match_title || act.meta?.title || '',
+          }
+          list.push(normalized)
+        }
+      }
     })
   }
+
+  // Add activities from fetched profile (complete database history)
+  if (profileUser.value?.activities) {
+    addUniqueActivities(profileUser.value.activities)
+  }
+
+  // Add activities from store (for real-time updates)
+  if (store.state.activities) {
+    addUniqueActivities(store.state.activities)
+  }
+
+  // Synthesize activities from user's matches if they are not already present in the database log
+  const userMatches = props.isCurrentUser ? store.state.matches : (profileUser.value?.matches || [])
+  if (Array.isArray(userMatches)) {
+    userMatches.forEach(match => {
+      if (!match) return
+      
+      const isCreator = Number(match.creatorId || match.creator_id) === Number(userId)
+      const isParticipant = Array.isArray(match.participants) && match.participants.some(p => Number(p.id) === Number(userId))
+      
+      if (isCreator) {
+        const actId = `synthetic-created-${match.id}`
+        if (!seenIds.has(actId) && !seenIds.has(match.id)) {
+          seenIds.add(actId)
+          list.push({
+            id: actId,
+            type: 'match_created',
+            user_id: userId,
+            sportType: match.sportType || match.sport_type || 'Sports',
+            matchTitle: match.title,
+            created_at: match.dateTime || match.created_at || new Date().toISOString(),
+            meta: { location: match.location }
+          })
+        }
+      } else if (isParticipant) {
+        const actId = `synthetic-joined-${match.id}`
+        if (!seenIds.has(actId) && !seenIds.has(match.id)) {
+          seenIds.add(actId)
+          list.push({
+            id: actId,
+            type: 'match_joined',
+            user_id: userId,
+            sportType: match.sportType || match.sport_type || 'Sports',
+            matchTitle: match.title,
+            created_at: match.dateTime || match.created_at || new Date().toISOString(),
+            meta: { location: match.location }
+          })
+        }
+      }
+    })
+  }
+
+  return list
 })
 
 const sortedActivities = computed(() => {
   const sorted = [...userActivities.value].sort((a, b) => {
-    const timeA = new Date(String(a.created_at || 0).replace(' ', 'T'))
-    const timeB = new Date(String(b.created_at || 0).replace(' ', 'T'))
+    const timeA = parseDate(a.created_at || a.createdAt || 0)
+    const timeB = parseDate(b.created_at || b.createdAt || 0)
     return timeB - timeA
   })
   return sorted
@@ -460,8 +549,8 @@ const getActivityXp = (act) => {
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   try {
-    const d = new Date(dateStr.replace(' ', 'T'))
-    if (isNaN(d.getTime())) return dateStr
+    const d = parseDate(dateStr)
+    if (d.getTime() === 0) return dateStr
     return d.toLocaleDateString(store.state.language === 'hi' ? 'hi-IN' : 'en-US', {
       month: 'short',
       day: 'numeric',
@@ -542,87 +631,8 @@ const getSportSubtitle = (sport) => {
 }
 
 const getSportSVG = (sport) => {
-  const name = (sport || '').toLowerCase().trim()
-  if (name === 'football') {
-    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
-      <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#1e293b" stroke-width="3"/>
-      <polygon points="50,30 38,38 42,54 58,54 62,38" fill="#1e293b"/>
-      <path d="M50,30 L50,4 M38,38 L18,30 M42,54 L26,70 M58,54 L74,70 M62,38 L82,30" stroke="#1e293b" stroke-width="3"/>
-      <polygon points="50,4 35,12 35,26 50,30" fill="none" stroke="#1e293b" stroke-width="3"/>
-      <polygon points="50,4 65,12 65,26 50,30" fill="none" stroke="#1e293b" stroke-width="3"/>
-      <polygon points="18,30 8,44 18,58 38,38" fill="none" stroke="#1e293b" stroke-width="3"/>
-      <polygon points="82,30 92,44 82,58 62,38" fill="none" stroke="#1e293b" stroke-width="3"/>
-      <polygon points="26,70 42,88 50,88 42,54" fill="none" stroke="#1e293b" stroke-width="3"/>
-      <polygon points="74,70 58,88 50,88 58,54" fill="none" stroke="#1e293b" stroke-width="3"/>
-    </svg>`
-  } else if (name === 'cricket') {
-    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
-      <g transform="rotate(-45 50 50)">
-        <rect x="47" y="5" width="6" height="35" rx="3" fill="#d97706" stroke="#451a03" stroke-width="2"/>
-        <rect x="46" y="25" width="8" height="15" fill="#1e293b"/>
-        <path d="M44,40 L56,40 L54,90 L46,90 Z" fill="#f59e0b" stroke="#451a03" stroke-width="2"/>
-      </g>
-      <circle cx="75" cy="40" r="12" fill="#dc2626" stroke="#7f1d1d" stroke-width="2"/>
-      <path d="M66,33 Q75,40 84,33" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="2,2"/>
-      <path d="M66,47 Q75,40 84,47" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="2,2"/>
-    </svg>`
-  } else if (name === 'badminton') {
-    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
-      <g transform="rotate(-30 50 50)">
-        <rect x="48" y="45" width="4" height="50" rx="2" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
-        <rect x="47" y="85" width="6" height="10" fill="#1e293b" rx="1"/>
-        <ellipse cx="50" cy="28" rx="18" ry="22" fill="none" stroke="#475569" stroke-width="3"/>
-        <path d="M35,28 L65,28 M38,18 L62,18 M38,38 L62,38 M44,10 L44,46 M50,6 L50,50 M56,10 L56,46" stroke="#cbd5e1" stroke-width="1"/>
-      </g>
-      <g transform="translate(15, 15)">
-        <path d="M35,45 C35,55 45,55 45,45 Z" fill="#ffffff" stroke="#475569" stroke-width="2"/>
-        <rect x="35" y="42" width="10" height="3" fill="#dc2626"/>
-        <path d="M35,42 L25,15 L55,15 L45,42 Z" fill="#f8fafc" stroke="#475569" stroke-width="2"/>
-        <path d="M30,42 L20,15 M35,42 L30,15 M40,42 L40,15 M45,42 L50,15" stroke="#cbd5e1" stroke-width="1.5"/>
-      </g>
-    </svg>`
-  } else if (name === 'basketball') {
-    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
-      <circle cx="50" cy="50" r="46" fill="#ea580c" stroke="#431407" stroke-width="3"/>
-      <path d="M4,50 L96,50 M50,4 L50,96" stroke="#431407" stroke-width="3"/>
-      <path d="M18,18 Q50,50 18,82" fill="none" stroke="#431407" stroke-width="3"/>
-      <path d="M82,18 Q50,50 82,82" fill="none" stroke="#431407" stroke-width="3"/>
-    </svg>`
-  } else if (name === 'tennis') {
-    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
-      <g transform="rotate(-40 50 50)">
-        <rect x="48" y="45" width="4" height="50" rx="2" fill="#d1d5db" stroke="#374151" stroke-width="1.5"/>
-        <rect x="46" y="85" width="8" height="10" fill="#2563eb" rx="1"/>
-        <circle cx="50" cy="26" r="22" fill="none" stroke="#dc2626" stroke-width="3.5"/>
-        <path d="M30,26 L70,26 M32,16 L68,16 M32,36 L68,36 M40,8 L40,44 M50,4 L50,48 M60,8 L60,44" stroke="#e5e7eb" stroke-width="1"/>
-      </g>
-      <circle cx="35" cy="35" r="10" fill="#ccff00" stroke="#4d7c0f" stroke-width="2"/>
-      <path d="M27,29 Q35,35 35,45" fill="none" stroke="#ffffff" stroke-width="1.5"/>
-      <path d="M43,29 Q35,35 35,45" fill="none" stroke="#ffffff" stroke-width="1.5" transform="rotate(180 35 35)"/>
-    </svg>`
-  } else if (name === 'padel') {
-    return `<svg viewBox="0 0 100 100" width="100%" height="100%">
-      <g transform="rotate(-35 50 50)">
-        <rect x="47" y="55" width="6" height="40" rx="3" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
-        <rect x="45" y="85" width="10" height="10" fill="#ef4444" rx="2"/>
-        <path d="M32,32 C32,12 68,12 68,32 C68,52 32,52 32,32 Z" fill="#ef4444" stroke="#0f172a" stroke-width="3"/>
-        <circle cx="44" cy="26" r="2" fill="#0f172a"/>
-        <circle cx="50" cy="26" r="2" fill="#0f172a"/>
-        <circle cx="56" cy="26" r="2" fill="#0f172a"/>
-        <circle cx="40" cy="32" r="2" fill="#0f172a"/>
-        <circle cx="46" cy="32" r="2" fill="#0f172a"/>
-        <circle cx="54" cy="32" r="2" fill="#0f172a"/>
-        <circle cx="60" cy="32" r="2" fill="#0f172a"/>
-        <circle cx="44" cy="38" r="2" fill="#0f172a"/>
-        <circle cx="50" cy="38" r="2" fill="#0f172a"/>
-        <circle cx="56" cy="38" r="2" fill="#0f172a"/>
-      </g>
-      <circle cx="72" cy="40" r="8" fill="#ccff00" stroke="#4d7c0f" stroke-width="1.5"/>
-      <path d="M66,35 Q72,40 72,48" fill="none" stroke="#ffffff" stroke-width="1"/>
-      <path d="M78,35 Q72,40 72,48" fill="none" stroke="#ffffff" stroke-width="1" transform="rotate(180 72 40)"/>
-    </svg>`
-  }
-  return ''
+  const url = getSportIconUrl(sport)
+  return `<img src="${url}" class="rules-sport-icon-img" style="width: 100%; height: 100%; object-fit: contain;" alt="" />`
 }
 
 const currentSportRules = computed(() => {
@@ -797,7 +807,6 @@ const handleThemeToggle = (e) => {
 const showLogoutConfirm = ref(false)
 
 const handleLogout = () => {
-  store.logout()
   emit('auth-logout')
 }
 
@@ -1231,7 +1240,7 @@ const weekDaysStatus = computed(() => {
           :style="selectedSport === sport.name ? { backgroundColor: '#2e7d32', borderColor: '#2e7d32', color: '#ffffff' } : { backgroundColor: '#ffffff', borderColor: '#cbd5e1', color: '#0f172a' }"
           @click="selectedSport = sport.name"
         >
-          <span class="chip-emoji">{{ sport.icon }}</span>
+          <img :src="getSportIconUrl(sport.name)" class="profile-sport-chip-icon" alt="" />
           {{ t('sport_' + sport.name) }}
         </button>
       </div>
@@ -1272,16 +1281,15 @@ const weekDaysStatus = computed(() => {
               <span 
                 class="activity-icon-circle"
                 :class="act.type === 'match_created' ? 'bg-light-green' : act.type === 'match_left' ? 'bg-light-red' : 'bg-light-blue'"
-                style="display: flex; align-items: center; justify-content: center; font-size: 1.1rem;"
               >
-                <span>{{ act.sportType === 'Football' ? '⚽' : act.sportType === 'Cricket' ? '🏏' : act.sportType === 'Basketball' ? '🏀' : act.sportType === 'Tennis' ? '🎾' : act.sportType === 'Badminton' ? '🏸' : act.sportType === 'Padel' ? '🏓' : '🏃' }}</span>
+                <img :src="getSportIconUrl(act.sportType)" class="activity-sport-icon-img" alt="" />
               </span>
               <div class="activity-info-new">
                 <span class="activity-title-new">
                   {{ act.type === 'match_created' ? 'Organized' : act.type === 'match_left' ? 'Left' : 'Joined' }} 
                   {{ act.sportType || 'Sports' }} Match
                 </span>
-                <span class="activity-desc-new">{{ act.matchTitle }} at {{ act.meta?.location || 'Unknown' }} • {{ formatDate(act.created_at) }}</span>
+                <span class="activity-desc-new">{{ act.matchTitle || act.meta?.title || '' }} at {{ act.meta?.location || act.location || 'Unknown' }} • {{ formatDate(act.created_at) }}</span>
               </div>
             </div>
             <span class="xp-badge-new" :class="{ 'negative-xp': act.type === 'match_left' }">
@@ -1455,7 +1463,7 @@ const weekDaysStatus = computed(() => {
             </div>
 
             <!-- Elegant Lavender Theme Toggle -->
-            <div class="setting-switch-tile">
+            <div v-if="currentUser.gender !== 'male'" class="setting-switch-tile">
               <div class="setting-switch-info">
                 <span class="tile-title">🌸 {{ t('elegantLavender') }}</span>
                 <span class="tile-desc">
@@ -1796,7 +1804,7 @@ const weekDaysStatus = computed(() => {
                   :style="editSport === sport.name ? { backgroundColor: getSportColor(sport.name), borderColor: getSportColor(sport.name), color: '#ffffff' } : {}"
                   @click="editSport = sport.name"
                 >
-                  <span class="chip-emoji">{{ sport.icon }}</span> {{ t('sport_' + sport.name) }}
+                  <img :src="getSportIconUrl(sport.name)" class="profile-sport-chip-icon" alt="" /> {{ t('sport_' + sport.name) }}
                 </button>
               </div>
             </div>
@@ -1856,13 +1864,12 @@ const weekDaysStatus = computed(() => {
 <style scoped>
 .profile-content-wrap {
   width: 100%;
-  max-width: 1000px;
-  margin: 0 auto;
+  max-width: 100%;
   position: relative;
 }
 
 .profile-container {
-  padding: 56px 20px 80px;
+  padding: 56px 40px 80px;
   transition: background 0.6s ease;
 }
 
@@ -2330,6 +2337,13 @@ const weekDaysStatus = computed(() => {
   justify-content: center;
   align-items: center;
   font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.activity-sport-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .activity-icon-circle.bg-light-green {
@@ -3786,5 +3800,13 @@ input:checked + .toggle-slider:before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.profile-sport-chip-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  margin-right: 4px;
+  vertical-align: middle;
 }
 </style>

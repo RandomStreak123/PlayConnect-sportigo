@@ -14,6 +14,23 @@ const currentUser = computed(() => {
   return store.state.currentUser || { name: 'Champ', gender: 'male', profilePhotoUrl: null }
 })
 
+const profileStats = computed(() => {
+  if (store.state.currentUser && store.state.currentUser.stats) {
+    return store.state.currentUser.stats
+  }
+  return {
+    xp: 0,
+    level: 1,
+    currentLevelXp: 0,
+    nextLevelXp: 1000,
+    progressPct: 0,
+    winRate: 0,
+    streak: 0,
+    averageRating: 0.0,
+    totalGames: 0
+  }
+})
+
 const avatarUrl = computed(() => {
   return getPlayerAvatar(currentUser.value.profilePhotoUrl, currentUser.value.gender)
 })
@@ -228,6 +245,7 @@ const handleDragEnd = (e) => {
         <div class="greeting-wrap">
           <span class="greeting-lbl">{{ greeting }}</span>
           <span class="user-name">{{ currentUser.name }}</span>
+          <span class="user-level" style="font-size: 0.72rem; font-weight: 700; color: var(--on-surface-variant); opacity: 0.8; margin-top: 1px; display: inline-flex; align-items: center; gap: 4px;">⚡ Level {{ profileStats.level }} Player</span>
         </div>
       </div>
       <button class="icon-btn" @click="emit('open-notifications')">

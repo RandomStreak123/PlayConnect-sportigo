@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue'
-import { getSportImage, getPlayerAvatar } from '../utils/sportImageHelper'
+import { getSportImage, getPlayerAvatar, getSportIconUrl } from '../utils/sportImageHelper'
 import { store } from '../store'
 
 const props = defineProps({
@@ -96,7 +96,7 @@ const handleJoin = async (e) => {
       
       <!-- Individual Badges for cleaner positioning -->
       <div class="sport-badge badge-top-left">
-        <span>{{ getSportIcon(match.sportType) }}</span>
+        <img :src="getSportIconUrl(match.sportType)" class="match-sport-icon-img" alt="" />
         <span>{{ match.sportType }}</span>
       </div>
       
@@ -164,7 +164,7 @@ const handleJoin = async (e) => {
             </div>
           </div>
 
-          <span class="organizer-text" @click.stop="emit('open-player', match.participants[0] || { name: match.organizer }, match.sportType)">
+          <span class="organizer-text" @click.stop="emit('open-player', match.participants[0] || { id: match.creator_id || match.user_id, name: match.organizer || 'Organizer' }, match.sportType)">
             By {{ match.organizer || 'Sportigo' }}
           </span>
         </div>
@@ -312,6 +312,12 @@ const handleJoin = async (e) => {
   background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.match-sport-icon-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 .women-only-badge {

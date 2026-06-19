@@ -43,7 +43,7 @@ const filteredMatches = computed(() => {
   <div class="my-matches-container scrollable-y animate-fade-in">
     <!-- Header with Background Gradient -->
     <div class="matches-header">
-      <h2 class="title">{{ t('matches') }}</h2>
+      <h2 class="title">{{ t('myMatches') }}</h2>
       
       <!-- Custom tabs bar -->
       <div class="sub-tabs-bar">

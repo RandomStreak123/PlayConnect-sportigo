@@ -7,6 +7,7 @@ const state = reactive({
   matches: [],
   players: [],
   activities: [],
+  myMatchActivities: [],   // join/leave events on matches the current user created
   notifications: [],
   chats: {},
   isLoading: false
@@ -14,9 +15,8 @@ const state = reactive({
 
 // Dynamic theme checks matching ThemeManager class logic
 const isWomenMode = computed(() => {
-  if (state.themePreference === 'elegantLavender') return true
-  if (state.themePreference === 'activeSteelBlue') return false
-  return state.currentUser?.gender === 'female'
+  if (state.currentUser?.gender === 'male') return false
+  return state.themePreference === 'elegantLavender'
 })
 
 // API_URL: use /api (proxied by Vite) so no CORS or SSL issues
@@ -104,23 +104,46 @@ const init = async () => {
     // Unblock the main UI / skeletons immediately once critical dashboard data is loaded
     state.isLoading = false
 
-    // Fetch non-critical data (activities and notifications) concurrently in the background
+    // Fetch non-critical data (activities, my-match activities, notifications) concurrently in the background
     Promise.all([
       safeFetch(`${API_URL}/activities`, { headers }),
+      safeFetch(`${API_URL}/activities/my-matches`, { headers }),
       safeFetch(`${API_URL}/notifications`, { headers })
-    ]).then(([activitiesData, notificationsData]) => {
+    ]).then(([activitiesData, myMatchActivitiesData, notificationsData]) => {
       if (activitiesData) {
         state.activities = Array.isArray(activitiesData)
           ? activitiesData
           : (Array.isArray(activitiesData.data) ? activitiesData.data : [])
       }
-      if (notificationsData && Array.isArray(notificationsData.data)) {
-        state.notifications = notificationsData.data.map(n => ({
-          ...n,
-          read: Boolean(n.is_read),
-          body: n.message,
-          time: formatRelativeTime(n.created_at)
+      if (myMatchActivitiesData) {
+        const raw = Array.isArray(myMatchActivitiesData)
+          ? myMatchActivitiesData
+          : (Array.isArray(myMatchActivitiesData.data) ? myMatchActivitiesData.data : [])
+        state.myMatchActivities = raw.map(act => ({
+          ...act,
+          sportType: act.sportType || act.sport_type || act.meta?.sport_type || 'Sports',
+          matchTitle: act.matchTitle || act.match_title || act.meta?.title || '',
+          time: formatRelativeTime(act.created_at)
         }))
+      }
+      if (notificationsData && Array.isArray(notificationsData.data)) {
+        state.notifications = notificationsData.data.map(n => {
+          let meta = n.meta
+          if (meta && typeof meta === 'string') {
+            try {
+              meta = JSON.parse(meta)
+            } catch (e) {
+              console.warn('Store: Failed to parse notification meta:', e)
+            }
+          }
+          return {
+            ...n,
+            meta,
+            read: Boolean(n.is_read),
+            body: n.message,
+            time: formatRelativeTime(n.created_at)
+          }
+        })
       }
     }).catch(e => {
       console.warn('Background store fetch failed:', e.message)
@@ -194,6 +217,7 @@ const logout = async () => {
   state.currentUser = null
   state.matches = []
   state.activities = []
+  state.myMatchActivities = []
   sessionStorage.removeItem('sportigo_user')
   sessionStorage.removeItem('sportigo_token')
 
