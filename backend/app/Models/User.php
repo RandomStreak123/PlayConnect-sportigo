@@ -97,18 +97,22 @@ class User extends Authenticatable
 
         $joinedMatches = $this->relationLoaded('joinedMatches')
             ? $this->joinedMatches
-            : $this->joinedMatches()->with('participants')->get();
+            : $this->joinedMatches()->with(['participants', 'user'])->get();
 
-        if ($joinedMatches->isNotEmpty() && !$joinedMatches->first()->relationLoaded('participants')) {
-            $joinedMatches->load('participants');
+        if ($joinedMatches->isNotEmpty()) {
+            if (!$joinedMatches->first()->relationLoaded('participants') || !$joinedMatches->first()->relationLoaded('user')) {
+                $joinedMatches->load(['participants', 'user']);
+            }
         }
 
         $hostedMatches = $this->relationLoaded('hostedMatches')
             ? $this->hostedMatches
-            : \App\Models\SportsMatch::with('participants')->where('creator_id', $uid)->get();
+            : \App\Models\SportsMatch::with(['participants', 'user'])->where('creator_id', $uid)->get();
 
-        if ($hostedMatches->isNotEmpty() && !$hostedMatches->first()->relationLoaded('participants')) {
-            $hostedMatches->load('participants');
+        if ($hostedMatches->isNotEmpty()) {
+            if (!$hostedMatches->first()->relationLoaded('participants') || !$hostedMatches->first()->relationLoaded('user')) {
+                $hostedMatches->load(['participants', 'user']);
+            }
         }
         
         $allPlayedMatches = $hostedMatches->merge($joinedMatches)

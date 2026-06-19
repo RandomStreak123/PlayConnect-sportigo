@@ -156,10 +156,17 @@ class AppView extends StatelessWidget {
                 if (state.status == AuthStatus.authenticated &&
                     state.user != null) {
                   themeManager.updateUser(state.user!.gender, state.user!.themePreference);
+                  // Load home matches immediately
                   context.read<MatchBloc>().add(const MatchFetched());
-                  context.read<MatchBloc>().add(const MyMatchesFetched());
-                  context.read<ActivityBloc>().add(const ActivityFetched());
-                  context.read<NotificationBloc>().add(const NotificationFetched());
+                  
+                  // Defer background loading of non-critical data
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    if (context.mounted) {
+                      context.read<MatchBloc>().add(const MyMatchesFetched());
+                      context.read<ActivityBloc>().add(const ActivityFetched());
+                      context.read<NotificationBloc>().add(const NotificationFetched());
+                    }
+                  });
                 } else if (state.status == AuthStatus.unauthenticated) {
                   themeManager.updateUser(null, null);
                   navigatorKey.currentState?.popUntil((route) => route.isFirst);

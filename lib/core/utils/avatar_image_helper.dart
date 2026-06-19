@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/api_constants.dart';
 
 class AvatarImageHelper {
@@ -27,7 +28,7 @@ class AvatarImageHelper {
   static ImageProvider? provider(String? path) {
     final url = resolveUrl(path);
     if (url != null) {
-      return NetworkImage(url);
+      return CachedNetworkImageProvider(url);
     }
     return null;
   }
@@ -47,16 +48,15 @@ class AvatarImageHelper {
           color: backgroundColor ?? Colors.grey.shade300,
         ),
         child: ClipOval(
-          child: Image.network(
-            url,
+          child: CachedNetworkImage(
+            imageUrl: url,
             width: radius * 2,
             height: radius * 2,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
+            errorWidget: (context, url, error) {
               return Icon(Icons.person, size: radius, color: Colors.white70);
             },
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
+            placeholder: (context, url) {
               return Center(
                 child: SizedBox(
                   width: radius,

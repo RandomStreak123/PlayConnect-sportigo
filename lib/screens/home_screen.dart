@@ -129,18 +129,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 actions: [
                   Padding(
                     padding: const EdgeInsets.only(right: 8.0),
-                    child: BlocBuilder<NotificationBloc, NotificationState>(
-                      builder: (context, notificationState) {
-                        final hasUnread = notificationState.notifications.any((n) => !n.isRead);
-                        
+                    child: BlocSelector<NotificationBloc, NotificationState, bool>(
+                      selector: (notificationState) {
+                        return notificationState.notifications.any((n) => !n.isRead);
+                      },
+                      builder: (context, hasUnread) {
                         return Center(
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
                               IconButton(
-                                icon: Icon(
+                                icon: const Icon(
                                   Icons.notifications_outlined,
-                                  color: const Color(0xFFFFD700), // Golden yellow
+                                  color: Color(0xFFFFD700), // Golden yellow
                                 ),
                                 onPressed: () {
                                   Navigator.push(

@@ -23,9 +23,22 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     emit(state.copyWith(status: NotificationStatus.loading));
     try {
       final result = await _notificationRepository.getNotifications();
+      
+      // Preserve local read status for any notifications that were already marked read locally
+      final mergedNotifications = result.notifications.map((newNotification) {
+        final localNotification = state.notifications.firstWhere(
+          (n) => n.id == newNotification.id,
+          orElse: () => newNotification,
+        );
+        if (localNotification.isRead) {
+          return newNotification.copyWith(isRead: true);
+        }
+        return newNotification;
+      }).toList();
+
       emit(state.copyWith(
         status: NotificationStatus.success,
-        notifications: result.notifications,
+        notifications: mergedNotifications,
         nextCursor: result.nextCursor,
         hasMore: result.nextCursor != null,
       ));
@@ -48,9 +61,22 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     emit(state.copyWith(status: NotificationStatus.loadingMore));
     try {
       final result = await _notificationRepository.getNotifications(cursor: state.nextCursor);
+      
+      // Preserve local read status for any fetched-more notifications
+      final mergedFetchedNotifications = result.notifications.map((newNotification) {
+        final localNotification = state.notifications.firstWhere(
+          (n) => n.id == newNotification.id,
+          orElse: () => newNotification,
+        );
+        if (localNotification.isRead) {
+          return newNotification.copyWith(isRead: true);
+        }
+        return newNotification;
+      }).toList();
+
       emit(state.copyWith(
         status: NotificationStatus.success,
-        notifications: List.of(state.notifications)..addAll(result.notifications),
+        notifications: List.of(state.notifications)..addAll(mergedFetchedNotifications),
         nextCursor: result.nextCursor,
         hasMore: result.nextCursor != null,
       ));
@@ -75,7 +101,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     try {
       await _notificationRepository.markAsRead(event.id);
     } catch (_) {
-      // Revert if request failed? Let's keep it read for UI simplicity.
+      // Revert optimistic update if request failed
+      final revertedNotifications = state.notifications.map((n) {
+        return n.id == event.id ? n.copyWith(isRead: false) : n;
+      }).toList();
+      emit(state.copyWith(notifications: revertedNotifications));
     }
   }
 
@@ -83,6 +113,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     NotificationMarkAllRead event,
     Emitter<NotificationState> emit,
   ) async {
+    final previousNotifications = state.notifications;
+
     // Optimistic UI update
     final updatedNotifications = state.notifications.map((n) {
       return n.copyWith(isRead: true);
@@ -92,7 +124,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     try {
       await _notificationRepository.markAllAsRead();
     } catch (_) {
-      // Revert or ignore
+      // Revert to previous state if request failed
+      emit(state.copyWith(notifications: previousNotifications));
     }
   }
 }

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../logic/blocs/matches/match_bloc.dart';
+import '../logic/blocs/activity/activity_bloc.dart';
 import '../core/utils/responsive_util.dart';
 import '../core/theme/app_spacing.dart';
 import 'home_screen.dart';
@@ -88,6 +91,7 @@ class _MainScreenState extends State<MainScreen> {
         setState(() {
           _currentIndex = index;
         });
+        _onTabChanged(index);
       },
       labelType: isDesktop ? NavigationRailLabelType.none : NavigationRailLabelType.all,
       extended: isDesktop,
@@ -124,6 +128,7 @@ class _MainScreenState extends State<MainScreen> {
         setState(() {
           _currentIndex = index;
         });
+        _onTabChanged(index);
       },
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
@@ -165,5 +170,16 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
     );
+  }
+  void _onTabChanged(int index) {
+    if (!mounted) return;
+    switch (index) {
+      case 2:
+        context.read<MatchBloc>().add(const MyMatchesFetched());
+        break;
+      case 3:
+        context.read<ActivityBloc>().add(const ActivityFetched());
+        break;
+    }
   }
 }
