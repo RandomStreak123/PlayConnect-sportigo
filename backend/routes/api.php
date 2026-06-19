@@ -33,6 +33,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::get('/user', [UserController::class, 'show']);
+    Route::get('/user/stats', [UserController::class, 'stats']);
+    Route::get('/user/history', [UserController::class, 'history']);
+    Route::get('/user/ratings', [UserController::class, 'ratings']);
     Route::post('/user/update', [UserController::class, 'update']);
     Route::put('/user', [UserController::class, 'update']);
     

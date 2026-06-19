@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
+import '../models/match_model.dart';
 import '../../core/constants/api_constants.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
@@ -226,6 +227,8 @@ class AuthRepository {
         _refreshUserInBackground(token);
         return cachedUser;
       }
+      _refreshUserInBackground(token);
+      return UserModel(id: 0, name: 'User');
     }
 
     return _fetchUserFromServer(token);
@@ -370,6 +373,66 @@ class AuthRepository {
 
     if (response.statusCode != 200) {
       throw Exception(_extractErrorMessage(response, 'Failed to send wave'));
+    }
+  }
+
+  Future<UserStats> getUserStats() async {
+    final token = await _getToken();
+    if (token == null) throw Exception('User not authenticated');
+
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/user/stats'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = _decodeJsonBody(response.body);
+      if (data == null) throw Exception('Invalid server response');
+      return UserStats.fromJson(data);
+    } else {
+      throw Exception(_extractErrorMessage(response, 'Failed to fetch user stats'));
+    }
+  }
+
+  Future<List<MatchModel>> getUserHistory() async {
+    final token = await _getToken();
+    if (token == null) throw Exception('User not authenticated');
+
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/user/history'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => MatchModel.fromJson(json)).toList();
+    } else {
+      throw Exception(_extractErrorMessage(response, 'Failed to fetch user history'));
+    }
+  }
+
+  Future<List<dynamic>> getUserRatings() async {
+    final token = await _getToken();
+    if (token == null) throw Exception('User not authenticated');
+
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/user/ratings'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      throw Exception(_extractErrorMessage(response, 'Failed to fetch user ratings'));
     }
   }
 

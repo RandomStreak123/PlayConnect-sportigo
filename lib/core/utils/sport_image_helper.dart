@@ -84,6 +84,15 @@ class SportImageHelper {
     // Fallback to the default match background if no sport-specific image is found
     return 'assets/images/match_bg.png';
   }
+
+  static List<String> getAllImagePaths() {
+    final List<String> allPaths = [];
+    _sportImages.values.forEach(allPaths.addAll);
+    if (!allPaths.contains('assets/images/match_bg.png')) {
+      allPaths.add('assets/images/match_bg.png');
+    }
+    return allPaths;
+  }
 }
 
 

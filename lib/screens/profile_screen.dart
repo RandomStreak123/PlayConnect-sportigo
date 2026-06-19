@@ -6,11 +6,13 @@ import '../widgets/app_loading_indicator.dart';
 import '../core/constants/colors.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../data/repositories/auth_repository.dart';
+import '../data/repositories/activity_repository.dart';
 import '../core/utils/avatar_image_helper.dart';
 import 'profile_settings_screen.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import '../data/models/match_model.dart';
 import '../data/models/activity_model.dart';
+import '../data/models/user_model.dart';
 import 'package:intl/intl.dart';
 import '../core/utils/sport_icon_helper.dart';
 import 'dart:math' as math;
@@ -130,6 +132,97 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Future<void> _loadPublicProfileWithId(int userId, {bool isRefresh = false}) async {
+    if (widget.isCurrentUser) {
+      final currentUser = context.read<AuthBloc>().state.user;
+      if (currentUser == null) return;
+
+      setState(() {
+        _publicProfileData = {
+          'id': currentUser.id,
+          'name': currentUser.name,
+          'username': currentUser.username,
+          'email': currentUser.email,
+          'phone': currentUser.phoneNumber,
+          'gender': currentUser.gender,
+          'avatar': currentUser.profilePicture,
+          'bio': currentUser.bio,
+          'primary_sport': currentUser.primarySport,
+          'skill_tier': currentUser.skillTier,
+          'stats': _publicProfileData?['stats'] ?? currentUser.stats?.toJson(),
+          'matches': _publicProfileData?['matches'],
+          'activities': _publicProfileData?['activities'],
+        };
+      });
+
+      try {
+        final authRepository = context.read<AuthRepository>();
+        final activityRepository = context.read<ActivityRepository>();
+
+        await Future.wait([
+          authRepository.getUserStats().then((stats) {
+            if (mounted) {
+              setState(() {
+                _publicProfileData = {
+                  ...?_publicProfileData,
+                  'stats': stats.toJson(),
+                };
+                
+                final level = stats.level;
+                String theme = 'Default';
+                if (level >= 25) {
+                  theme = 'Golden Legend';
+                } else if (level >= 10) {
+                  theme = 'Gold Rush';
+                } else if (level >= 5) {
+                  theme = 'Lavender Dusk';
+                }
+                _loadSelectedTheme().then((_) {
+                  if (_selectedTheme == 'Default' || _selectedTheme.isEmpty) {
+                    setState(() {
+                      _selectedTheme = theme;
+                    });
+                  }
+                });
+              });
+            }
+          }),
+          authRepository.getUserHistory().then((history) {
+            if (mounted) {
+              setState(() {
+                _publicProfileData = {
+                  ...?_publicProfileData,
+                  'matches': history.map((m) => m.toJson()).toList(),
+                };
+              });
+            }
+          }),
+          activityRepository.getActivities().then((res) {
+            if (mounted) {
+              setState(() {
+                _publicProfileData = {
+                  ...?_publicProfileData,
+                  'activities': res.activities.map((a) => a.toJson()).toList(),
+                };
+              });
+            }
+          }),
+        ]);
+      } catch (e) {
+        // Fallback to monolithic public profile endpoint
+        try {
+          if (!mounted) return;
+          final authRepository = context.read<AuthRepository>();
+          final data = await authRepository.getPublicProfile(userId);
+          if (mounted) {
+            setState(() {
+              _publicProfileData = data;
+            });
+          }
+        } catch (_) {}
+      }
+      return;
+    }
+
     final shouldShowLoader = !isRefresh && _publicProfileData == null && !widget.isCurrentUser;
     if (shouldShowLoader) {
       setState(() {
@@ -151,17 +244,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         }
         setState(() {
           _publicProfileData = data;
-          if (widget.isCurrentUser) {
-            _loadSelectedTheme().then((_) {
-              if (_selectedTheme == 'Default' || _selectedTheme.isEmpty) {
-                setState(() {
-                  _selectedTheme = theme;
-                });
-              }
-            });
-          } else {
-            _selectedTheme = theme;
-          }
+          _selectedTheme = theme;
         });
       }
     } catch (e) {
@@ -664,12 +747,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               children: [
                 // Avatar Frame with dynamic glowing pulsing ring
                 Center(
-                  child: BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
+                  child: BlocSelector<AuthBloc, AuthState, String?>(
+                    selector: (state) => state.user?.profilePhotoUrl,
+                    builder: (context, profilePhotoUrl) {
                       final photoUrl = _publicProfileData?['avatar'] as String? ?? 
                           _publicProfileData?['profile_picture'] as String? ?? 
                           _publicProfileData?['profile_photo'] as String? ?? 
-                          (widget.isCurrentUser ? state.user?.profilePhotoUrl : widget.profilePicture);
+                          (widget.isCurrentUser ? profilePhotoUrl : widget.profilePicture);
 
                       return Stack(
                         alignment: Alignment.center,
@@ -778,10 +862,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 const SizedBox(height: 16),
                 
                 // Name, verified check, and country flag
-                BlocBuilder<AuthBloc, AuthState>(
-                  builder: (context, state) {
+                BlocSelector<AuthBloc, AuthState, String?>(
+                  selector: (state) => state.user?.name,
+                  builder: (context, name) {
                     final userName = _publicProfileData?['name'] as String? ??
-                        (widget.isCurrentUser ? (state.user?.name ?? 'Sportigo Champ') : (widget.playerName ?? 'Player'));
+                        (widget.isCurrentUser ? (name ?? 'Sportigo Champ') : (widget.playerName ?? 'Player'));
                     return Column(
                       children: [
                         Row(
@@ -913,19 +998,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildLevelSection(BuildContext context, Color sportColor) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        final user = state.user;
+    return BlocSelector<AuthBloc, AuthState, UserStats?>(
+      selector: (state) => state.user?.stats,
+      builder: (context, stats) {
         final level = _publicProfileData?['stats']?['level'] as int? ??
-            (widget.isCurrentUser ? (user?.stats?.level ?? 24) : 1);
+            (widget.isCurrentUser ? (stats?.level ?? 24) : 1);
         final xp = _publicProfileData?['stats']?['currentLevelXp'] as int? ??
-            (widget.isCurrentUser ? (user?.stats?.currentLevelXp ?? 750) : 0);
+            (widget.isCurrentUser ? (stats?.currentLevelXp ?? 750) : 0);
         final nextXp = _publicProfileData?['stats']?['nextLevelXp'] as int? ??
-            (widget.isCurrentUser ? (user?.stats?.nextLevelXp ?? 1000) : 1000);
+            (widget.isCurrentUser ? (stats?.nextLevelXp ?? 1000) : 1000);
         final progressPct = _publicProfileData?['stats']?['progressPct'] as int? ??
-            (widget.isCurrentUser ? (user?.stats?.progressPct ?? 75) : 0);
+            (widget.isCurrentUser ? (stats?.progressPct ?? 75) : 0);
         final streak = _publicProfileData?['stats']?['streak'] as int? ??
-            (widget.isCurrentUser ? (user?.stats?.streak ?? 7) : 0);
+            (widget.isCurrentUser ? (stats?.streak ?? 7) : 0);
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1067,9 +1152,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final int crossAxisCount = screenWidth > 600 ? 4 : 2;
     final double childAspectRatio = screenWidth < 360 ? 1.35 : 1.6;
 
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        final user = state.user;
+    return BlocSelector<AuthBloc, AuthState, UserModel?>(
+      selector: (state) => state.user,
+      builder: (context, user) {
         final winRate = _publicProfileData?['stats']?['winRate'] as int? ??
             (widget.isCurrentUser ? (user?.stats?.winRate ?? 72) : 0);
         final primarySport = _publicProfileData?['primary_sport'] as String? ??

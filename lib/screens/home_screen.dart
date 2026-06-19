@@ -90,9 +90,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     GestureDetector(
                       onTap: () => _showSignOutConfirmation(context),
-                      child: BlocBuilder<AuthBloc, AuthState>(
-                        builder: (context, state) {
-                          final photoUrl = state.user?.profilePhotoUrl;
+                      child: BlocSelector<AuthBloc, AuthState, String?>(
+                        selector: (state) => state.user?.profilePhotoUrl,
+                        builder: (context, photoUrl) {
                           return AvatarImageHelper.circleAvatar(
                             path: photoUrl,
                             radius: 20,
@@ -112,11 +112,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
-                          BlocBuilder<AuthBloc, AuthState>(
-                            builder: (context, state) {
-                              final name = state.user?.name ?? 'Champ';
+                          BlocSelector<AuthBloc, AuthState, String>(
+                            selector: (state) => state.user?.name ?? 'Champ',
+                            builder: (context, userName) {
                               return Text(
-                                name,
+                                userName,
                                 style: Theme.of(context).textTheme.titleLarge,
                               );
                             },

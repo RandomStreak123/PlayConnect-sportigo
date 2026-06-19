@@ -30,4 +30,16 @@ class ActivityModel {
       user: json['user'] != null ? UserModel.fromJson(json['user']) : null,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'type': type,
+      'message': message,
+      'meta': meta,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'user': user?.toJson(),
+    };
+  }
 }

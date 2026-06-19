@@ -52,8 +52,6 @@ class ProfileController extends Controller
             $user->profile_picture = $path;
         }
         $user->save();
-        $user->loadMissing(['joinedMatches.participants', 'hostedMatches.participants']);
-        $user->append('stats');
 
         return response()->json([
             'message' => 'Profile photo updated',
@@ -108,8 +106,6 @@ class ProfileController extends Controller
         }
 
         $user->save();
-        $user->loadMissing(['joinedMatches.participants', 'hostedMatches.participants']);
-        $user->append('stats');
 
         return response()->json([
             'message' => 'Profile updated successfully',

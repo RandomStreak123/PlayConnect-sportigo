@@ -33,8 +33,6 @@ class AuthController extends Controller
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
-        $user->loadMissing(['joinedMatches.participants', 'hostedMatches.participants']);
-        $user->append('stats');
 
         return response()->json([
             'access_token' => $token,
@@ -64,8 +62,6 @@ class AuthController extends Controller
         $user->tokens()->delete();
 
         $token = $user->createToken('auth_token')->plainTextToken;
-        $user->loadMissing(['joinedMatches.participants', 'hostedMatches.participants']);
-        $user->append('stats');
 
         return response()->json([
             'access_token' => $token,
@@ -165,8 +161,6 @@ class AuthController extends Controller
             // Revoke other tokens and create new one
             $user->tokens()->delete();
             $token = $user->createToken('auth_token')->plainTextToken;
-            $user->loadMissing(['joinedMatches.participants', 'hostedMatches.participants']);
-            $user->append('stats');
 
             return response()->json([
                 'access_token' => $token,

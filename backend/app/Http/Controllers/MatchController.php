@@ -26,7 +26,11 @@ class MatchController extends Controller
 
     public function index(Request $request)
     {
-        $query = SportsMatch::with(['user', 'participants']);
+        $query = SportsMatch::withCount('participants')
+            ->with([
+                'user:id,name,avatar,profile_picture,profile_photo',
+                'participants:id,name,avatar,profile_picture,profile_photo'
+            ]);
 
         if ($request->filled('sport_type')) {
             $query->where('sport_type', $request->input('sport_type'));
@@ -69,7 +73,11 @@ class MatchController extends Controller
     public function mine(Request $request)
     {
         $user = auth()->user();
-        $matches = SportsMatch::with(['user', 'participants'])
+        $matches = SportsMatch::withCount('participants')
+            ->with([
+                'user:id,name,avatar,profile_picture,profile_photo',
+                'participants:id,name,avatar,profile_picture,profile_photo'
+            ])
             ->whereHas('participants', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
@@ -256,10 +264,22 @@ class MatchController extends Controller
         $user = auth()->user();
         
         // Fetch matches hosted by the user
-        $hostedMatches = SportsMatch::where('creator_id', $user->id)->get();
+        $hostedMatches = SportsMatch::withCount('participants')
+            ->with([
+                'user:id,name,avatar,profile_picture,profile_photo',
+                'participants:id,name,avatar,profile_picture,profile_photo'
+            ])
+            ->where('creator_id', $user->id)
+            ->get();
         
         // Fetch matches the user joined
-        $joinedMatches = $user->joinedMatches()->get();
+        $joinedMatches = $user->joinedMatches()
+            ->withCount('participants')
+            ->with([
+                'user:id,name,avatar,profile_picture,profile_photo',
+                'participants:id,name,avatar,profile_picture,profile_photo'
+            ])
+            ->get();
         
         // Combine them and ensure no duplicates
         $allMatches = $hostedMatches->merge($joinedMatches)->unique('id')->values();

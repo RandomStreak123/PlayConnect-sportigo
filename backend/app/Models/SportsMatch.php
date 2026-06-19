@@ -121,6 +121,9 @@ class SportsMatch extends Model
 
     public function getJoinedCountAttribute()
     {
+        if (isset($this->participants_count)) {
+            return (int) $this->participants_count;
+        }
         return $this->relationLoaded('participants')
             ? $this->participants->count()
             : $this->participants()->count();

@@ -9,9 +9,23 @@ class UserController extends Controller
     public function show(Request $request)
     {
         $user = $request->user();
-        $user->loadMissing(['joinedMatches.participants', 'hostedMatches.participants']);
-        $user->append('stats');
-        return response()->json($user);
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'username' => $user->username,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'phone_number' => $user->phone_number,
+            'gender' => $user->gender,
+            'avatar' => $user->avatar,
+            'profile_picture' => $user->profile_picture,
+            'profile_photo' => $user->profile_photo,
+            'bio' => $user->bio,
+            'primary_sport' => $user->primary_sport,
+            'skill_tier' => $user->skill_tier,
+            'hide_phone' => $user->hide_phone,
+            'theme_preference' => $user->theme_preference,
+        ]);
     }
 
     public function update(Request $request)
@@ -33,8 +47,54 @@ class UserController extends Controller
         $user->update($validated);
 
         $freshUser = $user->fresh();
-        $freshUser->append('stats');
-        return response()->json($freshUser);
+        return response()->json([
+            'id' => $freshUser->id,
+            'name' => $freshUser->name,
+            'username' => $freshUser->username,
+            'email' => $freshUser->email,
+            'phone' => $freshUser->phone,
+            'phone_number' => $freshUser->phone_number,
+            'gender' => $freshUser->gender,
+            'avatar' => $freshUser->avatar,
+            'profile_picture' => $freshUser->profile_picture,
+            'profile_photo' => $freshUser->profile_photo,
+            'bio' => $freshUser->bio,
+            'primary_sport' => $freshUser->primary_sport,
+            'skill_tier' => $freshUser->skill_tier,
+            'hide_phone' => $freshUser->hide_phone,
+            'theme_preference' => $freshUser->theme_preference,
+        ]);
+    }
+
+    public function stats(Request $request)
+    {
+        $startTime = microtime(true);
+        $user = $request->user();
+        $stats = $user->stats;
+        $duration = (microtime(true) - $startTime) * 1000;
+        \Illuminate\Support\Facades\Log::info("UserController::stats executed in {$duration}ms for User ID {$user->id}");
+        return response()->json($stats);
+    }
+
+    public function history(Request $request)
+    {
+        $startTime = microtime(true);
+        $user = $request->user();
+        $user->loadMissing(['joinedMatches.participants', 'hostedMatches.participants']);
+        $allMatches = $user->hostedMatches->merge($user->joinedMatches)->unique('id')->values();
+        $duration = (microtime(true) - $startTime) * 1000;
+        \Illuminate\Support\Facades\Log::info("UserController::history executed in {$duration}ms for User ID {$user->id}");
+        return response()->json($allMatches);
+    }
+
+    public function ratings(Request $request)
+    {
+        $startTime = microtime(true);
+        $user = $request->user();
+        $ratings = \App\Models\PlayerRating::where('rated_id', $user->id)->get();
+        $duration = (microtime(true) - $startTime) * 1000;
+        \Illuminate\Support\Facades\Log::info("UserController::ratings executed in {$duration}ms for User ID {$user->id}");
+        return response()->json($ratings);
     }
 
     public function publicProfile($id)

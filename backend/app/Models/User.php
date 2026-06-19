@@ -93,6 +93,7 @@ class User extends Authenticatable
 
     public function getStatsAttribute()
     {
+        $startTime = microtime(true);
         $uid = $this->id;
 
         $joinedMatches = $this->relationLoaded('joinedMatches')
@@ -207,7 +208,7 @@ class User extends Authenticatable
         $avgRating = \App\Models\PlayerRating::where('rated_id', $uid)->avg('rating');
         $averageRating = $avgRating !== null ? round((float) $avgRating, 1) : 0.0;
 
-        return [
+        $stats = [
             'xp' => (int) $xp,
             'level' => (int) $level,
             'currentLevelXp' => (int) $currentLevelXp,
@@ -220,6 +221,11 @@ class User extends Authenticatable
             'averageRating' => (float) $averageRating,
             'totalGames' => (int) $totalGames
         ];
+
+        $duration = (microtime(true) - $startTime) * 1000;
+        \Illuminate\Support\Facades\Log::info("User stats calculated in {$duration}ms for User ID {$uid}");
+
+        return $stats;
     }
 
     // Mutators for writing using legacy field names

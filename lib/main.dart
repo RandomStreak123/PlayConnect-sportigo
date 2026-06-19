@@ -51,6 +51,18 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
     _themeManager = ThemeManager();
     _navigatorKey = GlobalKey<NavigatorState>();
     _deepLinkService = DeepLinkService(navigatorKey: _navigatorKey)..initialize();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _precacheAssets();
+    });
+  }
+
+  void _precacheAssets() {
+    try {
+      final paths = SportImageHelper.getAllImagePaths();
+      for (final path in paths) {
+        precacheImage(AssetImage(path), context);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -162,8 +174,6 @@ class AppView extends StatelessWidget {
                   // Defer background loading of non-critical data
                   Future.delayed(const Duration(milliseconds: 500), () {
                     if (context.mounted) {
-                      context.read<MatchBloc>().add(const MyMatchesFetched());
-                      context.read<ActivityBloc>().add(const ActivityFetched());
                       context.read<NotificationBloc>().add(const NotificationFetched());
                     }
                   });
