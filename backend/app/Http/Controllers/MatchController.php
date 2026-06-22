@@ -256,10 +256,10 @@ class MatchController extends Controller
         $user = auth()->user();
         
         // Fetch matches hosted by the user
-        $hostedMatches = SportsMatch::where('creator_id', $user->id)->get();
+        $hostedMatches = SportsMatch::with(['user', 'participants'])->where('creator_id', $user->id)->get();
         
         // Fetch matches the user joined
-        $joinedMatches = $user->joinedMatches()->get();
+        $joinedMatches = $user->joinedMatches()->with(['user', 'participants'])->get();
         
         // Combine them and ensure no duplicates
         $allMatches = $hostedMatches->merge($joinedMatches)->unique('id')->values();

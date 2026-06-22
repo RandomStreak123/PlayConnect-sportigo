@@ -41,6 +41,8 @@ class User extends Authenticatable
         'profilePicture',
     ];
 
+
+
     protected function casts(): array
     {
         return [
@@ -89,6 +91,11 @@ class User extends Authenticatable
         return $this->followers()->where('follower_id', $currentUser->id)->exists();
     }
 
+    public function hostedMatches()
+    {
+        return $this->hasMany(SportsMatch::class, 'creator_id');
+    }
+
     public function getProfilePhotoUrlAttribute()
     {
         $photo = $this->avatar;
@@ -117,8 +124,25 @@ class User extends Authenticatable
     {
         $uid = $this->id;
 
-        $joinedMatches = $this->joinedMatches()->with('participants')->get();
-        $hostedMatches = \App\Models\SportsMatch::with('participants')->where('creator_id', $uid)->get();
+        $joinedMatches = $this->relationLoaded('joinedMatches')
+            ? $this->joinedMatches
+            : $this->joinedMatches()->with(['participants', 'user'])->get();
+
+        if ($joinedMatches->isNotEmpty()) {
+            if (!$joinedMatches->first()->relationLoaded('participants') || !$joinedMatches->first()->relationLoaded('user')) {
+                $joinedMatches->load(['participants', 'user']);
+            }
+        }
+
+        $hostedMatches = $this->relationLoaded('hostedMatches')
+            ? $this->hostedMatches
+            : \App\Models\SportsMatch::with(['participants', 'user'])->where('creator_id', $uid)->get();
+
+        if ($hostedMatches->isNotEmpty()) {
+            if (!$hostedMatches->first()->relationLoaded('participants') || !$hostedMatches->first()->relationLoaded('user')) {
+                $hostedMatches->load(['participants', 'user']);
+            }
+        }
         
         $allPlayedMatches = $hostedMatches->merge($joinedMatches)
             ->unique('id')
@@ -167,14 +191,30 @@ class User extends Authenticatable
         $winRate = $recordedMatchCount > 0 ? round(($wins / $recordedMatchCount) * 100) : 0;
 
         $streak = 0;
-        $sortedMatches = $allPlayedMatches->sortByDesc('date_time');
-        foreach ($sortedMatches as $match) {
-            $participant = $match->participants->where('id', $uid)->first();
-            $result = $participant ? ($participant->pivot->result ?? null) : null;
-            if ($result === 'win') {
-                $streak++;
-            } elseif ($result === 'loss' || $result === 'draw') {
-                break;
+        $playedDates = $allPlayedMatches->map(function($m) {
+            $time = $m->date_time ?? $m->date;
+            return $time ? (new \DateTime($time))->format('Y-m-d') : null;
+        })->filter(function($date) {
+            return $date !== null && $date <= now()->format('Y-m-d');
+        })->unique()->values()->all();
+
+
+        if (count($playedDates) > 0) {
+            rsort($playedDates);
+            $nowDate = now()->format('Y-m-d');
+            $yesterdayDate = now()->subDay()->format('Y-m-d');
+            if ($playedDates[0] === $nowDate || $playedDates[0] === $yesterdayDate) {
+                $streak = 1;
+                for ($i = 0; $i < count($playedDates) - 1; $i++) {
+                    $d1 = new \DateTime($playedDates[$i]);
+                    $d2 = new \DateTime($playedDates[$i + 1]);
+                    $diff = $d1->diff($d2)->days;
+                    if ($diff === 1) {
+                        $streak++;
+                    } elseif ($diff > 1) {
+                        break;
+                    }
+                }
             }
         }
 

@@ -37,6 +37,122 @@ const selectGender = (gender) => {
 
 const socialLoading = ref('')
 
+// Forgot Password Refs
+const isForgotPassword = ref(false)
+const forgotUsernameOrEmail = ref('')
+const forgotLoading = ref(false)
+const forgotError = ref('')
+const forgotSuccess = ref('')
+
+// Reset Password Refs
+const isResetMode = ref(false)
+const resetToken = ref('')
+const resetEmail = ref('')
+const resetPassword = ref('')
+const resetPasswordConfirm = ref('')
+const resetLoading = ref(false)
+const resetError = ref('')
+const resetSuccess = ref('')
+
+// Forgot Password / Reset Password Methods
+const handleForgotPassword = async () => {
+  if (!forgotUsernameOrEmail.value) {
+    forgotError.value = 'Please enter your username or email address.'
+    return
+  }
+  forgotError.value = ''
+  forgotSuccess.value = ''
+  forgotLoading.value = true
+
+  try {
+    const res = await fetch('/api/forgot-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        username_or_email: forgotUsernameOrEmail.value
+      })
+    })
+
+    const data = await res.json()
+    if (res.ok) {
+      forgotSuccess.value = data.message || 'A password reset link has been sent to your registered email address.'
+      forgotUsernameOrEmail.value = ''
+    } else {
+      forgotError.value = data.message || 'Failed to send reset link.'
+    }
+  } catch (e) {
+    forgotError.value = e.message || 'Something went wrong. Please try again.'
+  } finally {
+    forgotLoading.value = false
+  }
+}
+
+const handleResetPassword = async () => {
+  if (!resetPassword.value || !resetPasswordConfirm.value) {
+    resetError.value = 'Please enter and confirm your new password.'
+    return
+  }
+  if (resetPassword.value.length < 8) {
+    resetError.value = 'Password must be at least 8 characters long.'
+    return
+  }
+  if (resetPassword.value !== resetPasswordConfirm.value) {
+    resetError.value = 'Passwords do not match.'
+    return
+  }
+
+  resetError.value = ''
+  resetSuccess.value = ''
+  resetLoading.value = true
+
+  try {
+    const res = await fetch('/api/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        token: resetToken.value,
+        email: resetEmail.value,
+        password: resetPassword.value,
+        password_confirmation: resetPasswordConfirm.value
+      })
+    })
+
+    const data = await res.json()
+    if (res.ok) {
+      resetSuccess.value = data.message || 'Your password has been reset successfully!'
+      
+      // Clean up URL parameters
+      if (typeof window !== 'undefined' && window.history.replaceState) {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('token')
+        url.searchParams.delete('email')
+        window.history.replaceState({}, '', url.pathname + url.search)
+      }
+
+      setTimeout(() => {
+        isResetMode.value = false
+        activeTab.value = 'signin'
+        resetSuccess.value = ''
+        loginUsername.value = resetEmail.value
+        resetPassword.value = ''
+        resetPasswordConfirm.value = ''
+      }, 3000)
+    } else {
+      resetError.value = data.message || 'Failed to reset password.'
+    }
+  } catch (e) {
+    resetError.value = e.message || 'Something went wrong. Please try again.'
+  } finally {
+    resetLoading.value = false
+  }
+}
+
 // Prevent browser from auto-filling fields on page load
 const isReadonly = ref(true)
 const removeReadonly = () => {
@@ -223,6 +339,18 @@ watch(activeTab, () => {
 })
 
 onMounted(() => {
+  // Check for password reset query parameters
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
+    const email = params.get('email')
+    if (token && email) {
+      isResetMode.value = true
+      resetToken.value = token
+      resetEmail.value = email
+    }
+  }
+
   loginUsername.value = ''
   loginPassword.value = ''
   registerName.value = ''
@@ -262,275 +390,365 @@ onMounted(() => {
 
 <template>
   <div class="auth-container scrollable-y animate-fade-in">
-    <div v-if="activeTab === 'signin'" class="logo-header">
-      <div class="logo-icon">⚡</div>
-      <h1 class="brand-title">PlayConnect</h1>
-      <p class="brand-subtitle">Sportigo Matchmaker Platform</p>
-    </div>
+    <!-- 1. Reset Password Mode -->
+    <div v-if="isResetMode" class="form-panel animate-fade-in" style="padding-top: 40px;">
+      <h2 class="form-title">Reset Password</h2>
+      <p class="form-subtitle">Enter your new password below</p>
 
-    <!-- Tab Selector -->
-    <div v-if="activeTab === 'signin'" class="auth-tabs">
-      <button 
-        class="auth-tab-btn" 
-        :class="{ active: activeTab === 'signin' }"
-        @click="activeTab = 'signin'"
-      >
-        Sign In
-      </button>
-      <button 
-        class="auth-tab-btn" 
-        :class="{ active: activeTab === 'signup' }"
-        @click="activeTab = 'signup'"
-      >
-        Sign Up
-      </button>
-    </div>
-
-    <!-- Sign In Panel -->
-    <div v-if="activeTab === 'signin'" class="form-panel animate-fade-in">
-      <h2 class="form-title">Welcome Back</h2>
-      <p class="form-subtitle">Sign in to join your next match</p>
-
-      <div v-if="loginError" class="error-banner">{{ loginError }}</div>
-      <div v-if="loginSuccess" class="success-banner">{{ loginSuccess }}</div>
-
-      <!-- Decoy inputs to trap browser autofill -->
-      <input type="text" id="username" name="username" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
-      <input type="password" id="password" name="password" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
+      <div v-if="resetError" class="error-banner">{{ resetError }}</div>
+      <div v-if="resetSuccess" class="success-banner">{{ resetSuccess }}</div>
 
       <div class="input-group">
-        <label class="input-label">Username</label>
-        <div class="input-wrapper">
-          <span class="input-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="input-svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </span>
-          <input 
-            v-model="loginUsername" 
-            type="text" 
-            id="real-login-username-input"
-            name="real_login_username_input"
-            placeholder="Enter your username" 
-            class="form-input"
-            :readonly="isReadonly"
-            @focus="removeReadonly"
-            @mousedown="removeReadonly"
-            @touchstart="removeReadonly"
-            @keyup.enter="handleSignIn"
-            autocomplete="off"
-          />
-        </div>
-      </div>
-
-      <div class="input-group">
-        <label class="input-label">Password</label>
+        <label class="input-label">New Password</label>
         <div class="input-wrapper">
           <span class="input-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="input-svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           </span>
           <input 
-            v-model="loginPassword" 
-            :type="loginPasswordVisible ? 'text' : 'password'" 
-            id="real-login-password-input"
-            name="real_login_password_input"
-            placeholder="Enter your password" 
+            v-model="resetPassword" 
+            type="password" 
+            placeholder="Min 8 characters" 
             class="form-input"
-            :readonly="isReadonly"
-            @focus="removeReadonly"
-            @mousedown="removeReadonly"
-            @touchstart="removeReadonly"
-            @keyup.enter="handleSignIn"
-            autocomplete="off"
+            @keyup.enter="handleResetPassword"
+            style="padding-left: 40px;"
           />
-          <button class="password-toggle-btn" @click="toggleLoginPassword">
-            <svg v-if="loginPasswordVisible" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-svg"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
         </div>
       </div>
 
-      <div class="forgot-pwd">
-        <a href="#" class="text-link">Forgot Password?</a>
+      <div class="input-group">
+        <label class="input-label">Confirm Password</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="input-svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span>
+          <input 
+            v-model="resetPasswordConfirm" 
+            type="password" 
+            placeholder="Confirm new password" 
+            class="form-input"
+            @keyup.enter="handleResetPassword"
+            style="padding-left: 40px;"
+          />
+        </div>
       </div>
 
-      <button type="button" class="submit-btn" :disabled="loginLoading" @click="handleSignIn">
-        <span v-if="loginLoading" class="loader"></span>
-        <span v-else>Sign In</span>
+      <button type="button" class="submit-btn" :disabled="resetLoading" @click="handleResetPassword">
+        <span v-if="resetLoading" class="loader"></span>
+        <span v-else>Update Password</span>
       </button>
 
-      <!-- Social login divider -->
-      <div class="social-divider">
-        <span class="divider-line"></span>
-        <span class="divider-text">or continue with</span>
-        <span class="divider-line"></span>
-      </div>
-
-      <div class="social-buttons" style="justify-content: center;">
-        <div id="google-signin-btn-signin" class="google-btn-container"></div>
+      <div class="forgot-pwd" style="text-align: center; margin-top: 20px;">
+        <a href="#" class="text-link" @click.prevent="isResetMode = false; activeTab = 'signin'">Back to Sign In</a>
       </div>
     </div>
 
-    <!-- Sign Up Panel -->
-    <div v-else class="form-panel signup-panel animate-fade-in">
-      <button type="button" class="back-btn" @click="activeTab = 'signin'" aria-label="Back to Sign In">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
+    <!-- 2. Forgot Password Panel -->
+    <div v-else-if="isForgotPassword" class="form-panel animate-fade-in" style="padding-top: 40px;">
+      <h2 class="form-title">Reset Password</h2>
+      <p class="form-subtitle">Enter your username or email address and we'll send you a link to reset your password.</p>
+
+      <div v-if="forgotError" class="error-banner">{{ forgotError }}</div>
+      <div v-if="forgotSuccess" class="success-banner">{{ forgotSuccess }}</div>
+
+      <div class="input-group">
+        <label class="input-label">Username or Email Address</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="input-svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          <input 
+            v-model="forgotUsernameOrEmail" 
+            type="text" 
+            placeholder="Enter username or email" 
+            class="form-input"
+            @keyup.enter="handleForgotPassword"
+            style="padding-left: 40px;"
+          />
+        </div>
+      </div>
+
+      <button type="button" class="submit-btn" :disabled="forgotLoading" @click="handleForgotPassword">
+        <span v-if="forgotLoading" class="loader"></span>
+        <span v-else>Send Reset Link</span>
       </button>
 
-      <h2 class="form-title">Create Account</h2>
-      <p class="form-subtitle">Join the Sportigo community</p>
+      <div class="forgot-pwd" style="text-align: center; margin-top: 20px;">
+        <a href="#" class="text-link" @click.prevent="isForgotPassword = false; forgotError = ''; forgotSuccess = ''">Back to Sign In</a>
+      </div>
+    </div>
 
-      <div v-if="signupError" class="error-banner">{{ signupError }}</div>
+    <!-- 3. Standard Login/Register Flow -->
+    <template v-else>
+      <div v-if="activeTab === 'signin'" class="logo-header">
+        <div class="logo-icon">⚡</div>
+        <h1 class="brand-title">PlayConnect</h1>
+        <p class="brand-subtitle">Sportigo Matchmaker Platform</p>
+      </div>
 
-      <!-- Decoy inputs to trap browser autofill on signup -->
-      <input type="text" name="signup_name" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
-      <input type="text" name="signup_username" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
-      <input type="password" name="signup_password" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
+      <!-- Tab Selector -->
+      <div v-if="activeTab === 'signin'" class="auth-tabs">
+        <button 
+          class="auth-tab-btn" 
+          :class="{ active: activeTab === 'signin' }"
+          @click="activeTab = 'signin'"
+        >
+          Sign In
+        </button>
+        <button 
+          class="auth-tab-btn" 
+          :class="{ active: activeTab === 'signup' }"
+          @click="activeTab = 'signup'"
+        >
+          Sign Up
+        </button>
+      </div>
 
-      <div class="input-group">
-        <label class="input-label">Full Name</label>
-        <div class="input-wrapper">
-          <span class="input-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-svg">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </span>
-          <input 
-            v-model="registerName" 
-            type="text"
-            id="real-register-name-input"
-            name="real_register_name_input"
-            placeholder="Enter your full name" 
-            class="form-input"
-            :readonly="isReadonly"
-            @focus="removeReadonly"
-            @mousedown="removeReadonly"
-            @touchstart="removeReadonly"
-            autocomplete="off"
-          />
+      <!-- Sign In Panel -->
+      <div v-if="activeTab === 'signin'" class="form-panel animate-fade-in">
+        <h2 class="form-title">Welcome Back</h2>
+        <p class="form-subtitle">Sign in to join your next match</p>
+
+        <div v-if="loginError" class="error-banner">{{ loginError }}</div>
+        <div v-if="loginSuccess" class="success-banner">{{ loginSuccess }}</div>
+
+        <!-- Decoy inputs to trap browser autofill -->
+        <input type="text" id="username" name="username" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
+        <input type="password" id="password" name="password" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
+
+        <div class="input-group">
+          <label class="input-label">Username</label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="input-svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <input 
+              v-model="loginUsername" 
+              type="text" 
+              id="real-login-username-input"
+              name="real_login_username_input"
+              placeholder="Enter your username" 
+              class="form-input"
+              :readonly="isReadonly"
+              @focus="removeReadonly"
+              @mousedown="removeReadonly"
+              @touchstart="removeReadonly"
+              @keyup.enter="handleSignIn"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="input-svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
+            <input 
+              v-model="loginPassword" 
+              :type="loginPasswordVisible ? 'text' : 'password'" 
+              id="real-login-password-input"
+              name="real_login_password_input"
+              placeholder="Enter your password" 
+              class="form-input"
+              :readonly="isReadonly"
+              @focus="removeReadonly"
+              @mousedown="removeReadonly"
+              @touchstart="removeReadonly"
+              @keyup.enter="handleSignIn"
+              autocomplete="off"
+            />
+            <button class="password-toggle-btn" @click="toggleLoginPassword">
+              <svg v-if="loginPasswordVisible" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-svg"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="forgot-pwd">
+          <a href="#" class="text-link" @click.prevent="isForgotPassword = true; forgotError = ''; forgotSuccess = ''">Forgot Password?</a>
+        </div>
+
+        <button type="button" class="submit-btn" :disabled="loginLoading" @click="handleSignIn">
+          <span v-if="loginLoading" class="loader"></span>
+          <span v-else>Sign In</span>
+        </button>
+
+        <!-- Social login divider -->
+        <div class="social-divider">
+          <span class="divider-line"></span>
+          <span class="divider-text">or continue with</span>
+          <span class="divider-line"></span>
+        </div>
+
+        <div class="social-buttons" style="justify-content: center;">
+          <div id="google-signin-btn-signin" class="google-btn-container"></div>
         </div>
       </div>
 
-      <div class="input-group">
-        <label class="input-label">Username</label>
-        <div class="input-wrapper">
-          <span class="input-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-svg">
-              <circle cx="12" cy="12" r="4"></circle>
-              <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path>
-            </svg>
-          </span>
-          <input 
-            v-model="registerUsername" 
-            type="text"
-            id="real-register-username-input"
-            name="real_register_username_input"
-            placeholder="Choose a username" 
-            class="form-input"
-            :readonly="isReadonly"
-            @focus="removeReadonly"
-            @mousedown="removeReadonly"
-            @touchstart="removeReadonly"
-            autocomplete="off"
-          />
-        </div>
-      </div>
+      <!-- Sign Up Panel -->
+      <div v-else class="form-panel signup-panel animate-fade-in">
+        <button type="button" class="back-btn" @click="activeTab = 'signin'" aria-label="Back to Sign In">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+        </button>
 
-      <div class="input-group">
-        <label class="input-label">Password</label>
-        <div class="input-wrapper">
-          <span class="input-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-svg">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-          </span>
-          <input 
-            v-model="registerPassword" 
-            :type="registerPasswordVisible ? 'text' : 'password'"
-            id="real-register-password-input"
-            name="real_register_password_input"
-            placeholder="Create a password" 
-            class="form-input"
-            :readonly="isReadonly"
-            @focus="removeReadonly"
-            @mousedown="removeReadonly"
-            @touchstart="removeReadonly"
-            autocomplete="new-password"
-          />
-          <button type="button" class="password-toggle-btn" @click="toggleRegisterPassword" aria-label="Toggle password visibility">
-            <svg v-if="registerPasswordVisible" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-svg">
-              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-              <line x1="1" y1="1" x2="23" y2="23"></line>
-            </svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-svg">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-          </button>
-        </div>
-      </div>
+        <h2 class="form-title">Create Account</h2>
+        <p class="form-subtitle">Join the Sportigo community</p>
 
-      <!-- Gender Selector -->
-      <div class="gender-section">
-        <label class="input-label">Gender Identity (Optional)</label>
-        <div class="gender-cards">
-          <div 
-            class="gender-card male" 
-            :class="{ active: selectedGender === 'male' }"
-            @click="selectGender('male')"
-          >
-            <span class="gender-icon-wrapper">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="gender-svg">
-                <circle cx="10" cy="14" r="5"></circle>
-                <path d="M14 10l7-7"></path>
-                <path d="M16 3h5v5"></path>
+        <div v-if="signupError" class="error-banner">{{ signupError }}</div>
+
+        <!-- Decoy inputs to trap browser autofill on signup -->
+        <input type="text" name="signup_name" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
+        <input type="text" name="signup_username" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
+        <input type="password" name="signup_password" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" />
+
+        <div class="input-group">
+          <label class="input-label">Full Name</label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-svg">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
               </svg>
             </span>
-            <span class="gender-label">Male</span>
+            <input 
+              v-model="registerName" 
+              type="text"
+              id="real-register-name-input"
+              name="real_register_name_input"
+              placeholder="Enter your full name" 
+              class="form-input"
+              :readonly="isReadonly"
+              @focus="removeReadonly"
+              @mousedown="removeReadonly"
+              @touchstart="removeReadonly"
+              autocomplete="off"
+            />
           </div>
-          <div 
-            class="gender-card female" 
-            :class="{ active: selectedGender === 'female' }"
-            @click="selectGender('female')"
-          >
-            <span class="gender-icon-wrapper">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="gender-svg">
-                <circle cx="12" cy="8" r="5"></circle>
-                <path d="M12 13v8"></path>
-                <path d="M9 18h6"></path>
-              </svg>
-            </span>
-            <span class="gender-label">Female</span>
-          </div>
-          <div 
-            class="gender-card other" 
-            :class="{ active: selectedGender === 'other' }"
-            @click="selectGender('other')"
-          >
-            <span class="gender-icon-wrapper">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="gender-svg">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Username</label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-svg">
                 <circle cx="12" cy="12" r="4"></circle>
-                <path d="M12 16v5"></path>
-                <path d="M9.5 19h5"></path>
-                <path d="M15 9l5-5"></path>
-                <path d="M16 4h4v4"></path>
-                <path d="M9 9L4 4"></path>
-                <path d="M3 7l4-4"></path>
+                <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path>
               </svg>
             </span>
-            <span class="gender-label">Other</span>
+            <input 
+              v-model="registerUsername" 
+              type="text"
+              id="real-register-username-input"
+              name="real_register_username_input"
+              placeholder="Choose a username" 
+              class="form-input"
+              :readonly="isReadonly"
+              @focus="removeReadonly"
+              @mousedown="removeReadonly"
+              @touchstart="removeReadonly"
+              autocomplete="off"
+            />
           </div>
         </div>
-      </div>
 
-      <button type="button" class="submit-btn" :disabled="signupLoading" @click="handleSignUp">
-        <span v-if="signupLoading" class="loader"></span>
-        <span v-else>Sign Up</span>
-      </button>
-    </div>
+        <div class="input-group">
+          <label class="input-label">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-svg">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </span>
+            <input 
+              v-model="registerPassword" 
+              :type="registerPasswordVisible ? 'text' : 'password'"
+              id="real-register-password-input"
+              name="real_register_password_input"
+              placeholder="Create a password" 
+              class="form-input"
+              :readonly="isReadonly"
+              @focus="removeReadonly"
+              @mousedown="removeReadonly"
+              @touchstart="removeReadonly"
+              autocomplete="new-password"
+            />
+            <button type="button" class="password-toggle-btn" @click="toggleRegisterPassword" aria-label="Toggle password visibility">
+              <svg v-if="registerPasswordVisible" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-svg">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-svg">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Gender Selector -->
+        <div class="gender-section">
+          <label class="input-label">Gender Identity (Optional)</label>
+          <div class="gender-cards">
+            <div 
+              class="gender-card male" 
+              :class="{ active: selectedGender === 'male' }"
+              @click="selectGender('male')"
+            >
+              <span class="gender-icon-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="gender-svg">
+                  <circle cx="10" cy="14" r="5"></circle>
+                  <path d="M14 10l7-7"></path>
+                  <path d="M16 3h5v5"></path>
+                </svg>
+              </span>
+              <span class="gender-label">Male</span>
+            </div>
+            <div 
+              class="gender-card female" 
+              :class="{ active: selectedGender === 'female' }"
+              @click="selectGender('female')"
+            >
+              <span class="gender-icon-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="gender-svg">
+                  <circle cx="12" cy="8" r="5"></circle>
+                  <path d="M12 13v8"></path>
+                  <path d="M9 18h6"></path>
+                </svg>
+              </span>
+              <span class="gender-label">Female</span>
+            </div>
+            <div 
+              class="gender-card other" 
+              :class="{ active: selectedGender === 'other' }"
+              @click="selectGender('other')"
+            >
+              <span class="gender-icon-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="gender-svg">
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <path d="M12 16v5"></path>
+                  <path d="M9.5 19h5"></path>
+                  <path d="M15 9l5-5"></path>
+                  <path d="M16 4h4v4"></path>
+                  <path d="M9 9L4 4"></path>
+                  <path d="M3 7l4-4"></path>
+                </svg>
+              </span>
+              <span class="gender-label">Other</span>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="submit-btn" :disabled="signupLoading" @click="handleSignUp">
+          <span v-if="signupLoading" class="loader"></span>
+          <span v-else>Sign Up</span>
+        </button>
+      </div>
+    </template>
   </div>
 </template>
 

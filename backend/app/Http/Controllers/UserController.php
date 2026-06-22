@@ -29,7 +29,24 @@ class UserController extends Controller
         ]);
 
         $user = $request->user();
+        $oldEmail = $user->email;
+        
         $user->update($validated);
+
+        if (empty($oldEmail) && !empty($user->email)) {
+            $frontendUrl = $request->header('Origin') ?: $request->header('Referer');
+            if ($frontendUrl) {
+                $frontendUrl = preg_replace('/(\/auth|\/login|\/forgot-password|\/register|\/reset-password|\/profile).*$/', '', $frontendUrl);
+                $frontendUrl = rtrim($frontendUrl, '/');
+            } else {
+                $frontendUrl = 'https://playconnect-vue.ddev.site';
+            }
+            try {
+                \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\WelcomeMail($user->name, $frontendUrl));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to send welcome email on profile update to {$user->email}: " . $e->getMessage());
+            }
+        }
 
         $freshUser = $user->fresh();
         $freshUser->append(['stats', 'followersCount', 'followingCount']);
@@ -38,13 +55,13 @@ class UserController extends Controller
 
     public function publicProfile($id)
     {
-        $user = \App\Models\User::with(['joinedMatches', 'tournaments'])->findOrFail($id);
+        $user = \App\Models\User::with(['joinedMatches.user', 'joinedMatches.participants', 'tournaments'])->findOrFail($id);
         $hostedMatches = \App\Models\SportsMatch::with(['user', 'participants'])->where('creator_id', $user->id)->get();
         
         // Merge hosted and joined matches for their public activity feed
         $allMatches = $hostedMatches->merge($user->joinedMatches)->unique('id')->values();
 
-        $activities = \App\Models\Activity::where('user_id', $user->id)->latest()->get();
+        $activities = \App\Models\Activity::with('user')->where('user_id', $user->id)->latest()->get();
 
         return response()->json([
             'id' => $user->id,
