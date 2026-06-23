@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/app_loading_indicator.dart';
-import '../core/constants/colors.dart';
-import '../core/utils/avatar_image_helper.dart';
 import '../data/models/activity_model.dart';
 import '../data/repositories/match_repository.dart';
 import '../logic/blocs/activity/activity_bloc.dart';
 import 'match_details_screen.dart';
 import '../core/theme/app_spacing.dart';
-import '../core/theme/app_icon_size.dart';
-import '../core/theme/app_radius.dart';
-import '../core/utils/sport_icon_helper.dart';
+import 'activity_feed/widgets/activity_card.dart';
+import 'activity_feed/widgets/activity_empty_state.dart';
+import 'activity_feed/widgets/activity_error_state.dart';
+import 'activity_feed/widgets/activity_shimmer_loader.dart';
 
 class ActivityFeedScreen extends StatefulWidget {
   const ActivityFeedScreen({super.key});
@@ -93,89 +92,6 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
     }
   }
 
-  String _getRelativeTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inSeconds < 60) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      final mins = difference.inMinutes;
-      return '$mins min${mins > 1 ? 's' : ''} ago';
-    } else if (difference.inHours < 24) {
-      final hrs = difference.inHours;
-      return '$hrs hr${hrs > 1 ? 's' : ''} ago';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      // Return simple date e.g. May 21
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return '${months[dateTime.month - 1]} ${dateTime.day}';
-    }
-  }
-
-  Color _getActivityColor(String type, String? sportType) {
-    if (type == 'match_created') {
-      return AppColors.sportsGreen;
-    } else if (type == 'match_joined') {
-      switch (sportType?.toLowerCase()) {
-        case 'football':
-          return const Color(0xFF4CAF50);
-        case 'basketball':
-          return const Color(0xFFFF9800);
-        case 'tennis':
-          return const Color(0xFFCDDC39);
-        case 'badminton':
-          return const Color(0xFF00BCD4);
-        case 'cricket':
-          return const Color(0xFF3F51B5);
-        default:
-          return AppColors.sportsGreen;
-      }
-    } else if (type == 'match_left') {
-      return Colors.redAccent;
-    }
-    return AppColors.deepBlue;
-  }
-
-  Widget _getActivityIcon(String type, String? sportType, Color color) {
-    if (type == 'match_created') {
-      return Container(
-        padding: const EdgeInsets.all(AppSpacing.xs + 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-          border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
-        ),
-        child: Icon(Icons.add_circle_outline, color: color, size: AppIconSize.md),
-      );
-    } else if (type == 'match_left') {
-      return Container(
-        padding: const EdgeInsets.all(AppSpacing.xs + 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-          border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
-        ),
-        child: Icon(Icons.exit_to_app_rounded, color: color, size: AppIconSize.md),
-      );
-    } else {
-      // Joined or other sport-based feed item - no circle background, original image color
-      return SizedBox(
-        width: 44,
-        height: 44,
-        child: Center(
-          child: SportIconHelper.widgetForSport(
-            sportType ?? '',
-            size: 32,
-          ),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -197,15 +113,24 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
             builder: (context, state) {
               if (state.status == ActivityStatus.initial ||
                   (state.status == ActivityStatus.loading && state.activities.isEmpty)) {
-                return _buildShimmerLoader();
+                return const ActivityShimmerLoader();
               }
 
               if (state.status == ActivityStatus.failure && state.activities.isEmpty) {
-                return _buildErrorState(state.errorMessage ?? 'An error occurred');
+                return ActivityErrorState(
+                  message: state.errorMessage ?? 'An error occurred',
+                  onRetry: () {
+                    context.read<ActivityBloc>().add(const ActivityFetched());
+                  },
+                );
               }
 
               if (state.activities.isEmpty) {
-                return _buildEmptyState();
+                return ActivityEmptyState(
+                  onRefresh: () {
+                    context.read<ActivityBloc>().add(const ActivityFetched());
+                  },
+                );
               }
 
               return RefreshIndicator(
@@ -229,7 +154,11 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                     }
 
                     final activity = state.activities[index];
-                    return _buildActivityCard(activity);
+                    final meta = activity.meta;
+                    return ActivityCard(
+                      activity: activity,
+                      onTap: meta != null && meta['match_id'] != null ? () => _handleActivityTap(activity) : null,
+                    );
                   },
                 ),
               );
@@ -259,277 +188,6 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildActivityCard(ActivityModel activity) {
-    final meta = activity.meta;
-    final sportType = meta?['sport_type'] as String?;
-    final color = _getActivityColor(activity.type, sportType);
-
-    final Color leftBarColor;
-    if (activity.type == 'match_joined') {
-      leftBarColor = AppColors.sportsGreen;
-    } else if (activity.type == 'match_left') {
-      leftBarColor = Colors.redAccent;
-    } else {
-      leftBarColor = Colors.transparent;
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.25),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: meta != null && meta['match_id'] != null ? () => _handleActivityTap(activity) : null,
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (leftBarColor != Colors.transparent)
-                    Container(
-                      width: 4,
-                      color: leftBarColor,
-                    ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // User Avatar
-                          AvatarImageHelper.circleAvatar(
-                            path: activity.user?.profilePicture,
-                            radius: 24,
-                            backgroundColor: Theme.of(context).colorScheme.surfaceDim,
-                          ),
-                          const SizedBox(width: AppSpacing.sm + 2),
-
-                          // Content
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        activity.user?.name ?? 'Player',
-                                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.xs),
-                                    Text(
-                                      _getRelativeTime(activity.createdAt),
-                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                        color: Theme.of(context).colorScheme.outline,
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  activity.message,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                    height: 1.4,
-                                  ),
-                                ),
-
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-
-                          // Sport Icon Indicator
-                          _getActivityIcon(activity.type, sportType, color),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildShimmerLoader() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
-      itemCount: 6,
-      itemBuilder: (context, index) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: AppSpacing.md),
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.15),
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar Shimmer
-              _buildShimmerBlock(48, 48, radius: 24),
-              const SizedBox(width: AppSpacing.sm + 2),
-
-              // Content Shimmer
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildShimmerBlock(80, 14, radius: AppRadius.xxs),
-                        _buildShimmerBlock(40, 10, radius: AppRadius.xxs),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _buildShimmerBlock(double.infinity, 14, radius: AppRadius.xxs),
-                    const SizedBox(height: 6),
-                    _buildShimmerBlock(160, 14, radius: AppRadius.xxs),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm + 2),
-
-              // Icon Shimmer
-              _buildShimmerBlock(44, 44, radius: 22),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildShimmerBlock(double width, double height, {double radius = AppRadius.xs}) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.05),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.dynamic_feed_rounded,
-                size: AppIconSize.hero,
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.8),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'No Activity Yet',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Start by creating or joining matches to build the sports community!',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            ElevatedButton.icon(
-              onPressed: () {
-                // Refresh to check for items
-                context.read<ActivityBloc>().add(const ActivityFetched());
-              },
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Refresh Feed'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm + 2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline_rounded, size: AppIconSize.xl, color: Colors.redAccent),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Failed to load activities',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            ElevatedButton(
-              onPressed: () {
-                context.read<ActivityBloc>().add(const ActivityFetched());
-              },
-              child: const Text('Try Again'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

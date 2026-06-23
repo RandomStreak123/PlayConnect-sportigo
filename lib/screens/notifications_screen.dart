@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../core/theme/app_spacing.dart';
-import '../core/theme/app_icon_size.dart';
-import '../core/theme/app_radius.dart';
 import '../data/models/notification_model.dart';
 import '../data/repositories/match_repository.dart';
 import '../logic/blocs/notification/notification_bloc.dart';
@@ -11,7 +9,9 @@ import '../logic/blocs/notification/notification_state.dart';
 import '../widgets/app_loading_indicator.dart';
 import 'match_details_screen.dart';
 import 'profile_screen.dart';
-import '../core/utils/sport_icon_helper.dart';
+import 'notifications/widgets/notification_card.dart';
+import 'notifications/widgets/notification_empty_state.dart';
+import 'notifications/widgets/notification_error_state.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -50,72 +50,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.offset;
     return currentScroll >= (maxScroll * 0.9);
-  }
-
-  String _getRelativeTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inSeconds < 60) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      final mins = difference.inMinutes;
-      return '$mins min${mins > 1 ? 's' : ''} ago';
-    } else if (difference.inHours < 24) {
-      final hrs = difference.inHours;
-      return '$hrs hr${hrs > 1 ? 's' : ''} ago';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return '${months[dateTime.month - 1]} ${dateTime.day}';
-    }
-  }
-
-  IconData _getIconForType(String type, String? sportType) {
-    if (type == 'match_joined') {
-      switch (sportType?.toLowerCase()) {
-        case 'football':
-          return Icons.sports_soccer_rounded;
-        case 'basketball':
-          return Icons.sports_basketball_rounded;
-        case 'tennis':
-          return Icons.sports_tennis_rounded;
-        case 'badminton':
-          return Icons.sports_tennis;
-        case 'cricket':
-          return Icons.sports_cricket_rounded;
-        default:
-          return Icons.sports_rounded;
-      }
-    } else if (type == 'match_left') {
-      return Icons.exit_to_app_rounded;
-    }
-    return Icons.notifications_rounded;
-  }
-
-  Color _getColorForType(BuildContext context, String type, String? sportType) {
-    if (type == 'match_joined') {
-      switch (sportType?.toLowerCase()) {
-        case 'football':
-          return const Color(0xFF4CAF50);
-        case 'basketball':
-          return const Color(0xFFFF9800);
-        case 'tennis':
-          return const Color(0xFFCDDC39);
-        case 'badminton':
-          return const Color(0xFF00BCD4);
-        case 'cricket':
-          return const Color(0xFF3F51B5);
-        default:
-          return Theme.of(context).colorScheme.primaryContainer;
-      }
-    } else if (type == 'match_left') {
-      return Colors.redAccent;
-    }
-    return Theme.of(context).colorScheme.primaryContainer;
   }
 
   Future<void> _handleNotificationTap(NotificationModel notification) async {
@@ -228,11 +162,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               }
 
               if (state.status == NotificationStatus.failure && state.notifications.isEmpty) {
-                return _buildErrorState(state.errorMessage ?? 'An error occurred');
+                return NotificationErrorState(
+                  message: state.errorMessage ?? 'An error occurred',
+                  onRetry: () {
+                    context.read<NotificationBloc>().add(const NotificationFetched());
+                  },
+                );
               }
 
               if (state.notifications.isEmpty) {
-                return _buildEmptyState();
+                return const NotificationEmptyState();
               }
 
               // Group notifications
@@ -295,34 +234,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     }
 
                     final notification = item as NotificationModel;
-                    final meta = notification.meta;
-                    final sportType = meta?['sport_type'] as String?;
-                    final iconColor = _getColorForType(context, notification.type, sportType);
 
-                    Widget? iconWidget;
-                    IconData? iconData;
-                    if (notification.type == 'match_joined') {
-                      iconWidget = SportIconHelper.widgetForSport(
-                        sportType ?? '',
-                        size: 32,
-                        color: iconColor,
-                      );
-                    } else {
-                      iconData = _getIconForType(notification.type, sportType);
-                    }
-
-                    return GestureDetector(
+                    return NotificationCard(
+                      notification: notification,
                       onTap: () => _handleNotificationTap(notification),
-                      child: _buildNotificationItem(
-                        context,
-                        iconWidget: iconWidget,
-                        icon: iconData,
-                        iconColor: iconColor,
-                        title: notification.title,
-                        message: notification.message,
-                        time: _getRelativeTime(notification.createdAt),
-                        isUnread: !notification.isRead,
-                      ),
                     );
                   },
                 ),
@@ -364,175 +279,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
           color: Theme.of(context).colorScheme.outline,
           fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationItem(
-    BuildContext context, {
-    Widget? iconWidget,
-    IconData? icon,
-    required Color iconColor,
-    required String title,
-    required String message,
-    required String time,
-    required bool isUnread,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: isUnread 
-            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.05)
-            : Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(
-          color: isUnread 
-              ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1)
-              : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          iconWidget != null
-              ? SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Center(child: iconWidget),
-                )
-              : Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon!, color: iconColor, size: AppIconSize.sm),
-                ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      time,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  message,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (isUnread) ...[
-            const SizedBox(width: AppSpacing.xs),
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.05),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.notifications_none_rounded,
-                size: AppIconSize.hero,
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.8),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'No Notifications Yet',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'You will get notified here when other players join or interact with your matches!',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline_rounded, size: AppIconSize.xl, color: Colors.redAccent),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Failed to load notifications',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            ElevatedButton(
-              onPressed: () {
-                context.read<NotificationBloc>().add(const NotificationFetched());
-              },
-              child: const Text('Try Again'),
-            ),
-          ],
         ),
       ),
     );

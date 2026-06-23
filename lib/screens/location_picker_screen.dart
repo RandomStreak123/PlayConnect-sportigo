@@ -5,8 +5,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
-import '../widgets/app_loading_indicator.dart';
-import '../core/theme/app_radius.dart';
+import 'location_picker/widgets/location_search_bar.dart';
+import 'location_picker/widgets/location_address_card.dart';
+import 'location_picker/widgets/location_map_container.dart';
 
 class LocationResult {
   final String address;
@@ -288,30 +289,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       ),
       body: Stack(
         children: [
-          FlutterMap(
+          LocationMapContainer(
             mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _currentCenter,
-              initialZoom: 15.0,
-              maxZoom: 18.0,
-              minZoom: 3.0,
-              onPositionChanged: _onMapPositionChanged,
-              onTap: (tapPosition, point) {
-                setState(() {
-                  _currentCenter = point;
-                  _isGeocoding = true;
-                  _address = 'Locating...';
-                });
-                _mapController.move(point, _mapController.camera.zoom);
-                _reverseGeocode(point);
-              },
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.example.sportigo',
-              ),
-            ],
+            currentCenter: _currentCenter,
+            onPositionChanged: _onMapPositionChanged,
+            onTap: (tapPosition, point) {
+              setState(() {
+                _currentCenter = point;
+                _isGeocoding = true;
+                _address = 'Locating...';
+              });
+              _mapController.move(point, _mapController.camera.zoom);
+              _reverseGeocode(point);
+            },
           ),
           Center(
             child: Padding(
@@ -341,162 +331,36 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             top: 16,
             left: 16,
             right: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          hintText: 'Search location...',
-                          border: InputBorder.none,
-                        ),
-                        onSubmitted: (_) => _searchAddress(),
-                      ),
-                    ),
-                  ),
-                  _isSearching
-                      ? const Padding(
-                          padding: EdgeInsets.all(12.0),
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: AppLoadingIndicator(),
-                          ),
-                        )
-                      : IconButton(
-                          icon: const Icon(Icons.search),
-                          onPressed: _searchAddress,
-                        ),
-                ],
-              ),
+            child: LocationSearchBar(
+              controller: _searchController,
+              isSearching: _isSearching,
+              onSearchPressed: _searchAddress,
             ),
           ),
           Positioned(
             bottom: 24,
             left: 16,
             right: 16,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
+            child: LocationAddressCard(
+              address: _address,
+              isGeocoding: _isGeocoding,
+              customAddressQuery: _customAddressQuery,
+              onConfirm: () {
+                Navigator.pop(
+                  context,
+                  LocationResult(
+                    address: _address,
+                    latitude: _currentCenter.latitude,
+                    longitude: _currentCenter.longitude,
                   ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Selected Location',
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            _isGeocoding
-                                ? const SizedBox(
-                                    height: 16,
-                                    width: 16,
-                                    child: AppLoadingIndicator(),
-                                  )
-                                : Text(
-                                    _address,
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                        ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_customAddressQuery != null) ...[
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _address = _sanitizeAddress(_customAddressQuery!);
-                          _customAddressQuery = null;
-                        });
-                      },
-                      icon: const Icon(Icons.check),
-                      label: Text('Use "$_customAddressQuery" as name'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.primary,
-                        side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _isGeocoding
-                        ? null
-                        : () {
-                            Navigator.pop(
-                              context,
-                              LocationResult(
-                                address: _address,
-                                latitude: _currentCenter.latitude,
-                                longitude: _currentCenter.longitude,
-                              ),
-                            );
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Confirm Location',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
+              onUseCustomAddressQuery: () {
+                setState(() {
+                  _address = _sanitizeAddress(_customAddressQuery!);
+                  _customAddressQuery = null;
+                });
+              },
             ),
           ),
           Positioned(

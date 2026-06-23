@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_spacing.dart';
-import 'game_rules_screen.dart';
+import '../data/models/sport_rule_model.dart';
 
 class SportRulesDetailScreen extends StatelessWidget {
   final SportRuleItem sport;

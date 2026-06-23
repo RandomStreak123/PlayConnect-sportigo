@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/app_loading_indicator.dart';
-import '../widgets/match_card.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../logic/blocs/matches/match_bloc.dart';
-import '../logic/blocs/notification/notification_bloc.dart';
-import '../logic/blocs/notification/notification_state.dart';
-import 'notifications_screen.dart';
 import 'advanced_search_screen.dart';
 import 'create_match_screen.dart';
-import '../core/utils/responsive_util.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_radius.dart';
 import '../core/constants/colors.dart';
-import '../core/utils/avatar_image_helper.dart';
+import 'home/widgets/home_top_bar.dart';
+import 'home/widgets/quick_sport_shortcuts.dart';
+import 'home/widgets/featured_matches_carousel.dart';
+import 'home/widgets/home_match_list.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,21 +48,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _onCategorySelected(String category) {
-    context.read<MatchBloc>().add(MatchFetched(sportType: category));
-  }
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return 'Good morning,';
-    } else if (hour < 17) {
-      return 'Good afternoon,';
-    } else {
-      return 'Good evening,';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -72,360 +55,97 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Stack(
         children: [
           Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            context.read<MatchBloc>().add(const MatchFetched(forceRefresh: true));
-          },
-          child: CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              SliverAppBar(
-                floating: true,
-                toolbarHeight: 72,
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                elevation: 0,
-                title: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => _showSignOutConfirmation(context),
-                      child: BlocSelector<AuthBloc, AuthState, String?>(
-                        selector: (state) => state.user?.profilePhotoUrl,
-                        builder: (context, photoUrl) {
-                          return AvatarImageHelper.circleAvatar(
-                            path: photoUrl,
-                            radius: 20,
-                            backgroundColor: Theme.of(context).colorScheme.surfaceDim,
-                          );
-                        },
-                      ),
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            body: SafeArea(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  context.read<MatchBloc>().add(const MatchFetched(forceRefresh: true));
+                },
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    HomeTopBar(
+                      onProfileTap: () => _showSignOutConfirmation(context),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getGreeting(),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          BlocSelector<AuthBloc, AuthState, String>(
-                            selector: (state) => state.user?.name ?? 'Champ',
-                            builder: (context, userName) {
-                              return Text(
-                                userName,
-                                style: Theme.of(context).textTheme.titleLarge,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: BlocSelector<NotificationBloc, NotificationState, bool>(
-                      selector: (notificationState) {
-                        return notificationState.notifications.any((n) => !n.isRead);
-                      },
-                      builder: (context, hasUnread) {
-                        return Center(
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.notifications_outlined,
-                                  color: Color(0xFFFFD700), // Golden yellow
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Search Bar
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const AdvancedSearchScreen(),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.md,
+                                  vertical: AppSpacing.sm,
                                 ),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const NotificationsScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
-                              if (hasUnread)
-                                Positioned(
-                                  top: 10,
-                                  right: 10,
-                                  child: Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.deepBlue,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Theme.of(context).colorScheme.surface,
-                                        width: 1.5,
-                                      ),
-                                    ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                                   ),
                                 ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Search Bar
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AdvancedSearchScreen(),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.sm,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.search, color: Theme.of(context).colorScheme.outline),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: Text(
-                                  'Find matches or players...',
-                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                                  overflow: TextOverflow.ellipsis,
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.search, color: Theme.of(context).colorScheme.outline),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                      child: Text(
+                                        'Find matches or players...',
+                                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            // Sports Category Pills
+                            const QuickSportShortcuts(),
+                            const SizedBox(height: AppSpacing.lg),
+                            // Nearby Matches Header
+                            Text(
+                              'Nearby Matches',
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      // Sports Category Pills
-                      BlocBuilder<MatchBloc, MatchState>(
-                        builder: (context, state) {
-                          final selectedSport = state.sportType ?? 'All';
-                          return SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                _buildCategoryPill(selectedSport, 'All'),
-                                _buildCategoryPill(selectedSport, 'Football'),
-                                _buildCategoryPill(selectedSport, 'Cricket'),
-                                _buildCategoryPill(selectedSport, 'Badminton'),
-                                _buildCategoryPill(selectedSport, 'Basketball'),
-                                _buildCategoryPill(selectedSport, 'Tennis'),
-                                _buildCategoryPill(selectedSport, 'Padel'),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      // Nearby Matches Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Nearby Matches',
-                            style: Theme.of(context).textTheme.headlineMedium,
-                          ),
-                          // TextButton(
-                          //   onPressed: () {},
-                          //   child: Text(
-                          //     'See All',
-                          //     style: Theme.of(context).textTheme.labelLarge
-                          //         ?.copyWith(color: Theme.of(context).colorScheme.primaryContainer),
-                          //   ),
-                          // ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                  ),
-                ),
-              ),
-              BlocBuilder<MatchBloc, MatchState>(
-                builder: (context, state) {
-                  if (state.status == MatchStatus.initial ||
-                      (state.status == MatchStatus.loading && state.matches.isEmpty)) {
-                    return const SliverFillRemaining(
-                      child: Center(child: AppLoadingIndicator()),
-                    );
-                  }
-                  if (state.status == MatchStatus.failure) {
-                    return const SliverFillRemaining(
-                      child: Center(child: Text('Failed to load matches')),
-                    );
-                  }
-                  
-                  final now = DateTime.now();
-                  final upcomingMatches = state.matches.where((match) {
-                    return match.parsedDateTime.isAfter(now) ||
-                        match.parsedDateTime.isAtSameMomentAs(now);
-                  }).toList();
-
-                  // Sort chronologically (closest first)
-                  upcomingMatches.sort((a, b) => a.parsedDateTime.compareTo(b.parsedDateTime));
-
-                  if (upcomingMatches.isEmpty) {
-                    return const SliverFillRemaining(
-                      child: Center(child: Text('No upcoming matches found nearby')),
-                    );
-                  }
-
-                  return SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: MediaQuery.textScalerOf(context).scale(380),
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: EdgeInsets.zero,
-                        itemCount: upcomingMatches.length,
-                        itemBuilder: (context, index) {
-                          final match = upcomingMatches[index];
-                          return SizedBox(
-                            width: 312,
-                            height: MediaQuery.textScalerOf(context).scale(364),
-                            child: MatchCard(
-                              match: match,
-                              isHorizontal: true,
-                              margin: EdgeInsets.only(
-                                left: index == 0 ? AppSpacing.md : 0.0,
-                                right: AppSpacing.sm,
-                                top: AppSpacing.xs,
-                                bottom: AppSpacing.xs,
-                              ),
-                            ),
-                          );
-                        },
                       ),
                     ),
-                  );
-                },
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(
-                    'Trending Matches',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
+                    const FeaturedMatchesCarousel(),
+                    const HomeMatchList(),
+                    const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.bottomNavClearance)),
+                  ],
                 ),
               ),
-              BlocBuilder<MatchBloc, MatchState>(
-                builder: (context, state) {
-                  final now = DateTime.now();
-                  final upcomingMatches = state.trendingMatches.where((match) {
-                    return match.parsedDateTime.isAfter(now) ||
-                        match.parsedDateTime.isAtSameMomentAs(now);
-                  }).toList();
-
-                  // Sort chronologically (closest first)
-                  upcomingMatches.sort((a, b) => a.parsedDateTime.compareTo(b.parsedDateTime));
-
-                  if (upcomingMatches.isNotEmpty) {
-                    final isDesktop = ResponsiveUtil.isDesktop(context);
-                    final isTablet = ResponsiveUtil.isTablet(context);
-                    final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
-                    
-                    if (crossAxisCount == 1) {
-                      return SliverList(
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          final match = upcomingMatches[index % upcomingMatches.length];
-                          return MatchCard(match: match);
-                        }, childCount: upcomingMatches.length),
-                      );
-                    } else {
-                      return SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        sliver: SliverGrid(
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            childAspectRatio: 0.85,
-                            crossAxisSpacing: AppSpacing.md,
-                            mainAxisSpacing: AppSpacing.md,
-                          ),
-                          delegate: SliverChildBuilderDelegate((context, index) {
-                            final match = upcomingMatches[index % upcomingMatches.length];
-                            return MatchCard(match: match);
-                          }, childCount: upcomingMatches.length),
-                        ),
-                      );
-                    }
-                  }
-                  return const SliverToBoxAdapter(child: SizedBox.shrink());
-                },
+            ),
+            floatingActionButton: FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CreateMatchScreen()),
+                );
+              },
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text(
+                'Create Match',
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
-              // ── Infinite-scroll footer ─────────────────────────────────
-              BlocBuilder<MatchBloc, MatchState>(
-                builder: (context, state) {
-                  if (state.status == MatchStatus.loadingMore) {
-                    return const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                        child: Center(child: AppLoadingIndicator()),
-                      ),
-                    );
-                  }
-                  if (!state.hasMore && state.matches.isNotEmpty) {
-                    return SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                        child: Center(
-                          child: Text(
-                            '✓  All caught up',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return const SliverToBoxAdapter(child: SizedBox.shrink());
-                },
-              ),
-              const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.bottomNavClearance)),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreateMatchScreen()),
-          );
-        },
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text(
-          'Create Match',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
+            ),
           ),
           if (_isLoggingOut)
             Positioned.fill(
@@ -465,32 +185,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryPill(String selectedSport, String label) {
-    final isSelected = selectedSport == label;
-    return GestureDetector(
-      onTap: () => _onCategorySelected(label),
-      child: Container(
-        margin: const EdgeInsets.only(right: AppSpacing.xs),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(
-            color: isSelected
-                ? Theme.of(context).colorScheme.primaryContainer
-                : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
       ),
     );
   }
