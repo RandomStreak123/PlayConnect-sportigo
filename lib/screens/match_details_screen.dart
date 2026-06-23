@@ -4,6 +4,7 @@ import '../widgets/app_loading_indicator.dart';
 import '../data/models/match_model.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../data/repositories/match_repository.dart';
+import '../core/di/service_locator.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_radius.dart';
 import 'match_details/widgets/match_header_image.dart';
@@ -52,7 +53,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> {
     });
 
     try {
-      final repo = context.read<MatchRepository>();
+      final repo = getIt<MatchRepository>();
       final match = await repo.getMatch(widget.matchId!);
       if (mounted) {
         setState(() {

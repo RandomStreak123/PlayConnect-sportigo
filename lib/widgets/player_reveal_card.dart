@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:math' as math;
 import '../core/constants/colors.dart';
 import '../core/utils/sport_icon_helper.dart';
 import '../core/utils/avatar_image_helper.dart';
 import '../screens/profile_screen.dart';
+import '../core/di/service_locator.dart';
 import '../data/repositories/auth_repository.dart';
 
 class PlayerRevealCard extends StatefulWidget {
@@ -296,7 +296,7 @@ class _PlayerRevealCardState extends State<PlayerRevealCard> {
                     onPressed: userId == null ? null : () async {
                       _addWave();
                       try {
-                        final authRepo = context.read<AuthRepository>();
+                        final authRepo = getIt<AuthRepository>();
                         await authRepo.waveUser(userId);
                       } catch (e) {
                         if (context.mounted) {

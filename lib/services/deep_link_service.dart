@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
-import '../screens/match_details_screen.dart';
+import '../core/router/app_router.dart';
 
 class DeepLinkService {
-  final GlobalKey<NavigatorState> navigatorKey;
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
 
-  DeepLinkService({required this.navigatorKey});
+  DeepLinkService();
 
   void initialize() {
     // Handle cold start deep links (initial link when app starts)
@@ -57,19 +56,7 @@ class DeepLinkService {
   }
 
   void _navigateToMatchDetails(String matchId) {
-    final context = navigatorKey.currentContext;
-    if (context == null) {
-      // If navigator context is not ready, retry after a short delay
-      Future.delayed(const Duration(milliseconds: 500), () => _navigateToMatchDetails(matchId));
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MatchDetailsScreen(matchId: matchId),
-      ),
-    );
+    appRouter.push('/match-details', extra: {'matchId': matchId});
   }
 
   void dispose() {

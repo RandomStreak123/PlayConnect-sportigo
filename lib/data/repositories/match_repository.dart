@@ -1,54 +1,20 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/api_client.dart';
 import '../models/match_model.dart';
 import '../../core/constants/api_constants.dart';
 
 class MatchRepository {
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
-  }
+  final ApiClient apiClient;
 
-  Map<String, dynamic>? _decodeJsonBody(String body) {
-    if (body.isEmpty) return null;
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map<String, dynamic>) return decoded;
-    } catch (_) {}
-    return null;
-  }
-
-  String _extractErrorMessage(http.Response response, String fallback) {
-    final data = _decodeJsonBody(response.body);
-    if (data != null) {
-      final message = data['message'];
-      if (message is String && message.isNotEmpty) return message;
-    }
-    return fallback;
-  }
+  MatchRepository({required this.apiClient});
 
   Future<List<MatchModel>> getMyMatches() async {
-    final token = await _getToken();
-    if (token == null) throw Exception('Unauthorized');
-
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.myMatches}'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      try {
-        final List<dynamic> data = jsonDecode(response.body);
-        return data.map((json) => MatchModel.fromJson(json)).toList();
-      } catch (_) {
-        throw Exception('Invalid server response');
-      }
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to load your matches'));
+    try {
+      final List<dynamic> data = await apiClient.get(ApiConstants.myMatches) as List<dynamic>;
+      return data.map((json) => MatchModel.fromJson(json as Map<String, dynamic>)).toList();
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to load your matches');
     }
   }
 
@@ -61,9 +27,6 @@ class MatchRepository {
     String? search,
     String? cursor,
   }) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('Unauthorized');
-
     final Map<String, String> queryParams = {};
     if (sportType != null && sportType.isNotEmpty) {
       queryParams['sport_type'] = sportType;
@@ -78,209 +41,106 @@ class MatchRepository {
       queryParams['cursor'] = cursor;
     }
 
-    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.matches}').replace(
-      queryParameters: queryParams.isNotEmpty ? queryParams : null,
-    );
-
-    final response = await http.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      try {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        final List<dynamic> data = body['data'] as List<dynamic>;
-        final String? nextCursor = body['next_cursor'] as String?;
-        final matches = data.map((json) => MatchModel.fromJson(json as Map<String, dynamic>)).toList();
-        return (matches: matches, nextCursor: nextCursor);
-      } catch (_) {
-        throw Exception('Invalid server response');
-      }
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to load matches'));
+    try {
+      final body = await apiClient.get(ApiConstants.matches, queryParams: queryParams) as Map<String, dynamic>;
+      final List<dynamic> data = body['data'] as List<dynamic>;
+      final String? nextCursor = body['next_cursor'] as String?;
+      final matches = data.map((json) => MatchModel.fromJson(json as Map<String, dynamic>)).toList();
+      return (matches: matches, nextCursor: nextCursor);
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to load matches');
     }
   }
 
   Future<MatchModel> createMatch(MatchModel match) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('Unauthorized');
-
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.matches}'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(match.toCreateJson()),
-    );
-
-    if (response.statusCode == 201) {
-      try {
-        return MatchModel.fromJson(jsonDecode(response.body));
-      } catch (_) {
-        throw Exception('Invalid server response');
-      }
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to create match'));
+    try {
+      final body = await apiClient.post(ApiConstants.matches, body: match.toCreateJson());
+      return MatchModel.fromJson(body as Map<String, dynamic>);
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to create match');
     }
   }
 
   Future<MatchModel> joinMatch(String matchId) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('Unauthorized');
-
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.joinMatch(matchId)}'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      try {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final matchJson = data['match'];
-        if (matchJson is Map<String, dynamic>) {
-          return MatchModel.fromJson(matchJson);
-        }
-        throw Exception('Invalid server response');
-      } catch (e) {
-        if (e is Exception) rethrow;
-        throw Exception('Invalid server response');
+    try {
+      final data = await apiClient.post(ApiConstants.joinMatch(matchId)) as Map<String, dynamic>;
+      final matchJson = data['match'];
+      if (matchJson is Map<String, dynamic>) {
+        return MatchModel.fromJson(matchJson);
       }
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to join match'));
+      throw Exception('Invalid server response');
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Failed to join match');
     }
   }
 
   Future<MatchModel> leaveMatch(String matchId) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('Unauthorized');
-
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.leaveMatch(matchId)}'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      try {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final matchJson = data['match'];
-        if (matchJson is Map<String, dynamic>) {
-          return MatchModel.fromJson(matchJson);
-        }
-        throw Exception('Invalid server response');
-      } catch (e) {
-        if (e is Exception) rethrow;
-        throw Exception('Invalid server response');
+    try {
+      final data = await apiClient.post(ApiConstants.leaveMatch(matchId)) as Map<String, dynamic>;
+      final matchJson = data['match'];
+      if (matchJson is Map<String, dynamic>) {
+        return MatchModel.fromJson(matchJson);
       }
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to leave match'));
+      throw Exception('Invalid server response');
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Failed to leave match');
     }
   }
 
   Future<MatchModel> getMatch(String id) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('Unauthorized');
-
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.matches}/$id'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      try {
-        return MatchModel.fromJson(jsonDecode(response.body));
-      } catch (_) {
-        throw Exception('Invalid server response');
-      }
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to load match details'));
+    try {
+      final body = await apiClient.get('${ApiConstants.matches}/$id');
+      return MatchModel.fromJson(body as Map<String, dynamic>);
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to load match details');
     }
   }
 
   Future<MatchModel> recordResults(String matchId, List<Map<String, dynamic>> results) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('Unauthorized');
-
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/matches/$matchId/result'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'results': results}),
-    );
-
-    if (response.statusCode == 200) {
-      try {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final matchJson = data['match'];
-        if (matchJson is Map<String, dynamic>) {
-          return MatchModel.fromJson(matchJson);
-        }
-        throw Exception('Invalid server response');
-      } catch (e) {
-        if (e is Exception) rethrow;
-        throw Exception('Invalid server response');
+    try {
+      final data = await apiClient.post('/matches/$matchId/result', body: {'results': results}) as Map<String, dynamic>;
+      final matchJson = data['match'];
+      if (matchJson is Map<String, dynamic>) {
+        return MatchModel.fromJson(matchJson);
       }
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to record results'));
+      throw Exception('Invalid server response');
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Failed to record results');
     }
   }
 
   Future<void> submitRatings(String matchId, List<Map<String, dynamic>> ratings) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('Unauthorized');
-
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/matches/$matchId/ratings'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'ratings': ratings}),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception(_extractErrorMessage(response, 'Failed to submit ratings'));
+    try {
+      await apiClient.post('/matches/$matchId/ratings', body: {'ratings': ratings});
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to submit ratings');
     }
   }
 
   Future<List<dynamic>> getRatings(String matchId) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('Unauthorized');
-
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/matches/$matchId/ratings'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      try {
-        return jsonDecode(response.body) as List<dynamic>;
-      } catch (_) {
-        throw Exception('Invalid server response');
-      }
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to load ratings'));
+    try {
+      return await apiClient.get('/matches/$matchId/ratings') as List<dynamic>;
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to load ratings');
     }
   }
 }

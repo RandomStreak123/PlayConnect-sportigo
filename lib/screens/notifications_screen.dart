@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../core/theme/app_spacing.dart';
 import '../data/models/notification_model.dart';
 import '../data/repositories/match_repository.dart';
+import '../core/di/service_locator.dart';
 import '../logic/blocs/notification/notification_bloc.dart';
 import '../logic/blocs/notification/notification_event.dart';
 import '../logic/blocs/notification/notification_state.dart';
@@ -89,7 +90,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
 
     try {
-      final matchRepository = RepositoryProvider.of<MatchRepository>(context);
+      final matchRepository = getIt<MatchRepository>();
       final match = await matchRepository.getMatch(matchId);
       
       if (mounted) {

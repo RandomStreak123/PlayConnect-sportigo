@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../data/repositories/auth_repository.dart';
+import '../core/di/service_locator.dart';
 import 'registration_screen.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_radius.dart';
@@ -99,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           setState(() => _isLoading = true);
                           final messenger = ScaffoldMessenger.of(context);
                           try {
-                            await context.read<AuthRepository>().logIn(
+                            await getIt<AuthRepository>().logIn(
                                   username: _usernameController.text,
                                   password: _passwordController.text,
                                 );

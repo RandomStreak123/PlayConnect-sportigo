@@ -5,6 +5,7 @@ import '../../../widgets/app_loading_indicator.dart';
 import '../../../core/constants/colors.dart';
 import '../../../logic/blocs/auth/auth_bloc.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/models/user_model.dart';
 import '../../../core/utils/avatar_image_helper.dart';
 
@@ -119,7 +120,7 @@ class _ProfileCardState extends State<ProfileCard> {
     final picker = ImagePicker();
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final authBloc = context.read<AuthBloc>();
-    final authRepository = context.read<AuthRepository>();
+    final authRepository = getIt<AuthRepository>();
     final errorColor = Theme.of(context).colorScheme.error;
 
     try {

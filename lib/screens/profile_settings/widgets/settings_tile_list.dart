@@ -5,6 +5,7 @@ import '../../../../theme/theme_manager.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_icon_size.dart';
+import '../../../../core/di/service_locator.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../game_rules_screen.dart';
 import '../../policy_guidelines_screen.dart';
@@ -241,7 +242,7 @@ class SettingsTileList extends StatelessWidget {
                         themeManager.setThemePreference(newPref);
                         
                         try {
-                          final authRepo = context.read<AuthRepository>();
+                          final authRepo = getIt<AuthRepository>();
                           final authBloc = context.read<AuthBloc>();
                           
                           final updatedUser = await authRepo.updateProfile(

@@ -5,6 +5,7 @@ import '../widgets/match_card.dart';
 import '../widgets/player_reveal_card.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import '../data/repositories/auth_repository.dart';
+import '../core/di/service_locator.dart';
 import '../data/models/user_model.dart';
 import '../core/utils/avatar_image_helper.dart';
 import '../core/theme/app_spacing.dart';
@@ -34,7 +35,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     });
 
     try {
-      final authRepository = context.read<AuthRepository>();
+      final authRepository = getIt<AuthRepository>();
       final fetchedPlayers = await authRepository.getPlayers();
       if (mounted) {
         setState(() {

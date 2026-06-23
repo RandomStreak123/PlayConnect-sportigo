@@ -3,8 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_manager.dart';
-import 'screens/main_screen.dart';
-import 'screens/login_screen.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/match_repository.dart';
 import 'data/repositories/activity_repository.dart';
@@ -16,12 +14,14 @@ import 'logic/blocs/notification/notification_bloc.dart';
 import 'logic/blocs/notification/notification_event.dart';
 import 'core/constants/colors.dart';
 import 'core/utils/sport_image_helper.dart';
-import 'widgets/app_loading_indicator.dart';
 import 'services/deep_link_service.dart';
+import 'core/di/service_locator.dart';
+import 'core/router/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SportImageHelper.init();
+  setupLocator(); // DI Locator boot
   runApp(const PlayConnectApp());
 }
 
@@ -33,24 +33,12 @@ class PlayConnectApp extends StatefulWidget {
 }
 
 class _PlayConnectAppState extends State<PlayConnectApp> {
-  late final AuthRepository _authRepository;
-  late final MatchRepository _matchRepository;
-  late final ActivityRepository _activityRepository;
-  late final NotificationRepository _notificationRepository;
-  late final ThemeManager _themeManager;
-  late final GlobalKey<NavigatorState> _navigatorKey;
   late final DeepLinkService _deepLinkService;
 
   @override
   void initState() {
     super.initState();
-    _authRepository = AuthRepository();
-    _matchRepository = MatchRepository();
-    _activityRepository = ActivityRepository();
-    _notificationRepository = NotificationRepository();
-    _themeManager = ThemeManager();
-    _navigatorKey = GlobalKey<NavigatorState>();
-    _deepLinkService = DeepLinkService(navigatorKey: _navigatorKey)..initialize();
+    _deepLinkService = DeepLinkService()..initialize();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _precacheAssets();
     });
@@ -67,63 +55,53 @@ class _PlayConnectAppState extends State<PlayConnectApp> {
 
   @override
   void dispose() {
-    _authRepository.dispose();
-    _themeManager.dispose();
     _deepLinkService.dispose();
+    getIt<AuthRepository>().dispose();
+    getIt<ThemeManager>().dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MultiRepositoryProvider(
-      providers: [
-        RepositoryProvider.value(value: _authRepository),
-        RepositoryProvider.value(value: _matchRepository),
-        RepositoryProvider.value(value: _activityRepository),
-        RepositoryProvider.value(value: _notificationRepository),
-      ],
-      child: ChangeNotifierProvider.value(
-        value: _themeManager,
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider(
-              create: (_) => AuthBloc(authRepository: _authRepository)
-                ..add(const AuthCheckRequested()),
+    return ChangeNotifierProvider.value(
+      value: getIt<ThemeManager>(),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (_) => AuthBloc(authRepository: getIt<AuthRepository>())
+              ..add(const AuthCheckRequested()),
+          ),
+          BlocProvider(
+            create: (_) => MatchBloc(matchRepository: getIt<MatchRepository>()),
+          ),
+          BlocProvider(
+            create: (_) => ActivityBloc(activityRepository: getIt<ActivityRepository>()),
+          ),
+          BlocProvider(
+            create: (_) => NotificationBloc(
+              notificationRepository: getIt<NotificationRepository>(),
             ),
-            BlocProvider(
-              create: (_) => MatchBloc(matchRepository: _matchRepository),
-            ),
-            BlocProvider(
-              create: (_) => ActivityBloc(activityRepository: _activityRepository),
-            ),
-            BlocProvider(
-              create: (context) => NotificationBloc(
-                notificationRepository: context.read<NotificationRepository>(),
-              ),
-            ),
-          ],
-          child: AppView(navigatorKey: _navigatorKey),
-        ),
+          ),
+        ],
+        child: const AppView(),
       ),
     );
   }
 }
 
 class AppView extends StatelessWidget {
-  final GlobalKey<NavigatorState> navigatorKey;
-
-  const AppView({super.key, required this.navigatorKey});
+  const AppView({super.key});
 
   @override
   Widget build(BuildContext context) {
     final themeManager = context.watch<ThemeManager>();
     final theme = AppTheme.themeData(themeManager.isWomenMode);
 
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'PlayConnect',
-      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: theme,
+      routerConfig: appRouter,
       builder: (context, child) {
         return MultiBlocListener(
           listeners: [
@@ -179,7 +157,7 @@ class AppView extends StatelessWidget {
                   });
                 } else if (state.status == AuthStatus.unauthenticated) {
                   themeManager.updateUser(null, null);
-                  navigatorKey.currentState?.popUntil((route) => route.isFirst);
+                  appRouter.go('/');
                 }
               },
             ),
@@ -187,20 +165,6 @@ class AppView extends StatelessWidget {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          switch (state.status) {
-            case AuthStatus.unknown:
-              return const Scaffold(
-                body: Center(child: AppLoadingIndicator()),
-              );
-            case AuthStatus.authenticated:
-              return const MainScreen();
-            case AuthStatus.unauthenticated:
-              return const LoginScreen();
-          }
-        },
-      ),
     );
   }
 }

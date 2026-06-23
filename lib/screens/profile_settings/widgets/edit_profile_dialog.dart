@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/di/service_locator.dart';
 import '../../../../data/models/user_model.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../logic/blocs/auth/auth_bloc.dart';
@@ -359,7 +360,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                                     });
 
                                     try {
-                                      final authRepo = context.read<AuthRepository>();
+                                      final authRepo = getIt<AuthRepository>();
                                       final updatedUser = await authRepo.updateProfile(
                                         name: name,
                                         email: _emailController.text.trim().isEmpty ? '' : _emailController.text.trim(),

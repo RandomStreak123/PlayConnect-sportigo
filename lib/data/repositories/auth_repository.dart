@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/api_client.dart';
 import '../models/user_model.dart';
 import '../models/match_model.dart';
 import '../../core/constants/api_constants.dart';
@@ -9,18 +9,21 @@ import '../../core/constants/api_constants.dart';
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
 class AuthRepository {
+  final ApiClient apiClient;
   final _controller = StreamController<AuthStatus>.broadcast();
   final _userController = StreamController<UserModel>.broadcast();
 
-  AuthRepository();
+  AuthRepository({required this.apiClient});
 
   Stream<UserModel> get userUpdates => _userController.stream;
 
   Stream<AuthStatus> get status async* {
     final token = await _getToken();
     if (token != null) {
+      apiClient.setToken(token);
       yield AuthStatus.authenticated;
     } else {
+      apiClient.setToken(null);
       yield AuthStatus.unauthenticated;
     }
     yield* _controller.stream;
@@ -34,11 +37,13 @@ class AuthRepository {
   Future<void> _saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
+    apiClient.setToken(token);
   }
 
   Future<void> _removeToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
+    apiClient.setToken(null);
   }
 
   Future<void> _saveUserLocally(UserModel user) async {
@@ -51,24 +56,6 @@ class AuthRepository {
     await prefs.remove('cached_user');
   }
 
-  Map<String, dynamic>? _decodeJsonBody(String body) {
-    if (body.isEmpty) return null;
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map<String, dynamic>) return decoded;
-    } catch (_) {}
-    return null;
-  }
-
-  String _extractErrorMessage(http.Response response, String fallback) {
-    final data = _decodeJsonBody(response.body);
-    if (data != null) {
-      final message = data['message'];
-      if (message is String && message.isNotEmpty) return message;
-    }
-    return fallback;
-  }
-
   /// Register.
   Future<UserModel> register({
     required String name,
@@ -77,25 +64,24 @@ class AuthRepository {
     String? phoneNumber,
     String? gender,
   }) async {
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.register}'),
-      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-      body: jsonEncode({
-        'name': name,
-        'username': username,
-        'password': password,
-        'phone_number': phoneNumber,
-        'gender': gender,
-      }),
-    );
+    try {
+      final data = await apiClient.post(
+        ApiConstants.register,
+        body: {
+          'name': name,
+          'username': username,
+          'password': password,
+          'phone_number': phoneNumber,
+          'gender': gender,
+        },
+      ) as Map<String, dynamic>;
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = _decodeJsonBody(response.body);
-      if (data == null) throw Exception('Invalid server response');
       final user = UserModel.fromJson(data['user']);
       return user;
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Registration failed'));
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Registration failed');
     }
   }
 
@@ -104,20 +90,15 @@ class AuthRepository {
     required String username,
     required String password,
   }) async {
+    try {
+      final data = await apiClient.post(
+        ApiConstants.login,
+        body: {
+          'username': username,
+          'password': password,
+        },
+      ) as Map<String, dynamic>;
 
-
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.login}'),
-      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final data = _decodeJsonBody(response.body);
-      if (data == null) throw Exception('Invalid server response');
       final user = UserModel.fromJson(data['user']);
       final token = data['access_token'];
 
@@ -125,8 +106,10 @@ class AuthRepository {
       await _saveUserLocally(user);
       _controller.add(AuthStatus.authenticated);
       return user;
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Login failed'));
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Login failed');
     }
   }
 
@@ -134,14 +117,7 @@ class AuthRepository {
     final token = await _getToken();
     if (token != null) {
       try {
-        await http.post(
-          Uri.parse('${ApiConstants.baseUrl}${ApiConstants.logout}'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        );
+        await apiClient.post(ApiConstants.logout);
       } catch (_) {
         // Ignore network errors to allow local logout to succeed
       }
@@ -168,21 +144,14 @@ class AuthRepository {
 
   Future<void> _refreshUserInBackground(String token) async {
     try {
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.user}'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-      if (response.statusCode == 200) {
-        final data = _decodeJsonBody(response.body);
-        if (data != null) {
-          final user = UserModel.fromJson(data);
-          await _saveUserLocally(user);
-          _userController.add(user);
-        }
-      } else if (response.statusCode == 401) {
+      final data = await apiClient.get(ApiConstants.user) as Map<String, dynamic>?;
+      if (data != null) {
+        final user = UserModel.fromJson(data);
+        await _saveUserLocally(user);
+        _userController.add(user);
+      }
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
         await logOut();
       }
     } catch (_) {}
@@ -190,27 +159,17 @@ class AuthRepository {
 
   Future<UserModel?> _fetchUserFromServer(String token) async {
     try {
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.user}'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = _decodeJsonBody(response.body);
-        if (data == null) {
-          await logOut();
-          return null;
-        }
-        final user = UserModel.fromJson(data);
-        await _saveUserLocally(user);
-        return user;
-      } else {
+      final data = await apiClient.get(ApiConstants.user) as Map<String, dynamic>?;
+      if (data == null) {
         await logOut();
         return null;
       }
+      final user = UserModel.fromJson(data);
+      await _saveUserLocally(user);
+      return user;
+    } on ApiException {
+      await logOut();
+      return null;
     } catch (_) {
       return null;
     }
@@ -234,34 +193,20 @@ class AuthRepository {
     return _fetchUserFromServer(token);
   }
 
-
   Future<UserModel> uploadProfilePhoto(String filePath) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('User not authenticated');
+    try {
+      final data = await apiClient.postMultipart(
+        '/profile/photo',
+        files: {'profile_photo': filePath},
+      ) as Map<String, dynamic>;
 
-    final uri = Uri.parse('${ApiConstants.baseUrl}/profile/photo');
-    final request = http.MultipartRequest('POST', uri);
-
-    request.headers.addAll({
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $token',
-    });
-
-    request.files.add(
-      await http.MultipartFile.fromPath('profile_photo', filePath),
-    );
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 200) {
-      final data = _decodeJsonBody(response.body);
-      if (data == null) throw Exception('Invalid server response');
       final user = UserModel.fromJson(data['user']);
       await _saveUserLocally(user);
       return user;
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Profile photo upload failed'));
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Profile photo upload failed');
     }
   }
 
@@ -276,9 +221,6 @@ class AuthRepository {
     String? skillTier,
     String? gender,
   }) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('User not authenticated');
-
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
     if (phoneNumber != null) body['phone_number'] = phoneNumber;
@@ -290,149 +232,81 @@ class AuthRepository {
     if (skillTier != null) body['skill_tier'] = skillTier;
     if (gender != null) body['gender'] = gender;
 
-    final response = await http.put(
-      Uri.parse('${ApiConstants.baseUrl}/profile'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(body),
-    );
-
-    if (response.statusCode == 200) {
-      final data = _decodeJsonBody(response.body);
-      if (data == null) throw Exception('Invalid server response');
+    try {
+      final data = await apiClient.put('/profile', body: body) as Map<String, dynamic>;
       final user = UserModel.fromJson(data['user']);
       await _saveUserLocally(user);
       return user;
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to update profile'));
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to update profile');
     }
   }
 
   Future<List<UserModel>> getPlayers({String? search}) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('User not authenticated');
-
     final queryParams = search != null && search.isNotEmpty ? {'search': search} : null;
-    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.players}').replace(
-      queryParameters: queryParams,
-    );
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = _decodeJsonBody(response.body);
-      if (data == null) throw Exception('Invalid server response');
+    try {
+      final data = await apiClient.get(ApiConstants.players, queryParams: queryParams) as Map<String, dynamic>;
       final List<dynamic> playersJson = data['data'];
-      return playersJson.map((json) => UserModel.fromJson(json)).toList();
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to fetch players'));
+      return playersJson.map((json) => UserModel.fromJson(json as Map<String, dynamic>)).toList();
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to fetch players');
     }
   }
 
   Future<Map<String, dynamic>> getPublicProfile(int userId) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('User not authenticated');
-
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/users/$userId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = _decodeJsonBody(response.body);
-      if (data == null) throw Exception('Invalid server response');
-      return data;
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to fetch user profile'));
+    try {
+      return await apiClient.get('/users/$userId') as Map<String, dynamic>;
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to fetch user profile');
     }
   }
 
   Future<void> waveUser(int userId) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('User not authenticated');
-
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/users/$userId/wave'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception(_extractErrorMessage(response, 'Failed to send wave'));
+    try {
+      await apiClient.post('/users/$userId/wave');
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to send wave');
     }
   }
 
   Future<UserStats> getUserStats() async {
-    final token = await _getToken();
-    if (token == null) throw Exception('User not authenticated');
-
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/user/stats'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = _decodeJsonBody(response.body);
-      if (data == null) throw Exception('Invalid server response');
+    try {
+      final data = await apiClient.get('/user/stats') as Map<String, dynamic>;
       return UserStats.fromJson(data);
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to fetch user stats'));
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to fetch user stats');
     }
   }
 
   Future<List<MatchModel>> getUserHistory() async {
-    final token = await _getToken();
-    if (token == null) throw Exception('User not authenticated');
-
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/user/history'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => MatchModel.fromJson(json)).toList();
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to fetch user history'));
+    try {
+      final List<dynamic> data = await apiClient.get('/user/history') as List<dynamic>;
+      return data.map((json) => MatchModel.fromJson(json as Map<String, dynamic>)).toList();
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to fetch user history');
     }
   }
 
   Future<List<dynamic>> getUserRatings() async {
-    final token = await _getToken();
-    if (token == null) throw Exception('User not authenticated');
-
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/user/ratings'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as List<dynamic>;
-    } else {
-      throw Exception(_extractErrorMessage(response, 'Failed to fetch user ratings'));
+    try {
+      return await apiClient.get('/user/ratings') as List<dynamic>;
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to fetch user ratings');
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../data/models/activity_model.dart';
 import '../data/repositories/match_repository.dart';
+import '../core/di/service_locator.dart';
 import '../logic/blocs/activity/activity_bloc.dart';
 import 'match_details_screen.dart';
 import '../core/theme/app_spacing.dart';
@@ -62,7 +63,7 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
     });
 
     try {
-      final matchRepository = RepositoryProvider.of<MatchRepository>(context);
+      final matchRepository = getIt<MatchRepository>();
       final match = await matchRepository.getMatch(matchId);
       
       if (mounted) {

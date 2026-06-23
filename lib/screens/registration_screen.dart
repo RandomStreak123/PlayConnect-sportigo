@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../core/constants/colors.dart';
+import '../core/di/service_locator.dart';
 import '../data/repositories/auth_repository.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_radius.dart';
@@ -33,7 +33,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await context.read<AuthRepository>().register(
+      await getIt<AuthRepository>().register(
             name: _nameController.text,
             username: _usernameController.text,
             password: _passwordController.text,

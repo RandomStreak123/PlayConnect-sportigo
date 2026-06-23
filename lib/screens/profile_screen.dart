@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/colors.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../data/repositories/auth_repository.dart';
+import '../core/di/service_locator.dart';
 import '../data/repositories/activity_repository.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import 'profile/widgets/profile_custom_app_bar.dart';
@@ -144,8 +145,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       });
 
       try {
-        final authRepository = context.read<AuthRepository>();
-        final activityRepository = context.read<ActivityRepository>();
+        final authRepository = getIt<AuthRepository>();
+        final activityRepository = getIt<ActivityRepository>();
 
         await Future.wait([
           authRepository.getUserStats().then((stats) {
@@ -199,7 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       } catch (e) {
         try {
           if (!mounted) return;
-          final authRepository = context.read<AuthRepository>();
+          final authRepository = getIt<AuthRepository>();
           final data = await authRepository.getPublicProfile(userId);
           if (mounted) {
             setState(() {
@@ -218,7 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       });
     }
     try {
-      final authRepository = context.read<AuthRepository>();
+      final authRepository = getIt<AuthRepository>();
       final data = await authRepository.getPublicProfile(userId);
       if (mounted) {
         final level = data['stats']?['level'] as int? ?? 1;

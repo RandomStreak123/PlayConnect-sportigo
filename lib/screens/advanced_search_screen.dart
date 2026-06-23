@@ -5,6 +5,7 @@ import '../data/models/match_model.dart';
 import '../data/models/user_model.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/match_repository.dart';
+import '../core/di/service_locator.dart';
 import '../logic/blocs/matches/match_bloc.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_radius.dart';
@@ -79,8 +80,8 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
     });
 
     try {
-      final matchRepo = context.read<MatchRepository>();
-      final authRepo = context.read<AuthRepository>();
+      final matchRepo = getIt<MatchRepository>();
+      final authRepo = getIt<AuthRepository>();
 
       final results = await Future.wait([
         matchRepo.getNearbyMatches(search: query),
