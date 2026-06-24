@@ -113,6 +113,26 @@ class AuthRepository {
     }
   }
 
+  Future<String> sendResetLink({
+    required String usernameOrEmail,
+  }) async {
+    try {
+      final data = await apiClient.post(
+        '/forgot-password',
+        body: {
+          'username_or_email': usernameOrEmail,
+        },
+      ) as Map<String, dynamic>;
+
+      return data['message'] ?? 'A password reset link has been sent to your registered email address.';
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to send reset link');
+    }
+  }
+
+
   Future<void> logOut() async {
     final token = await _getToken();
     if (token != null) {

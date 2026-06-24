@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../screens/main_screen.dart';
 import '../../screens/login_screen.dart';
 import '../../screens/registration_screen.dart';
+import '../../screens/reset_password_screen.dart';
 import '../../screens/match_details_screen.dart';
 import '../../screens/advanced_search_screen.dart';
 import '../../screens/create_match_screen.dart';
@@ -42,6 +43,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/register',
       builder: (context, state) => const RegistrationScreen(),
+    ),
+    GoRoute(
+      path: '/reset-password',
+      builder: (context, state) => const ResetPasswordScreen(),
     ),
     GoRoute(
       path: '/search',

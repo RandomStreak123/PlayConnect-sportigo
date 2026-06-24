@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/app_loading_indicator.dart';
+import '../widgets/custom_text_field.dart';
 import '../data/repositories/auth_repository.dart';
 import '../core/di/service_locator.dart';
 import 'registration_screen.dart';
@@ -42,7 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
               ),
               const SizedBox(height: AppSpacing.xxl),
-              _buildTextField(
+              CustomTextField(
+                textFieldKey: const ValueKey('username_field'),
                 label: 'Username',
                 controller: _usernameController,
                 hintText: 'Enter your username',
@@ -50,7 +53,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 keyboardType: TextInputType.text,
               ),
               const SizedBox(height: AppSpacing.md + 4),
-              _buildTextField(
+              CustomTextField(
+                textFieldKey: const ValueKey('password_field'),
                 label: 'Password',
                 controller: _passwordController,
                 hintText: 'Enter your password',
@@ -68,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    // Handle forgot password
+                    context.push('/reset-password');
                   },
                   child: Text(
                     'Forgot Password?',
@@ -175,60 +179,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    TextInputType? keyboardType,
-    bool isPassword = false,
-    bool isPasswordVisible = false,
-    VoidCallback? onToggleVisibility,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        TextField(
-          key: ValueKey('${label.toLowerCase()}_field'),
-          controller: controller,
-
-          obscureText: isPassword && !isPasswordVisible,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            hintText: hintText,
-            prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.outline),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(
-                      isPasswordVisible
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onPressed: onToggleVisibility,
-                  )
-                : null,
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/app_loading_indicator.dart';
+import '../widgets/custom_text_field.dart';
 import '../core/constants/colors.dart';
 import '../core/di/service_locator.dart';
 import '../data/repositories/auth_repository.dart';
@@ -84,21 +85,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
 
               const SizedBox(height: AppSpacing.xl + 4),
-              _buildTextField(
+              CustomTextField(
                 label: 'Full Name',
                 controller: _nameController,
                 hintText: 'Enter your full name',
                 icon: Icons.person_outline,
               ),
               const SizedBox(height: AppSpacing.md + 4),
-              _buildTextField(
+              CustomTextField(
                 label: 'Username',
                 controller: _usernameController,
                 hintText: 'Choose a username',
                 icon: Icons.alternate_email,
               ),
               const SizedBox(height: AppSpacing.md + 4),
-              _buildTextField(
+              CustomTextField(
                 label: 'Password',
                 controller: _passwordController,
                 hintText: 'Create a password',
@@ -230,60 +231,4 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    bool isPassword = false,
-    bool isPasswordVisible = false,
-    VoidCallback? onToggleVisibility,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        TextField(
-          key: ValueKey('${label.toLowerCase().replaceAll(' ', '_')}_field'),
-          controller: controller,
-
-          obscureText: isPassword && !isPasswordVisible,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            hintText: hintText,
-            prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.outline),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(
-                      isPasswordVisible
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onPressed: onToggleVisibility,
-                  )
-                : null,
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.surfaceDim.withValues(alpha: 0.3),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
