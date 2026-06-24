@@ -44,10 +44,7 @@ class Activity extends Model
 
     public function getUserAvatarAttribute()
     {
-        if (!$this->user) {
-            return null;
-        }
-        return $this->user->profile_photo ? asset('storage/' . $this->user->profile_photo) : ($this->user->profile_picture ? asset('storage/' . $this->user->profile_picture) : null);
+        return $this->user ? $this->user->profile_picture : null;
     }
 
     public function getSportTypeAttribute()

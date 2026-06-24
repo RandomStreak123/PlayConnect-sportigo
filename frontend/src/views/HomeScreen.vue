@@ -245,7 +245,6 @@ const handleDragEnd = (e) => {
         <div class="greeting-wrap">
           <span class="greeting-lbl">{{ greeting }}</span>
           <span class="user-name">{{ currentUser.name }}</span>
-          <span class="user-level" style="font-size: 0.72rem; font-weight: 700; color: var(--on-surface-variant); opacity: 0.8; margin-top: 1px; display: inline-flex; align-items: center; gap: 4px;">⚡ Level {{ profileStats.level }} Player</span>
         </div>
       </div>
       <button class="icon-btn" @click="emit('open-notifications')">

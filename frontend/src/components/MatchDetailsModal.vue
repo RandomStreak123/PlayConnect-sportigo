@@ -561,8 +561,8 @@ watch(() => match.value, () => {
 
 @media (min-width: 768px) {
   .modal-backdrop {
-    left: 280px;
-    width: calc(100vw - 280px);
+    left: 0;
+    width: 100vw;
     background-color: var(--scaffold-bg);
     backdrop-filter: none;
     align-items: stretch;
@@ -681,6 +681,8 @@ watch(() => match.value, () => {
 
 .details-content {
   flex: 1;
+  height: auto;
+  min-height: 0;
   padding: 16px 20px;
   width: 100%;
   box-sizing: border-box;

@@ -17,7 +17,9 @@ test.describe('PlayConnect E2E Match Flow', () => {
       await expect(page.locator('.brand-title')).toHaveText('PlayConnect');
 
       // 2. Perform Login
+      await page.locator('input[placeholder="Enter your username"]').click();
       await page.locator('input[placeholder="Enter your username"]').fill('Ajith');
+      await page.locator('input[placeholder="Enter your password"]').click();
       await page.locator('input[placeholder="Enter your password"]').fill('24681000');
       
       // Click Sign In button
@@ -73,6 +75,13 @@ test.describe('PlayConnect E2E Match Flow', () => {
       }
 
       // 5. Verify Successful Creation
+      await page.waitForTimeout(500); // Allow reactivity to catch up
+      await page.evaluate(() => {
+        const matches = window.store?.state?.matches || [];
+        console.log('E2E STORE MATCHES COUNT:', matches.length);
+        console.log('E2E STORE MATCH TITLES:', matches.map(m => `${m.title} (${m.dateTime || m.date_time})`).join(', '));
+      });
+
       await expect(page.locator('.modal-title')).not.toBeVisible({ timeout: 10000 });
       
       const matchCard = page.locator(`.match-card:has-text("${testTitle}")`).first();

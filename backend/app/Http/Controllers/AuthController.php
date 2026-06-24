@@ -201,18 +201,18 @@ class AuthController extends Controller
     public function forgotPassword(Request $request)
     {
         $request->validate([
-            'username_or_email' => 'required|string',
+            'username' => 'required|string',
+            'email' => 'required|email',
         ]);
 
-        $input = $request->input('username_or_email');
+        $username = $request->input('username');
+        $email = $request->input('email');
 
-        $user = User::where('email', $input)
-            ->orWhere('username', $input)
-            ->first();
+        $user = User::where('username', $username)->first();
 
-        if (!$user) {
+        if (!$user || strtolower($user->email) !== strtolower($email)) {
             return response()->json([
-                'message' => 'We could not find a user with that username or email address.'
+                'message' => 'The username or email address you entered does not match any registered profile.'
             ], 404);
         }
 

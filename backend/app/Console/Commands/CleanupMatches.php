@@ -27,22 +27,6 @@ class CleanupMatches extends Command
      */
     public function handle()
     {
-        $now = Carbon::now();
-        $matches = SportsMatch::all();
-        $deletedCount = 0;
-        
-        foreach ($matches as $match) {
-            try {
-                $matchDate = Carbon::parse($match->date);
-                if ($matchDate->isPast() && $matchDate->diffInHours($now, false) > 12) {
-                    $match->delete();
-                    $deletedCount++;
-                }
-            } catch (\Exception $e) {
-                // Ignore parsing errors for individual matches
-            }
-        }
-        
-        $this->info("Successfully deleted {$deletedCount} old matches.");
+        $this->info("Successfully deleted 0 old matches (Cleanup disabled to preserve match history).");
     }
 }

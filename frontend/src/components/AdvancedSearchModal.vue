@@ -28,16 +28,40 @@ const searchResultsMatches = ref([])
 
 let debounceTimer = null
 
+/**
+ * IMPORTANT: These are LOCAL-ONLY fetches that do NOT touch the global store.
+ * Using store.fetchPlayers() or store.fetchMatches() would overwrite state.players
+ * and state.matches, causing ExploreScreen and HomeScreen to lose their data
+ * when the modal closes. Instead we call the API directly and write only to
+ * local refs inside this modal.
+ */
+const localSafeFetch = async (url) => {
+  const token = sessionStorage.getItem('sportigo_token')
+  const headers = token
+    ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' }
+    : { 'Content-Type': 'application/json', Accept: 'application/json' }
+  try {
+    const res = await fetch(url, { headers })
+    if (!res.ok) return null
+    return await res.json()
+  } catch (e) {
+    console.warn('Search fetch failed:', e.message)
+    return null
+  }
+}
+
 const performSearch = async (query) => {
   isSearching.value = true
   searchError.value = null
   try {
-    const [players, matchesResult] = await Promise.all([
-      store.fetchPlayers(query),
-      store.fetchMatches({ search: query })
+    const encoded = encodeURIComponent(query)
+    const [playersData, matchesData] = await Promise.all([
+      localSafeFetch(`/api/players?search=${encoded}`),
+      localSafeFetch(`/api/matches?search=${encoded}`)
     ])
-    searchResultsPlayers.value = players || []
-    searchResultsMatches.value = matchesResult?.data || []
+    // Write ONLY to local refs — global store is never touched
+    searchResultsPlayers.value = (playersData?.success ? playersData.data : []) || []
+    searchResultsMatches.value = (matchesData?.data) || []
   } catch (e) {
     console.error('Unified search failed:', e)
     searchError.value = 'Search failed. Please try again.'

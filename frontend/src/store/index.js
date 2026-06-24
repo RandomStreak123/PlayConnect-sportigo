@@ -68,10 +68,11 @@ const formatRelativeTime = (dateStr) => {
 
 // Initialize state from database
 const init = async () => {
+  console.log('store.init() called stack:\n', new Error().stack);
   const token = sessionStorage.getItem('sportigo_token')
   if (!token) return // Not logged in
 
-  state.isLoading = true
+  state.isLoading = true;
   try {
     const headers = getAuthHeaders()
 
@@ -97,6 +98,22 @@ const init = async () => {
           combined.push(m)
         }
       })
+
+      // Preserve newly created matches or future matches that might have been loaded
+      // but are not returned on the first page of paginated results, or were affected by race conditions.
+      const currentUserId = state.currentUser?.id
+      const now = new Date()
+      state.matches.forEach(m => {
+        if (m && m.id && !combined.some(existing => existing.id === m.id)) {
+          const matchTime = new Date((m.dateTime || m.date_time || m.date || '').replace(' ', 'T'))
+          const isUpcoming = !isNaN(matchTime.getTime()) && matchTime >= now
+          const isMine = currentUserId && (Number(m.creatorId || m.creator_id || m.user_id) === Number(currentUserId))
+          if (isUpcoming || isMine) {
+            combined.push(m)
+          }
+        }
+      })
+
       state.matches = combined
       console.log('store.init() - state.matches updated count:', state.matches.length)
     }
@@ -258,6 +275,14 @@ const updateProfile = async (name, gender, avatar, bio, primarySport, skillTier,
       throw new Error('Session expired. Please log in again.')
     }
     const errData = await res.json().catch(() => ({}))
+    // Laravel 422 validation errors: prefer per-field messages (e.g. email uniqueness)
+    // over the generic summary message so the UI can show a precise error.
+    if (res.status === 422 && errData.errors) {
+      const fieldErrors = Object.values(errData.errors).flat()
+      if (fieldErrors.length > 0) {
+        throw new Error(fieldErrors[0])
+      }
+    }
     throw new Error(errData.message || 'Failed to update profile details')
   }
 
@@ -576,4 +601,8 @@ export const store = {
   followPlayer,
   unfollowPlayer,
   wavePlayer
+}
+
+if (typeof window !== 'undefined') {
+  window.store = store
 }

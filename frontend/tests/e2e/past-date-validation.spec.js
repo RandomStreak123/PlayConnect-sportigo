@@ -14,7 +14,9 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     await expect(page.locator('.brand-title')).toHaveText('PlayConnect');
 
     // 2. Perform Login
+    await page.locator('input[placeholder="Enter your username"]').click();
     await page.locator('input[placeholder="Enter your username"]').fill('Ajith');
+    await page.locator('input[placeholder="Enter your password"]').click();
     await page.locator('input[placeholder="Enter your password"]').fill('24681000');
     await page.locator('button.submit-btn:has-text("Sign In")').click();
 
@@ -57,7 +59,7 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     await expect(errorBanner).toContainText('Please select a date and time in the future');
 
     // Close Create Match Modal
-    await page.locator('.close-btn').click();
+    await page.locator('div.modal-sheet button.close-btn').click();
     await expect(page.locator('.modal-sheet')).not.toBeVisible();
 
     // 5. Test Language Switcher on Profile Screen
@@ -70,6 +72,7 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     // Open Settings Modal by clicking hamburger button
     await page.locator('.settings-nav-btn').click();
     await page.waitForSelector('.modal-title:has-text("Settings")');
+    await page.waitForTimeout(500); // Wait for slide-in animation to complete
 
     // Locate the language selector select dropdown
     const select = page.locator('select.language-select-dropdown');
@@ -82,8 +85,8 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     await expect(page.locator('.modal-title').first()).toContainText('सेटिंग्स');
 
     // Close Settings Modal
-    await page.locator('.close-btn').click();
-    await page.waitForTimeout(300);
+    await page.locator('div.settings-fullscreen-panel button.settings-close-btn').click({ force: true });
+    await page.waitForTimeout(500); // Wait for slide-out animation to complete
 
     // Verify translations are applied reactively on the main screen
     // Profile title should translate to "खिलाड़ी प्रोफ़ाइल"
@@ -94,6 +97,7 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     // Reopen Settings Modal to switch back to English
     await page.locator('.settings-nav-btn').click();
     await page.waitForSelector('.modal-title:has-text("सेटिंग्स")');
+    await page.waitForTimeout(500); // Wait for slide-in animation to complete
 
     // Switch back to English
     await select.selectOption('en');
@@ -102,8 +106,8 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     await expect(page.locator('.modal-title').first()).toContainText('Settings');
 
     // Close Settings Modal
-    await page.locator('.close-btn').click();
-    await page.waitForTimeout(300);
+    await page.locator('div.settings-fullscreen-panel button.settings-close-btn').click({ force: true });
+    await page.waitForTimeout(500); // Wait for slide-out animation to complete
 
     // Verify translations revert to English
     await expect(page.locator('.title').first()).toContainText('Player Profile');

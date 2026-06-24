@@ -78,7 +78,7 @@ const handleFollowToggle = async () => {
           profileUser.value.isFollowed = true
           profileUser.value.followersCount = res.followersCount
         }
-        emit('toast-message', `Following ${currentUser.value.name}! 🎉`)
+        emit('toast-message', `Following ${currentUser.value.name}!`)
       }
     }
   } catch (err) {
@@ -139,7 +139,7 @@ const handleListFollowToggle = async (user) => {
           profileUser.value.isFollowed = true
           profileUser.value.followersCount = res.followersCount
         }
-        emit('toast-message', `Following ${user.name}! 🎉`)
+        emit('toast-message', `Following ${user.name}!`)
       }
     }
   } catch (err) {
@@ -843,6 +843,7 @@ const editBio = ref('')
 const editSport = ref('')
 const editSkill = ref('')
 const editGender = ref('')
+const editEmailError = ref('') // inline error shown under email field
 
 const openEditModal = () => {
   editName.value = currentUser.value.name || ''
@@ -851,6 +852,7 @@ const openEditModal = () => {
   editSport.value = currentUser.value.primary_sport || 'Football'
   editSkill.value = currentUser.value.skill_tier || 'Intermediate'
   editGender.value = currentUser.value.gender || 'male'
+  editEmailError.value = '' // clear any previous inline error
   showEditModal.value = true
 }
 
@@ -859,11 +861,19 @@ const saveProfileDetails = async () => {
     emit('toast-message', 'Name cannot be empty! ❌')
     return
   }
-  
+
+  // Basic client-side email format check
+  const emailVal = editEmail.value.trim()
+  if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+    editEmailError.value = 'Please enter a valid email address.'
+    return
+  }
+  editEmailError.value = ''
+
   try {
     isSavingProfile.value = true
-    emit('toast-message', 'Updating profile details... ⏳')
-    
+    emit('toast-message', 'Updating profile details...')
+
     await store.updateProfile(
       editName.value.trim(),
       editGender.value,
@@ -871,13 +881,23 @@ const saveProfileDetails = async () => {
       editBio.value.trim(),
       editSport.value,
       editSkill.value,
-      editEmail.value.trim()
+      emailVal
     )
-    
-    emit('toast-message', 'Profile details updated successfully! 🎉')
+
+    editEmailError.value = ''
+    emit('toast-message', 'Profile details updated successfully!')
     showEditModal.value = false
   } catch (error) {
-    emit('toast-message', `Update failed: ${error.message} ❌`)
+    // Detect email uniqueness / email-related errors and surface inline
+    const msg = error.message || ''
+    const isEmailError = /email|already been taken|already.*taken|taken/i.test(msg)
+    if (isEmailError) {
+      editEmailError.value = 'This email is already taken. Please use a different one.'
+      emit('toast-message', 'Email already taken ❌')
+    } else {
+      editEmailError.value = ''
+      emit('toast-message', `Update failed: ${msg} ❌`)
+    }
   } finally {
     isSavingProfile.value = false
   }
@@ -921,7 +941,7 @@ const onFileSelected = async (event) => {
     // 4. Update Laravel backend database
     await store.updateProfile(currentUser.value.name, currentUser.value.gender, publicUrl)
 
-    emit('toast-message', 'Profile picture updated successfully! 🎉')
+    emit('toast-message', 'Profile picture updated successfully!')
   } catch (error) {
     console.error('Upload error:', error.message)
     emit('toast-message', `Upload failed: ${error.message} ❌`)
@@ -1135,8 +1155,14 @@ const weekDaysStatus = computed(() => {
       <div class="avatar-wrap">
         <img :src="avatarUrl" class="card-avatar" :class="avatarBorderClass" @error="(e) => e.target.src = '/assets/images/players/download.jpg'" />
         <button v-if="isCurrentUser" class="camera-btn" @click="fileInput.click()" :disabled="isUploading">
-          <span v-if="isUploading">⏳</span>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h3l2-3h6l2 3h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span v-if="isUploading" class="loader" style="width: 16px; height: 16px; border-color: #ffffff; border-bottom-color: transparent;"></span>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+            <mask id="camera-mask">
+              <rect width="24" height="24" fill="white" />
+              <circle cx="12" cy="13" r="4" fill="black" />
+            </mask>
+            <path d="M4 4h3l2-3h6l2 3h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="currentColor" mask="url(#camera-mask)" />
+          </svg>
         </button>
         <input 
           ref="fileInput"
@@ -1149,6 +1175,7 @@ const weekDaysStatus = computed(() => {
 
       <div class="name-row">
         <h3 class="card-name">{{ currentUser.name }}</h3>
+        <span v-if="currentUser.name && currentUser.name.toLowerCase().includes('pele')" class="shoe-emoji">👟</span>
         <span class="verified-badge">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#00a3ff"><path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-13 5l-4-4 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
         </span>
@@ -1432,8 +1459,9 @@ const weekDaysStatus = computed(() => {
     </div>
 
     <!-- Settings Full-Screen Panel -->
-    <Transition name="settings-slide">
-      <div v-if="showSettingsModal" class="settings-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
+    <Teleport to="body">
+      <Transition name="settings-slide">
+        <div v-if="showSettingsModal" class="settings-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
         <div class="settings-panel-header">
           <h2 class="settings-panel-title modal-title">{{ t('settings') }}</h2>
           <button class="settings-close-btn close-btn" @click="showSettingsModal = false">
@@ -1521,10 +1549,12 @@ const weekDaysStatus = computed(() => {
         </div>
       </div>
     </Transition>
+    </Teleport>
 
     <!-- Game Rules Full-Screen Panel -->
-    <Transition name="settings-slide">
-      <div v-if="showRulesModal" class="rules-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
+    <Teleport to="body">
+      <Transition name="settings-slide">
+        <div v-if="showRulesModal" class="rules-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
         <!-- Main Sports Options List View -->
         <div v-if="!selectedRulesSport" class="rules-main-view flex-col h-full" style="display: flex; flex-direction: column; height: 100%;">
           <div class="settings-panel-header">
@@ -1597,10 +1627,12 @@ const weekDaysStatus = computed(() => {
         </div>
       </div>
     </Transition>
+    </Teleport>
 
     <!-- Company Policies Full-Screen Panel -->
-    <Transition name="settings-slide">
-      <div v-if="showPoliciesModal" class="rules-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
+    <Teleport to="body">
+      <Transition name="settings-slide">
+        <div v-if="showPoliciesModal" class="rules-fullscreen-panel" :class="{ 'theme-women': store.isWomenMode.value }">
         <div class="rules-main-view flex-col h-full" style="display: flex; flex-direction: column; height: 100%;">
           <div class="settings-panel-header">
             <h2 class="settings-panel-title modal-title" style="display: flex; align-items: center; gap: 8px;">
@@ -1664,6 +1696,7 @@ const weekDaysStatus = computed(() => {
         </div>
       </div>
     </Transition>
+    </Teleport>
 
   </div>
 
@@ -1776,7 +1809,12 @@ const weekDaysStatus = computed(() => {
                 type="email" 
                 placeholder="e.g. user@example.com"
                 class="form-input"
+                :class="{ 'input-error-border': editEmailError }"
+                @input="editEmailError = ''"
               />
+              <p v-if="editEmailError" class="field-error-msg">
+                <span class="field-error-icon">⚠️</span> {{ editEmailError }}
+              </p>
             </div>
 
             <!-- Bio -->
@@ -1943,7 +1981,7 @@ const weekDaysStatus = computed(() => {
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  padding: 6px;
+  padding: 4px;
   background-color: #ffffff;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
@@ -1956,7 +1994,7 @@ const weekDaysStatus = computed(() => {
   bottom: 6px;
   right: 6px;
   background-color: #00c49f;
-  border: 3px solid #ffffff;
+  border: none;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -1966,12 +2004,19 @@ const weekDaysStatus = computed(() => {
   align-items: center;
   cursor: pointer;
   z-index: 3;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: all 0.2s ease;
 }
 
 .camera-btn:hover {
   transform: scale(1.05);
+}
+
+.shoe-emoji {
+  font-size: 1.3rem;
+  margin-left: 2px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .name-row {
@@ -2948,6 +2993,39 @@ input:checked + .toggle-slider:before {
   resize: none;
 }
 
+/* Email / field-level inline error styles */
+.form-input.input-error-border {
+  border-color: var(--error, #ef4444);
+  background-color: rgba(239, 68, 68, 0.04);
+}
+
+.form-input.input-error-border:focus {
+  border-color: var(--error, #ef4444);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.field-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--error, #ef4444);
+  animation: fadeInDown 0.2s ease;
+}
+
+.field-error-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
 .form-row {
   display: flex;
   gap: 16px;
@@ -3141,10 +3219,10 @@ input:checked + .toggle-slider:before {
 /* Avatar dynamic border styling */
 .border-bronze {
   border: 4px solid transparent !important;
-  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #10b981, #34d399, #059669) !important;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #00d2c4, #10b981) !important;
   background-origin: border-box !important;
   background-clip: padding-box, border-box !important;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 4px 12px rgba(0, 210, 196, 0.2) !important;
 }
 
 .border-silver {

@@ -43,7 +43,7 @@ class UserTest extends TestCase
             'id' => $user->id,
             'name' => 'Updated Name',
             'email' => 'updated@example.com',
-            'phone' => '+1234567890',
+            'phone_number' => '+1234567890',
             'bio' => 'A new custom bio',
             'primary_sport' => 'Football',
             'skill_tier' => 'Elite',

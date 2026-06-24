@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { store } from '../store'
+import PlayConnectLogo from './PlayConnectLogo.vue'
 
 const emit = defineEmits(['auth-success'])
 
@@ -39,7 +40,8 @@ const socialLoading = ref('')
 
 // Forgot Password Refs
 const isForgotPassword = ref(false)
-const forgotUsernameOrEmail = ref('')
+const forgotUsername = ref('')
+const forgotEmail = ref('')
 const forgotLoading = ref(false)
 const forgotError = ref('')
 const forgotSuccess = ref('')
@@ -56,8 +58,18 @@ const resetSuccess = ref('')
 
 // Forgot Password / Reset Password Methods
 const handleForgotPassword = async () => {
-  if (!forgotUsernameOrEmail.value) {
-    forgotError.value = 'Please enter your username or email address.'
+  const usernameVal = forgotUsername.value.trim()
+  const emailVal = forgotEmail.value.trim()
+  if (!usernameVal) {
+    forgotError.value = 'Please enter your username.'
+    return
+  }
+  if (!emailVal) {
+    forgotError.value = 'Please enter your email address.'
+    return
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+    forgotError.value = 'Please enter a valid email address.'
     return
   }
   forgotError.value = ''
@@ -72,14 +84,16 @@ const handleForgotPassword = async () => {
         'Accept': 'application/json'
       },
       body: JSON.stringify({
-        username_or_email: forgotUsernameOrEmail.value
+        username: usernameVal,
+        email: emailVal
       })
     })
 
     const data = await res.json()
     if (res.ok) {
       forgotSuccess.value = data.message || 'A password reset link has been sent to your registered email address.'
-      forgotUsernameOrEmail.value = ''
+      forgotEmail.value = ''
+      forgotUsername.value = ''
     } else {
       forgotError.value = data.message || 'Failed to send reset link.'
     }
@@ -445,21 +459,39 @@ onMounted(() => {
     <!-- 2. Forgot Password Panel -->
     <div v-else-if="isForgotPassword" class="form-panel animate-fade-in" style="padding-top: 40px;">
       <h2 class="form-title">Reset Password</h2>
-      <p class="form-subtitle">Enter your username or email address and we'll send you a link to reset your password.</p>
+      <p class="form-subtitle">Enter your username and registered email address to receive a password reset link.</p>
 
       <div v-if="forgotError" class="error-banner">{{ forgotError }}</div>
       <div v-if="forgotSuccess" class="success-banner">{{ forgotSuccess }}</div>
 
       <div class="input-group">
-        <label class="input-label">Username or Email Address</label>
+        <label class="input-label">Username</label>
         <div class="input-wrapper">
           <span class="input-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="input-svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </span>
           <input 
-            v-model="forgotUsernameOrEmail" 
+            v-model="forgotUsername" 
             type="text" 
-            placeholder="Enter username or email" 
+            placeholder="Enter your username" 
+            class="form-input"
+            @keyup.enter="handleForgotPassword"
+            style="padding-left: 40px; background-color: var(--surface-dim); cursor: not-allowed;"
+            readonly
+          />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Email Address</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="input-svg"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          </span>
+          <input 
+            v-model="forgotEmail" 
+            type="email" 
+            placeholder="Enter your email address" 
             class="form-input"
             @keyup.enter="handleForgotPassword"
             style="padding-left: 40px;"
@@ -473,16 +505,16 @@ onMounted(() => {
       </button>
 
       <div class="forgot-pwd" style="text-align: center; margin-top: 20px;">
-        <a href="#" class="text-link" @click.prevent="isForgotPassword = false; forgotError = ''; forgotSuccess = ''">Back to Sign In</a>
+        <a href="#" class="text-link" @click.prevent="isForgotPassword = false; forgotError = ''; forgotSuccess = ''; forgotEmail = ''; forgotUsername = ''">Back to Sign In</a>
       </div>
     </div>
 
     <!-- 3. Standard Login/Register Flow -->
     <template v-else>
       <div v-if="activeTab === 'signin'" class="logo-header">
-        <div class="logo-icon">⚡</div>
-        <h1 class="brand-title">PlayConnect</h1>
-        <p class="brand-subtitle">Sportigo Matchmaker Platform</p>
+        <div class="logo-icon"><PlayConnectLogo /></div>
+        <h1 class="brand-title">PLAYCONNECT</h1>
+        <p class="brand-subtitle">SINCE 2026</p>
       </div>
 
       <!-- Tab Selector -->
@@ -566,7 +598,7 @@ onMounted(() => {
         </div>
 
         <div class="forgot-pwd">
-          <a href="#" class="text-link" @click.prevent="isForgotPassword = true; forgotError = ''; forgotSuccess = ''">Forgot Password?</a>
+          <a href="#" class="text-link" @click.prevent="isForgotPassword = true; forgotError = ''; forgotSuccess = ''; forgotEmail = ''; forgotUsername = loginUsername">Forgot Password?</a>
         </div>
 
         <button type="button" class="submit-btn" :disabled="loginLoading" @click="handleSignIn">
@@ -766,23 +798,31 @@ onMounted(() => {
 }
 
 .logo-icon {
-  font-size: 3rem;
-  margin-bottom: 12px;
-  display: inline-block;
-  animation: pulseGlow 2s infinite;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .brand-title {
-  font-size: 1.8rem;
+  font-family: var(--font-display);
+  font-size: 2.1rem;
   font-weight: 800;
-  color: var(--primary);
-  margin-bottom: 4px;
+  color: #C62828;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  margin-bottom: 6px;
 }
 
 .brand-subtitle {
-  font-size: 0.85rem;
-  color: var(--on-surface-variant);
-  font-weight: 500;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  color: #C62828;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 5px;
 }
 
 .auth-tabs {

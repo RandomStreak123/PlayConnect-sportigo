@@ -20,15 +20,14 @@ class User extends Authenticatable
         'theme_preference',
         'phone_number',
         'hide_phone',
-        'profile_picture',
-        'profile_photo',
         'google_id',
-        // Legacy/additional fields for tests
-        'phone',
         'bio',
         'primary_sport',
         'skill_tier',
         'avatar',
+        'phone',
+        'profile_picture',
+        'profile_photo',
     ];
 
     protected $hidden = [
@@ -255,38 +254,36 @@ class User extends Authenticatable
     public function setPhoneAttribute($value)
     {
         $this->attributes['phone_number'] = $value;
-        $this->attributes['phone'] = $value;
     }
 
     public function setAvatarAttribute($value)
     {
         $this->attributes['avatar'] = $value;
-        $this->attributes['profile_picture'] = $value;
-        $this->attributes['profile_photo'] = $value;
     }
 
     public function setProfilePictureAttribute($value)
     {
         $this->attributes['avatar'] = $value;
-        $this->attributes['profile_picture'] = $value;
-        $this->attributes['profile_photo'] = $value;
     }
 
     public function setProfilePhotoAttribute($value)
     {
         $this->attributes['avatar'] = $value;
-        $this->attributes['profile_picture'] = $value;
-        $this->attributes['profile_photo'] = $value;
     }
 
     // Accessors for reading using legacy field names
     public function getPhoneAttribute()
     {
-        return $this->attributes['phone_number'] ?? ($this->attributes['phone'] ?? null);
+        return $this->attributes['phone_number'] ?? null;
     }
 
     public function getAvatarAttribute()
     {
-        return $this->attributes['profile_picture'] ?? ($this->attributes['avatar'] ?? null);
+        return $this->attributes['avatar'] ?? null;
+    }
+
+    public function getProfilePhotoAttribute()
+    {
+        return $this->attributes['avatar'] ?? null;
     }
 }

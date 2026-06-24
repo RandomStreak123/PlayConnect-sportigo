@@ -15,7 +15,7 @@ class ActivityController extends Controller
      */
     public function index()
     {
-        $paginated = Activity::with('user:id,name,profile_picture,profile_photo,gender')
+        $paginated = Activity::with('user:id,name,avatar,gender')
             ->latest()
             ->paginate(15);
 
@@ -41,7 +41,7 @@ class ActivityController extends Controller
         }
 
         // Get join/leave activities on those matches by OTHER users, ordered newest first
-        $activities = Activity::with('user:id,name,profile_picture,profile_photo,gender')
+        $activities = Activity::with('user:id,name,avatar,gender')
             ->whereIn('type', ['match_joined', 'match_left'])
             ->where('user_id', '!=', $user->id)             // exclude own actions
             ->whereIn('meta->match_id', $myMatchIds)         // only for my matches

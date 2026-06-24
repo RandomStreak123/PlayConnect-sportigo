@@ -14,6 +14,9 @@ import MatchesScreen from './views/MatchesScreen.vue'
 import ActivityFeedScreen from './views/ActivityFeedScreen.vue'
 import ProfileScreen from './views/ProfileScreen.vue'
 
+// Branding
+import PlayConnectLogo from './components/PlayConnectLogo.vue'
+
 // Modal sheets overlays
 import PlayerRevealCard from './components/PlayerRevealCard.vue'
 import CreateMatchModal from './components/CreateMatchModal.vue'
@@ -53,7 +56,12 @@ const dismissWarning = () => {
 
 watch(() => store.state.currentUser, (newVal) => {
   console.log('User state changed:', newVal ? { id: newVal.id, username: newVal.username, email: newVal.email } : null)
-  if (newVal && !newVal.email && !hasDismissedEmailWarning.value) {
+  if (!newVal) {
+    hasDismissedEmailWarning.value = false
+    showEmailVerificationModal.value = false
+    return
+  }
+  if (!newVal.email && !hasDismissedEmailWarning.value) {
     showEmailVerificationModal.value = true
   } else {
     showEmailVerificationModal.value = false
@@ -63,28 +71,25 @@ watch(() => store.state.currentUser, (newVal) => {
 // Toast Notifications state
 const showSnackbar = ref(false)
 const snackbarText = ref('')
+const snackbarIsLoading = ref(false)
 let snackbarTimeout = null
 
 const triggerSnackbar = (message) => {
-  snackbarText.value = message
+  // Strip emojis from the message text
+  let cleanMessage = message.replace(/[👋⭐🔍🔗🚪✅❌🎉🔔⏳👥📋💔➖]/g, '').trim();
+  // Also clean up any double spaces
+  cleanMessage = cleanMessage.replace(/\s+/g, ' ');
+
+  snackbarText.value = cleanMessage
   showSnackbar.value = true
+  const lower = cleanMessage.toLowerCase()
+  snackbarIsLoading.value = lower.includes('updating') || lower.includes('uploading') || lower.includes('saving') || lower.includes('loading')
   if (snackbarTimeout) clearTimeout(snackbarTimeout)
+  const delay = snackbarIsLoading.value ? 4000 : 2800
   snackbarTimeout = setTimeout(() => {
     showSnackbar.value = false
-  }, 3000)
+  }, delay)
 }
-
-const snackbarIcon = computed(() => {
-  const text = snackbarText.value.toLowerCase()
-  if (text.includes('coming soon')) return '⏳'
-  if (text.includes('welcome') || text.includes('morning') || text.includes('afternoon') || text.includes('evening')) return '👋'
-  if (text.includes('rated') || text.includes('star')) return '⭐'
-  if (text.includes('filtered') || text.includes('search')) return '🔍'
-  if (text.includes('share') || text.includes('shared')) return '🔗'
-  if (text.includes('sign') || text.includes('exit') || text.includes('out')) return '🚪'
-  if (text.includes('success')) return '✅'
-  return '🔔'
-})
 
 // Auth state
 const isAuthenticated = computed(() => {
@@ -240,7 +245,7 @@ const handleToggleFollow = async (player) => {
       if (res && res.success) {
         player.isFollowed = true
         player.followersCount = res.followersCount
-        triggerSnackbar(`Following ${player.name}! 🎉`)
+        triggerSnackbar(`Following ${player.name}!`)
       }
     } catch (err) {
       console.error('Follow failed in App:', err)
@@ -286,8 +291,13 @@ const handleApplyFilters = async (filters) => {
     if (filters.sport && filters.sport !== 'All') backendFilters.sportType = filters.sport
     if (filters.skill && filters.skill !== 'All') backendFilters.skillLevel = filters.skill
 
+    // IMPORTANT: fetchMatches without a cursor replaces state.matches with only
+    // filtered results. We re-init the store immediately afterwards so the full
+    // match list is restored to the home/explore screens.
     await store.fetchMatches(backendFilters)
     triggerSnackbar(`Filtered search applied!`)
+    // Restore full match list so Explore/Home tabs are not left showing only filtered results
+    store.init()
   } catch (e) {
     console.error('Failed to filter matches:', e)
     triggerSnackbar(`Failed to apply filters`)
@@ -309,7 +319,7 @@ const isWomenTheme = computed(() => {
         <div class="hero-overlay"></div>
         <div class="hero-content">
           <div class="hero-logo">
-            <span class="hero-logo-icon">⚡</span>
+            <span class="hero-logo-icon"><PlayConnectLogo /></span>
             <span class="hero-logo-text">PlayConnect</span>
           </div>
           <h1 class="hero-title">Your Next Match Is Just a Click Away</h1>
@@ -347,7 +357,7 @@ const isWomenTheme = computed(() => {
       <aside class="desktop-sidebar">
         <div class="header-inner-container">
           <div class="sidebar-logo" @click="switchTab('home')" style="cursor: pointer;">
-            <span class="logo-icon">⚡</span>
+            <span class="logo-icon"><PlayConnectLogo /></span>
             <span class="logo-text">PlayConnect</span>
           </div>
           
@@ -573,13 +583,12 @@ const isWomenTheme = computed(() => {
     />
 
     <!-- Toast message box -->
-    <div v-if="showSnackbar" class="snackbar-container">
-      <div class="snackbar-content">
-        <span class="snackbar-icon">{{ snackbarIcon }}</span>
+    <Transition name="toast">
+      <div v-if="showSnackbar" class="snackbar-container" :class="{ 'snackbar-loading': snackbarIsLoading }">
+        <span v-if="snackbarIsLoading" class="snackbar-spinner"></span>
         <span class="snackbar-text">{{ snackbarText }}</span>
       </div>
-      <button class="snackbar-btn" @click="showSnackbar = false">DISMISS</button>
-    </div>
+    </Transition>
 
     <!-- Unfollow Confirmation Modal -->
     <Teleport to="body">
@@ -638,31 +647,33 @@ const isWomenTheme = computed(() => {
     </Teleport>
 
     <!-- Email Verification Mandatory Popup -->
-    <Transition name="fade">
-      <div v-if="showEmailVerificationModal" class="email-warning-backdrop">
-        <div class="email-warning-modal">
-          <div class="email-warning-icon-container">
-            <span class="email-warning-icon">📧</span>
-          </div>
-          <h3 class="email-warning-title">
-            {{ store.state.language === 'hi' ? 'ईमेल सत्यापन अनिवार्य है' : 'Email Verification Mandatory' }}
-          </h3>
-          <p class="email-warning-message">
-            {{ store.state.language === 'hi' 
-              ? 'पासवर्ड भूल जाने की स्थिति में सुरक्षित खाता पुनर्प्राप्ति और प्रमाणीकरण के लिए आपके प्रोफ़ाइल में ईमेल पंजीकरण अनिवार्य है।' 
-              : 'Email registration in profile is mandatory. We require a registered email address to assist with password recovery and verify your identity.' }}
-          </p>
-          <div class="email-warning-actions">
-            <button class="email-warning-btn primary" @click="goToProfile">
-              {{ store.state.language === 'hi' ? 'प्रोफ़ाइल पर जाएं' : 'Go to Profile' }}
-            </button>
-            <button class="email-warning-btn secondary" @click="dismissWarning">
-              {{ store.state.language === 'hi' ? 'बाद में' : 'Later' }}
-            </button>
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showEmailVerificationModal" class="email-warning-backdrop">
+          <div class="email-warning-modal">
+            <div class="email-warning-icon-container">
+              <span class="email-warning-icon">📧</span>
+            </div>
+            <h3 class="email-warning-title">
+              {{ store.state.language === 'hi' ? 'ईमेल सत्यापन अनिवार्य है' : 'Email Verification Mandatory' }}
+            </h3>
+            <p class="email-warning-message">
+              {{ store.state.language === 'hi' 
+                ? 'पासवर्ड भूल जाने की स्थिति में सुरक्षित खाता पुनर्प्राप्ति और प्रमाणीकरण के लिए आपके प्रोफ़ाइल में ईमेल पंजीकरण अनिवार्य है।' 
+                : 'Email registration in profile is mandatory. We require a registered email address to assist with password recovery and verify your identity.' }}
+            </p>
+            <div class="email-warning-actions">
+              <button class="email-warning-btn primary" @click="goToProfile">
+                {{ store.state.language === 'hi' ? 'प्रोफ़ाइल पर जाएं' : 'Go to Profile' }}
+              </button>
+              <button class="email-warning-btn secondary" @click="dismissWarning">
+                {{ store.state.language === 'hi' ? 'बाद में' : 'Later' }}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -749,24 +760,24 @@ const isWomenTheme = computed(() => {
 }
 
 .hero-logo-icon {
-  font-size: 1.8rem;
-  background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+  background: #ffffff;
   width: 50px;
   height: 50px;
-  border-radius: 14px;
+  border-radius: 16px;
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-  color: var(--primary);
-  font-weight: bold;
+  border: none;
+  box-shadow: none;
+  padding: 6px;
 }
 
 .hero-logo-text {
   font-family: var(--font-display);
   font-size: 1.6rem;
   font-weight: 800;
-  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .hero-title {
@@ -913,17 +924,16 @@ const isWomenTheme = computed(() => {
 }
 
 .logo-icon {
-  font-size: 1.3rem;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary, #7B61FF) 100%);
+  background: #ffffff;
   width: 40px;
   height: 40px;
   border-radius: 12px;
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  animation: pulseGlow 3s infinite;
+  border: none;
+  box-shadow: none;
+  padding: 5px;
 }
 
 .logo-text {
@@ -931,7 +941,8 @@ const isWomenTheme = computed(() => {
   font-size: 1.35rem;
   font-weight: 800;
   color: var(--primary);
-  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .sidebar-nav {

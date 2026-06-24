@@ -125,4 +125,61 @@ class AuthTest extends TestCase
         
         $userJson->assertStatus(401);
     }
+
+    public function test_forgot_password_requires_valid_username_and_email()
+    {
+        $response = $this->postJson('/api/forgot-password', [
+            'username' => '',
+            'email' => 'invalid-email',
+        ]);
+
+        $response->assertStatus(422)
+                 ->assertJsonValidationErrors(['username', 'email']);
+    }
+
+    public function test_forgot_password_fails_if_username_or_email_mismatch()
+    {
+        $user = User::factory()->create([
+            'username' => 'messi',
+            'email' => 'messi@example.com',
+        ]);
+
+        $response = $this->postJson('/api/forgot-password', [
+            'username' => 'messi',
+            'email' => 'wrongemail@example.com',
+        ]);
+
+        $response->assertStatus(404)
+                 ->assertJson([
+                     'message' => 'The username or email address you entered does not match any registered profile.'
+                 ]);
+    }
+
+    public function test_forgot_password_sends_reset_link_if_username_and_email_match()
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $user = User::factory()->create([
+            'username' => 'messi',
+            'email' => 'messi@example.com',
+        ]);
+
+        $response = $this->postJson('/api/forgot-password', [
+            'username' => 'messi',
+            'email' => 'messi@example.com',
+        ]);
+
+        $response->assertStatus(200)
+                 ->assertJson([
+                     'message' => 'A password reset link has been sent to your registered email address.'
+                 ]);
+
+        $this->assertDatabaseHas('password_reset_tokens', [
+            'email' => 'messi@example.com',
+        ]);
+
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\ResetPasswordMail::class, function ($mail) use ($user) {
+            return $mail->hasTo($user->email);
+        });
+    }
 }
