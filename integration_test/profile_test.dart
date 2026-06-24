@@ -74,7 +74,10 @@ void main() {
       );
 
       // Tap sport chip
-      await tester.tap(find.text('Cricket').first);
+      final cricketChip = find.text('Cricket').first;
+      await tester.ensureVisible(cricketChip);
+      await tester.pumpAndSettle();
+      await tester.tap(cricketChip);
 
       await tester.pumpAndSettle();
 

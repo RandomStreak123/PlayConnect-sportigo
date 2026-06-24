@@ -21,6 +21,34 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isPasswordVisible = false;
 
+  bool get _isForgotEnabled {
+    final text = _usernameController.text.trim();
+    if (text.isEmpty) return false;
+    if (text.contains('@')) {
+      // Basic email regex: must have chars before and after @, and a dot in domain
+      return RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(text);
+    }
+    return text.length >= 3; // Username must be at least 3 characters
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController.addListener(_onUsernameChanged);
+  }
+
+  @override
+  void dispose() {
+    _usernameController.removeListener(_onUsernameChanged);
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _onUsernameChanged() {
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -71,12 +99,19 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {
-                    context.push('/reset-password');
-                  },
+                  onPressed: _isForgotEnabled
+                      ? () {
+                          final input = Uri.encodeComponent(_usernameController.text.trim());
+                          context.push('/reset-password?username_or_email=$input');
+                        }
+                      : null,
                   child: Text(
                     'Forgot Password?',
-                    style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                    style: TextStyle(
+                      color: _isForgotEnabled
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.outlineVariant,
+                    ),
                   ),
                 ),
               ),

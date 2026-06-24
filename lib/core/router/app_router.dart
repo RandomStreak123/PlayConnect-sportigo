@@ -46,7 +46,16 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/reset-password',
-      builder: (context, state) => const ResetPasswordScreen(),
+      builder: (context, state) {
+        final token = state.uri.queryParameters['token'];
+        final email = state.uri.queryParameters['email'];
+        final usernameOrEmail = state.uri.queryParameters['username_or_email'];
+        return ResetPasswordScreen(
+          token: token,
+          email: email,
+          usernameOrEmail: usernameOrEmail,
+        );
+      },
     ),
     GoRoute(
       path: '/search',
@@ -62,7 +71,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/settings',
-      builder: (context, state) => const ProfileSettingsScreen(),
+      builder: (context, state) {
+        final edit = state.uri.queryParameters['edit'] == 'true';
+        return ProfileSettingsScreen(showEditProfileOnLoad: edit);
+      },
     ),
     GoRoute(
       path: '/match-details',

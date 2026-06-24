@@ -157,7 +157,12 @@ class AppView extends StatelessWidget {
                   });
                 } else if (state.status == AuthStatus.unauthenticated) {
                   themeManager.updateUser(null, null);
-                  appRouter.go('/');
+                  final currentLocation = appRouter.routerDelegate.currentConfiguration.uri.toString();
+                  final isPublicRoute = currentLocation.startsWith('/reset-password') ||
+                      currentLocation.startsWith('/register');
+                  if (!isPublicRoute) {
+                    appRouter.go('/');
+                  }
                 }
               },
             ),

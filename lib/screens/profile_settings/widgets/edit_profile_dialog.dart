@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/di/service_locator.dart';
-import '../../../../data/models/user_model.dart';
-import '../../../../data/repositories/auth_repository.dart';
-import '../../../../logic/blocs/auth/auth_bloc.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/repositories/auth_repository.dart';
+import '../../../logic/blocs/auth/auth_bloc.dart';
 
 class EditProfileDialog extends StatefulWidget {
   final UserModel user;
@@ -26,6 +26,15 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   String? _selectedGender;
   String? _selectedSkillTier;
   bool _isSaving = false;
+
+  final List<Map<String, String>> _sports = const [
+    {'name': 'Football', 'emoji': '⚽'},
+    {'name': 'Cricket', 'emoji': '🏏'},
+    {'name': 'Badminton', 'emoji': '🏸'},
+    {'name': 'Basketball', 'emoji': '🏀'},
+    {'name': 'Tennis', 'emoji': '🎾'},
+    {'name': 'Padel', 'emoji': '🏓'},
+  ];
 
   @override
   void initState() {
@@ -83,22 +92,11 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.5),
     );
 
-    final List<Map<String, String>> sports = [
-      {'name': 'Football', 'emoji': '⚽'},
-      {'name': 'Cricket', 'emoji': '🏏'},
-      {'name': 'Badminton', 'emoji': '🏸'},
-      {'name': 'Basketball', 'emoji': '🏀'},
-      {'name': 'Tennis', 'emoji': '🎾'},
-      {'name': 'Padel', 'emoji': '🏓'},
-    ];
-
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
       ),
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? Theme.of(context).colorScheme.surface
-          : Colors.white,
+      backgroundColor: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
@@ -149,7 +147,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                       enabled: !_isSaving,
                     ),
                     const SizedBox(height: 16),
-                    Text('Email Address (for Google Login Link)', style: labelStyle),
+                    Text('Email Address', style: labelStyle),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _emailController,
@@ -185,132 +183,73 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     const SizedBox(height: 20),
                     Text('Primary Sport', style: labelStyle),
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: sports.map((sport) {
-                        final name = sport['name']!;
-                        final emoji = sport['emoji']!;
-                        final isSelected = _selectedSport == name;
-                        final pillBgColor = isSelected
-                            ? const Color(0xFF10B981)
-                            : textFieldFillColor;
-                        final pillBorderColor = isSelected
-                            ? const Color(0xFF10B981)
-                            : textFieldBorderColor;
-                        final pillTextColor = isSelected
-                            ? Colors.white
-                            : (isDark ? Colors.white : const Color(0xFF475569));
-                            
-                        return GestureDetector(
-                          onTap: _isSaving ? null : () {
-                            setState(() {
-                              _selectedSport = name;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: pillBgColor,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: pillBorderColor, width: 1),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(emoji, style: const TextStyle(fontSize: 14)),
-                                const SizedBox(width: 6),
-                                Text(
-                                  name,
-                                  style: TextStyle(
-                                    color: pillTextColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                    _SportPillSelector(
+                      sports: _sports,
+                      selectedSport: _selectedSport,
+                      isSaving: _isSaving,
+                      textFieldFillColor: textFieldFillColor,
+                      textFieldBorderColor: textFieldBorderColor,
+                      isDark: isDark,
+                      onSportSelected: (sport) {
+                        setState(() {
+                          _selectedSport = sport;
+                        });
+                      },
                     ),
                     const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Gender', style: labelStyle),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<String>(
-                                initialValue: _selectedGender,
-                                style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
-                                decoration: InputDecoration(
-                                  border: borderStyle,
-                                  enabledBorder: borderStyle,
-                                  focusedBorder: focusedBorderStyle,
-                                  filled: true,
-                                  fillColor: textFieldFillColor,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                ),
-                                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-                                dropdownColor: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
-                                items: const [
-                                  DropdownMenuItem(value: 'male', child: Text('Male')),
-                                  DropdownMenuItem(value: 'female', child: Text('Female')),
-                                  DropdownMenuItem(value: 'other', child: Text('Other')),
-                                ],
-                                onChanged: _isSaving ? null : (val) {
-                                  setState(() {
-                                    _selectedGender = val;
-                                  });
-                                },
-                              ),
+                          child: _ProfileDropdownSelector(
+                            label: 'Gender',
+                            value: _selectedGender,
+                            items: const [
+                              DropdownMenuItem(value: 'male', child: Text('Male')),
+                              DropdownMenuItem(value: 'female', child: Text('Female')),
+                              DropdownMenuItem(value: 'other', child: Text('Other')),
                             ],
+                            onChanged: _isSaving
+                                ? null
+                                : (val) {
+                                    setState(() {
+                                      _selectedGender = val;
+                                    });
+                                  },
+                            isDark: isDark,
+                            fillColor: textFieldFillColor,
+                            borderStyle: borderStyle,
+                            focusedBorderStyle: focusedBorderStyle,
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('skillTier', style: labelStyle),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<String>(
-                                initialValue: _selectedSkillTier,
-                                style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
-                                decoration: InputDecoration(
-                                  border: borderStyle,
-                                  enabledBorder: borderStyle,
-                                  focusedBorder: focusedBorderStyle,
-                                  filled: true,
-                                  fillColor: textFieldFillColor,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                ),
-                                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-                                dropdownColor: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
-                                items: [
-                                  'Beginner',
-                                  'Intermediate',
-                                  'Advanced',
-                                  'Expert',
-                                  'Professional',
-                                  'Elite'
-                                ].map((tier) {
-                                  return DropdownMenuItem(
-                                    value: tier,
-                                    child: Text(tier),
-                                  );
-                                }).toList(),
-                                onChanged: _isSaving ? null : (val) {
-                                  setState(() {
-                                    _selectedSkillTier = val;
-                                  });
-                                },
-                              ),
-                            ],
+                          child: _ProfileDropdownSelector(
+                            label: 'skillTier',
+                            value: _selectedSkillTier,
+                            items: const [
+                              'Beginner',
+                              'Intermediate',
+                              'Advanced',
+                              'Expert',
+                              'Professional',
+                              'Elite'
+                            ].map((tier) {
+                              return DropdownMenuItem(
+                                value: tier,
+                                child: Text(tier),
+                              );
+                            }).toList(),
+                            onChanged: _isSaving
+                                ? null
+                                : (val) {
+                                    setState(() {
+                                      _selectedSkillTier = val;
+                                    });
+                                  },
+                            isDark: isDark,
+                            fillColor: textFieldFillColor,
+                            borderStyle: borderStyle,
+                            focusedBorderStyle: focusedBorderStyle,
                           ),
                         ),
                       ],
@@ -431,6 +370,127 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Custom Sport Pill Selector Widget ────────────────────────────────────────
+class _SportPillSelector extends StatelessWidget {
+  final List<Map<String, String>> sports;
+  final String? selectedSport;
+  final bool isSaving;
+  final Color textFieldFillColor;
+  final Color textFieldBorderColor;
+  final bool isDark;
+  final ValueChanged<String?> onSportSelected;
+
+  const _SportPillSelector({
+    required this.sports,
+    required this.selectedSport,
+    required this.isSaving,
+    required this.textFieldFillColor,
+    required this.textFieldBorderColor,
+    required this.isDark,
+    required this.onSportSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: sports.map((sport) {
+        final name = sport['name']!;
+        final emoji = sport['emoji']!;
+        final isSelected = selectedSport == name;
+        final pillBgColor = isSelected ? const Color(0xFF10B981) : textFieldFillColor;
+        final pillBorderColor = isSelected ? const Color(0xFF10B981) : textFieldBorderColor;
+        final pillTextColor = isSelected ? Colors.white : (isDark ? Colors.white : const Color(0xFF475569));
+
+        return GestureDetector(
+          onTap: isSaving ? null : () => onSportSelected(name),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: pillBgColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: pillBorderColor, width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 14)),
+                const SizedBox(width: 6),
+                Text(
+                  name,
+                  style: TextStyle(
+                    color: pillTextColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ── Custom Dropdown Selector Widget ──────────────────────────────────────────
+class _ProfileDropdownSelector extends StatelessWidget {
+  final String label;
+  final String? value;
+  final List<DropdownMenuItem<String>> items;
+  final ValueChanged<String?>? onChanged;
+  final bool isDark;
+  final Color fillColor;
+  final InputBorder borderStyle;
+  final InputBorder focusedBorderStyle;
+
+  const _ProfileDropdownSelector({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    required this.isDark,
+    required this.fillColor,
+    required this.borderStyle,
+    required this.focusedBorderStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final labelStyle = const TextStyle(
+      color: Color(0xFF64748B),
+      fontWeight: FontWeight.bold,
+      fontSize: 13,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: labelStyle),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: value,
+          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
+          decoration: InputDecoration(
+            border: borderStyle,
+            enabledBorder: borderStyle,
+            focusedBorder: focusedBorderStyle,
+            filled: true,
+            fillColor: fillColor,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+          dropdownColor: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+          items: items,
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }

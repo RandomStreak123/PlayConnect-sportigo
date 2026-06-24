@@ -18,7 +18,9 @@ class MatchParticipant {
     return MatchParticipant(
       id: json['id'] as int,
       name: json['name'] as String,
-      profilePicture: json['profile_picture'] as String?,
+      profilePicture: (json['profile_picture'] as String?) ?? 
+                      (json['profilePicture'] as String?) ?? 
+                      (json['avatar'] as String?),
       result: (pivot != null ? pivot['result'] : json['result']) as String?,
     );
   }

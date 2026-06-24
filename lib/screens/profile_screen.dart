@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'profile/utils/profile_theme_helper.dart';
 import '../core/constants/colors.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
 import '../data/repositories/auth_repository.dart';
@@ -52,24 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Map<String, dynamic>? _publicProfileData;
   String? _publicProfileError;
 
-  final Map<String, List<Color>> _premiumGradients = {
-    'Default': [],
-    'Lavender Dusk': [
-      const Color(0xFF2E0854),
-      const Color(0xFF8A2BE2),
-      const Color(0xFFE6E6FA),
-    ],
-    'Gold Rush': [
-      const Color(0xFF3A2D00),
-      const Color(0xFF8A7300),
-      const Color(0xFFD4AF37),
-    ],
-    'Golden Legend': [
-      const Color(0xFF8B6C05),
-      const Color(0xFFD4AF37),
-      const Color(0xFFFFDF73),
-    ],
-  };
+
 
   @override
   void initState() {
@@ -98,27 +81,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Future<void> _loadSelectedTheme() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedTheme = prefs.getString('profile_theme_key') ?? 'Default';
-      if (mounted) {
-        setState(() {
-          _selectedTheme = savedTheme;
-        });
-      }
-    } catch (_) {}
+    final savedTheme = await ProfileThemeHelper.loadSelectedTheme();
+    if (mounted) {
+      setState(() {
+        _selectedTheme = savedTheme;
+      });
+    }
   }
 
   Future<void> _saveSelectedTheme(String themeName) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('profile_theme_key', themeName);
-      if (mounted) {
-        setState(() {
-          _selectedTheme = themeName;
-        });
-      }
-    } catch (_) {}
+    await ProfileThemeHelper.saveSelectedTheme(themeName);
+    if (mounted) {
+      setState(() {
+        _selectedTheme = themeName;
+      });
+    }
   }
 
   Future<void> _loadPublicProfileWithId(int userId, {bool isRefresh = false}) async {
@@ -337,7 +314,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       }
     }
 
-    final premiumColors = _premiumGradients[activeTheme]!;
+    final premiumColors = ProfileThemeHelper.getGradient(activeTheme);
     final gradientColors = activeTheme == 'Default'
         ? [
             sportColor.withValues(alpha: 0.15),

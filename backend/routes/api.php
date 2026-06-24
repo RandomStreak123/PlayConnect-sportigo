@@ -12,6 +12,8 @@ Route::middleware('throttle:5,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/auth/google', [AuthController::class, 'googleLogin']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -33,9 +35,6 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::get('/user', [UserController::class, 'show']);
-    Route::get('/user/stats', [UserController::class, 'stats']);
-    Route::get('/user/history', [UserController::class, 'history']);
-    Route::get('/user/ratings', [UserController::class, 'ratings']);
     Route::post('/user/update', [UserController::class, 'update']);
     Route::put('/user', [UserController::class, 'update']);
     
@@ -48,6 +47,10 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Public User Profile
     Route::get('/users/{id}', [UserController::class, 'publicProfile']);
+    Route::get('/users/{id}/followers', [UserController::class, 'followers']);
+    Route::get('/users/{id}/following', [UserController::class, 'following']);
+    Route::post('/users/{id}/follow', [UserController::class, 'follow']);
+    Route::post('/users/{id}/unfollow', [UserController::class, 'unfollow']);
     Route::post('/users/{id}/wave', [UserController::class, 'wave']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -65,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/photo', [\App\Http\Controllers\API\ProfileController::class, 'uploadProfilePhoto']);
     Route::put('/profile',        [\App\Http\Controllers\API\ProfileController::class, 'updateProfile']);
     Route::get('/players',        [\App\Http\Controllers\API\ProfileController::class, 'players']);
+    Route::get('/activities/my-matches', [\App\Http\Controllers\API\ActivityController::class, 'forMyMatches']);
     Route::get('/activities',     [\App\Http\Controllers\API\ActivityController::class, 'index']);
     Route::get('/notifications',  [\App\Http\Controllers\API\NotificationController::class, 'index']);
     Route::put('/notifications/read-all', [\App\Http\Controllers\API\NotificationController::class, 'markAllAsRead']);

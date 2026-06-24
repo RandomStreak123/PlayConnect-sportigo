@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../../data/models/match_model.dart';
-import '../../../../widgets/player_reveal_card.dart';
-import '../../../../core/utils/avatar_image_helper.dart';
-import '../../../../core/constants/colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_radius.dart';
+import '../../../data/models/match_model.dart';
+import '../../../widgets/player_reveal_card.dart';
+import '../../../core/utils/avatar_image_helper.dart';
+import '../../../core/constants/colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_radius.dart';
 
 class MatchParticipantsList extends StatelessWidget {
   final MatchModel match;

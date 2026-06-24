@@ -16,7 +16,6 @@ class PlayerSearchResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final photoUrl = player.profilePhotoUrl;
-    final ImageProvider? imageProvider = AvatarImageHelper.provider(photoUrl);
     final sport = player.primarySport ?? player.gender?.toUpperCase() ?? 'PLAYER';
 
     return GestureDetector(
@@ -54,13 +53,11 @@ class PlayerSearchResultCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
+            AvatarImageHelper.circleAvatar(
+              path: photoUrl,
               radius: 24,
               backgroundColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
-              backgroundImage: imageProvider,
-              child: AvatarImageHelper.resolveUrl(photoUrl) == null
-                  ? Icon(Icons.person, color: Theme.of(context).colorScheme.primaryContainer)
-                  : null,
+              foregroundColor: Theme.of(context).colorScheme.primaryContainer,
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(

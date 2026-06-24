@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../data/models/match_model.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_icon_size.dart';
+import '../../../data/models/match_model.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_radius.dart';
+import '../../../core/theme/app_icon_size.dart';
 
 class MatchPrimaryInfo extends StatelessWidget {
   final MatchModel match;

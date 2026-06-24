@@ -26,11 +26,7 @@ class MatchController extends Controller
 
     public function index(Request $request)
     {
-        $query = SportsMatch::withCount('participants')
-            ->with([
-                'user:id,name,avatar,profile_picture,profile_photo',
-                'participants:id,name,avatar,profile_picture,profile_photo'
-            ]);
+        $query = SportsMatch::with(['user', 'participants']);
 
         if ($request->filled('sport_type')) {
             $query->where('sport_type', $request->input('sport_type'));
@@ -73,11 +69,7 @@ class MatchController extends Controller
     public function mine(Request $request)
     {
         $user = auth()->user();
-        $matches = SportsMatch::withCount('participants')
-            ->with([
-                'user:id,name,avatar,profile_picture,profile_photo',
-                'participants:id,name,avatar,profile_picture,profile_photo'
-            ])
+        $matches = SportsMatch::with(['user', 'participants'])
             ->whereHas('participants', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
@@ -264,22 +256,10 @@ class MatchController extends Controller
         $user = auth()->user();
         
         // Fetch matches hosted by the user
-        $hostedMatches = SportsMatch::withCount('participants')
-            ->with([
-                'user:id,name,avatar,profile_picture,profile_photo',
-                'participants:id,name,avatar,profile_picture,profile_photo'
-            ])
-            ->where('creator_id', $user->id)
-            ->get();
+        $hostedMatches = SportsMatch::with(['user', 'participants'])->where('creator_id', $user->id)->get();
         
         // Fetch matches the user joined
-        $joinedMatches = $user->joinedMatches()
-            ->withCount('participants')
-            ->with([
-                'user:id,name,avatar,profile_picture,profile_photo',
-                'participants:id,name,avatar,profile_picture,profile_photo'
-            ])
-            ->get();
+        $joinedMatches = $user->joinedMatches()->with(['user', 'participants'])->get();
         
         // Combine them and ensure no duplicates
         $allMatches = $hostedMatches->merge($joinedMatches)->unique('id')->values();
@@ -348,6 +328,14 @@ class MatchController extends Controller
         $matchDate = Carbon::parse($match->date_time);
         if ($matchDate->subHours(24)->isFuture()) {
             return response()->json(['message' => 'Cannot submit ratings for a match that has not yet been played.'], 422);
+        }
+
+        // Check if ratings have already been submitted by this user for this match
+        $alreadyRated = \App\Models\PlayerRating::where('match_id', $match->id)
+            ->where('rater_id', $user->id)
+            ->exists();
+        if ($alreadyRated) {
+            return response()->json(['message' => 'You have already submitted ratings for this match and cannot edit them.'], 422);
         }
 
         $request->validate([

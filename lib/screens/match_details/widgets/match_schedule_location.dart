@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../../data/models/match_model.dart';
-import '../../../../core/theme/app_spacing.dart';
+import '../../../data/models/match_model.dart';
+import '../../../core/theme/app_spacing.dart';
 
 class MatchScheduleLocation extends StatelessWidget {
   final MatchModel match;

@@ -114,13 +114,15 @@ class AuthRepository {
   }
 
   Future<String> sendResetLink({
-    required String usernameOrEmail,
+    required String username,
+    required String email,
   }) async {
     try {
       final data = await apiClient.post(
         '/forgot-password',
         body: {
-          'username_or_email': usernameOrEmail,
+          'username': username,
+          'email': email,
         },
       ) as Map<String, dynamic>;
 
@@ -129,6 +131,32 @@ class AuthRepository {
       throw Exception(e.message);
     } catch (_) {
       throw Exception('Failed to send reset link');
+    }
+  }
+
+  /// Submit a new password using the token received via email.
+  Future<String> resetPassword({
+    required String token,
+    required String email,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    try {
+      final data = await apiClient.post(
+        '/reset-password',
+        body: {
+          'token': token,
+          'email': email,
+          'password': password,
+          'password_confirmation': passwordConfirmation,
+        },
+      ) as Map<String, dynamic>;
+
+      return data['message'] ?? 'Your password has been reset successfully! You can now log in.';
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (_) {
+      throw Exception('Failed to reset password');
     }
   }
 

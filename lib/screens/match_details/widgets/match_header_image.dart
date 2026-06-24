@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../../data/models/match_model.dart';
-import '../../../../core/utils/sport_image_helper.dart';
-import '../../../../core/theme/app_spacing.dart';
+import '../../../data/models/match_model.dart';
+import '../../../core/utils/sport_image_helper.dart';
+import '../../../core/theme/app_spacing.dart';
 
 class MatchHeaderImage extends StatelessWidget {
   final MatchModel match;

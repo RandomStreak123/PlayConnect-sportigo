@@ -9,23 +9,8 @@ class UserController extends Controller
     public function show(Request $request)
     {
         $user = $request->user();
-        return response()->json([
-            'id' => $user->id,
-            'name' => $user->name,
-            'username' => $user->username,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'phone_number' => $user->phone_number,
-            'gender' => $user->gender,
-            'avatar' => $user->avatar,
-            'profile_picture' => $user->profile_picture,
-            'profile_photo' => $user->profile_photo,
-            'bio' => $user->bio,
-            'primary_sport' => $user->primary_sport,
-            'skill_tier' => $user->skill_tier,
-            'hide_phone' => $user->hide_phone,
-            'theme_preference' => $user->theme_preference,
-        ]);
+        $user->append(['stats', 'followersCount', 'followingCount']);
+        return response()->json($user);
     }
 
     public function update(Request $request)
@@ -44,71 +29,39 @@ class UserController extends Controller
         ]);
 
         $user = $request->user();
+        $oldEmail = $user->email;
+        
         $user->update($validated);
 
+        if (empty($oldEmail) && !empty($user->email)) {
+            $frontendUrl = $request->header('Origin') ?: $request->header('Referer');
+            if ($frontendUrl) {
+                $frontendUrl = preg_replace('/(\/auth|\/login|\/forgot-password|\/register|\/reset-password|\/profile).*$/', '', $frontendUrl);
+                $frontendUrl = rtrim($frontendUrl, '/');
+            } else {
+                $frontendUrl = 'https://playconnect-vue.ddev.site';
+            }
+            try {
+                \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\WelcomeMail($user->name, $frontendUrl));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to send welcome email on profile update to {$user->email}: " . $e->getMessage());
+            }
+        }
+
         $freshUser = $user->fresh();
-        return response()->json([
-            'id' => $freshUser->id,
-            'name' => $freshUser->name,
-            'username' => $freshUser->username,
-            'email' => $freshUser->email,
-            'phone' => $freshUser->phone,
-            'phone_number' => $freshUser->phone_number,
-            'gender' => $freshUser->gender,
-            'avatar' => $freshUser->avatar,
-            'profile_picture' => $freshUser->profile_picture,
-            'profile_photo' => $freshUser->profile_photo,
-            'bio' => $freshUser->bio,
-            'primary_sport' => $freshUser->primary_sport,
-            'skill_tier' => $freshUser->skill_tier,
-            'hide_phone' => $freshUser->hide_phone,
-            'theme_preference' => $freshUser->theme_preference,
-        ]);
-    }
-
-    public function stats(Request $request)
-    {
-        $startTime = microtime(true);
-        $user = $request->user();
-        $stats = $user->stats;
-        $duration = (microtime(true) - $startTime) * 1000;
-        \Illuminate\Support\Facades\Log::info("UserController::stats executed in {$duration}ms for User ID {$user->id}");
-        return response()->json($stats);
-    }
-
-    public function history(Request $request)
-    {
-        $startTime = microtime(true);
-        $user = $request->user();
-        $user->loadMissing(['joinedMatches.participants', 'hostedMatches.participants']);
-        $allMatches = $user->hostedMatches->merge($user->joinedMatches)->unique('id')->values();
-        $duration = (microtime(true) - $startTime) * 1000;
-        \Illuminate\Support\Facades\Log::info("UserController::history executed in {$duration}ms for User ID {$user->id}");
-        return response()->json($allMatches);
-    }
-
-    public function ratings(Request $request)
-    {
-        $startTime = microtime(true);
-        $user = $request->user();
-        $ratings = \App\Models\PlayerRating::where('rated_id', $user->id)->get();
-        $duration = (microtime(true) - $startTime) * 1000;
-        \Illuminate\Support\Facades\Log::info("UserController::ratings executed in {$duration}ms for User ID {$user->id}");
-        return response()->json($ratings);
+        $freshUser->append(['stats', 'followersCount', 'followingCount']);
+        return response()->json($freshUser);
     }
 
     public function publicProfile($id)
     {
-        $user = \App\Models\User::with([
-            'joinedMatches.participants',
-            'hostedMatches.participants',
-            'tournaments'
-        ])->findOrFail($id);
+        $user = \App\Models\User::with(['joinedMatches.user', 'joinedMatches.participants', 'tournaments'])->findOrFail($id);
+        $hostedMatches = \App\Models\SportsMatch::with(['user', 'participants'])->where('creator_id', $user->id)->get();
         
         // Merge hosted and joined matches for their public activity feed
-        $allMatches = $user->hostedMatches->merge($user->joinedMatches)->unique('id')->values();
+        $allMatches = $hostedMatches->merge($user->joinedMatches)->unique('id')->values();
 
-        $activities = \App\Models\Activity::where('user_id', $user->id)->latest()->get();
+        $activities = \App\Models\Activity::with('user')->where('user_id', $user->id)->latest()->get();
 
         return response()->json([
             'id' => $user->id,
@@ -126,7 +79,85 @@ class UserController extends Controller
             'activities' => $activities,
             'tournaments' => $user->tournaments,
             'created_at' => $user->created_at,
+            'followersCount' => $user->followersCount,
+            'followingCount' => $user->followingCount,
+            'isFollowed' => $user->isFollowed,
         ]);
+    }
+
+    public function follow($id)
+    {
+        $targetUser = \App\Models\User::findOrFail($id);
+        $currentUser = auth()->user();
+
+        if ($currentUser->id === $targetUser->id) {
+            return response()->json(['message' => 'You cannot follow yourself'], 422);
+        }
+
+        $alreadyFollowing = $currentUser->following()->where('followed_id', $targetUser->id)->exists();
+
+        if (!$alreadyFollowing) {
+            $currentUser->following()->syncWithoutDetaching($targetUser->id);
+
+            // Create notification for B (the target user)
+            \App\Models\Notification::create([
+                'user_id' => $targetUser->id,
+                'type' => 'follow',
+                'title' => 'New Follower',
+                'message' => $currentUser->name . ' started following you!',
+                'meta' => ['follower_id' => $currentUser->id, 'follower_name' => $currentUser->name],
+            ]);
+
+            // Create activity for A (the follower)
+            \App\Models\Activity::create([
+                'user_id' => $currentUser->id,
+                'type' => 'follow',
+                'message' => 'started following ' . $targetUser->name,
+                'meta' => ['followed_id' => $targetUser->id, 'followed_name' => $targetUser->name],
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Followed successfully',
+            'followersCount' => $targetUser->followers()->count(),
+            'isFollowed' => true
+        ]);
+    }
+
+    public function unfollow($id)
+    {
+        $targetUser = \App\Models\User::findOrFail($id);
+        $currentUser = auth()->user();
+
+        $currentUser->following()->detach($targetUser->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Unfollowed successfully',
+            'followersCount' => $targetUser->followers()->count(),
+            'isFollowed' => false
+        ]);
+    }
+
+    public function followers($id)
+    {
+        $user = \App\Models\User::findOrFail($id);
+        $followers = $user->followers()->get();
+        foreach ($followers as $follower) {
+            $follower->append('isFollowed');
+        }
+        return response()->json($followers);
+    }
+
+    public function following($id)
+    {
+        $user = \App\Models\User::findOrFail($id);
+        $following = $user->following()->get();
+        foreach ($following as $followed) {
+            $followed->append('isFollowed');
+        }
+        return response()->json($following);
     }
 
     public function wave($id)

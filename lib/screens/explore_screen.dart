@@ -184,8 +184,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     String distance,
     String? photoUrl,
   ) {
-    final ImageProvider? imageProvider = AvatarImageHelper.provider(photoUrl);
-
     return GestureDetector(
       onTap: () {
         showModalBottomSheet(
@@ -219,13 +217,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
+            AvatarImageHelper.circleAvatar(
+              path: photoUrl,
               radius: 24,
               backgroundColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
-              backgroundImage: imageProvider,
-              child: AvatarImageHelper.resolveUrl(photoUrl) == null
-                  ? Icon(Icons.person, color: Theme.of(context).colorScheme.primaryContainer)
-                  : null,
+              foregroundColor: Theme.of(context).colorScheme.primaryContainer,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(

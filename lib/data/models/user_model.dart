@@ -94,7 +94,7 @@ class UserModel {
       name: json['name'],
       username: json['username'],
       phoneNumber: json['phone_number'],
-      profilePicture: json['profile_picture'],
+      profilePicture: json['profile_picture'] ?? json['profilePicture'] ?? json['avatar'],
       gender: json['gender'],
       hidePhone: json['hide_phone'] == 1 || json['hide_phone'] == true,
       themePreference: json['theme_preference'] ?? 'system',

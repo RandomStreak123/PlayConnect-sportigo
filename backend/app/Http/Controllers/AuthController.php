@@ -32,7 +32,24 @@ class AuthController extends Controller
             'role' => $validated['role'] ?? 'athlete',
         ]);
 
+        if ($user->email) {
+            $frontendUrl = $request->header('Origin') ?: $request->header('Referer');
+            if ($frontendUrl) {
+                $frontendUrl = preg_replace('/(\/auth|\/login|\/forgot-password|\/register|\/reset-password).*$/', '', $frontendUrl);
+                $frontendUrl = rtrim($frontendUrl, '/');
+            } else {
+                $frontendUrl = 'https://playconnect-vue.ddev.site';
+            }
+            try {
+                \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\WelcomeMail($user->name, $frontendUrl));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to send welcome email on registration to {$user->email}: " . $e->getMessage());
+            }
+        }
+
+        $user->append(['stats', 'followersCount', 'followingCount']);
         $token = $user->createToken('auth_token')->plainTextToken;
+        $user->append('stats');
 
         return response()->json([
             'access_token' => $token,
@@ -61,7 +78,9 @@ class AuthController extends Controller
         // Revoke all existing tokens to prevent simultaneous logins
         $user->tokens()->delete();
 
+        $user->append(['stats', 'followersCount', 'followingCount']);
         $token = $user->createToken('auth_token')->plainTextToken;
+        $user->append('stats');
 
         return response()->json([
             'access_token' => $token,
@@ -81,6 +100,10 @@ class AuthController extends Controller
 
     public function googleLogin(Request $request)
     {
+        if (!$request->has('credential') && $request->has('id_token')) {
+            $request->merge(['credential' => $request->input('id_token')]);
+        }
+
         $request->validate([
             'credential' => 'required|string',
         ]);
@@ -160,7 +183,9 @@ class AuthController extends Controller
 
             // Revoke other tokens and create new one
             $user->tokens()->delete();
+            $user->append(['stats', 'followersCount', 'followingCount']);
             $token = $user->createToken('auth_token')->plainTextToken;
+            $user->append('stats');
 
             return response()->json([
                 'access_token' => $token,
@@ -172,4 +197,112 @@ class AuthController extends Controller
             return response()->json(['message' => 'Authentication failed: ' . $e->getMessage()], 500);
         }
     }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'username' => 'required|string',
+            'email' => 'required|string|email',
+        ]);
+
+        $username = $request->input('username');
+        $email = $request->input('email');
+
+        $user = User::where('username', $username)
+            ->where('email', $email)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'We could not find a user with that username or email address.'
+            ], 404);
+        }
+
+        $token = \Illuminate\Support\Str::random(64);
+        
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            [
+                'token' => hash('sha256', $token),
+                'created_at' => now()
+            ]
+        );
+
+        // Build an http(s) link pointing to the backend redirect page.
+        // Email clients like Gmail only make http/https links tappable, so we
+        // serve a small HTML bridge page that immediately redirects the browser
+        // to the sportigo:// deep-link, which Android hands off to the app.
+        // APP_URL in .env controls the base (e.g. http://10.0.2.2:8000 for
+        // the Android emulator, https://api.yourserver.com in production).
+        $baseUrl = rtrim(config('app.url'), '/');
+        $resetUrl = $baseUrl . '/reset-password?token=' . $token . '&email=' . urlencode($user->email);
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\ResetPasswordMail($resetUrl));
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to send reset email. Please try again later. Error: ' . $e->getMessage()
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'A password reset link has been sent to your registered email address.'
+        ]);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|string|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $record = \Illuminate\Support\Facades\DB::table('password_reset_tokens')
+            ->where('email', $validated['email'])
+            ->first();
+
+        if (!$record) {
+            return response()->json([
+                'message' => 'This password reset token is invalid.'
+            ], 422);
+        }
+
+        $hashedToken = hash('sha256', $validated['token']);
+        if (!hash_equals($record->token, $hashedToken)) {
+            return response()->json([
+                'message' => 'This password reset token is invalid.'
+            ], 422);
+        }
+
+        $createdAt = \Carbon\Carbon::parse($record->created_at);
+        if ($createdAt->addMinutes(60)->isPast()) {
+            \Illuminate\Support\Facades\DB::table('password_reset_tokens')
+                ->where('email', $validated['email'])
+                ->delete();
+
+            return response()->json([
+                'message' => 'This password reset token has expired.'
+            ], 422);
+        }
+
+        $user = User::where('email', $validated['email'])->first();
+        if (!$user) {
+            return response()->json([
+                'message' => 'We could not find a user with that email address.'
+            ], 404);
+        }
+
+        $user->password = Hash::make($validated['password']);
+        $user->save();
+
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')
+            ->where('email', $validated['email'])
+            ->delete();
+
+        return response()->json([
+            'message' => 'Your password has been reset successfully! You can now log in.'
+        ]);
+    }
 }
+

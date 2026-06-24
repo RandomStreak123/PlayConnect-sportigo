@@ -21,7 +21,7 @@ class MatchSlotService
         $match->syncAvailableSlots($save);
 
         if ($save) {
-            return $match->fresh(['participants:id,name,profile_picture']);
+            return $match->fresh(['participants:id,name,avatar']);
         }
         return $match;
     }
@@ -69,7 +69,7 @@ class MatchSlotService
                 Log::error('Activity feed failed: ' . $e->getMessage());
             }
 
-            return $match->load('participants:id,name,profile_picture');
+            return $match->load('participants:id,name,avatar');
         });
     }
 
@@ -86,7 +86,7 @@ class MatchSlotService
             ]);
             $match->syncAvailableSlots();
 
-            return $match->load('participants:id,name,profile_picture');
+            return $match->load('participants:id,name,avatar');
         });
     }
 
@@ -144,7 +144,7 @@ class MatchSlotService
                 Log::error('Activity feed failed: ' . $e->getMessage());
             }
 
-            return ['match' => $match->load('participants:id,name,profile_picture')];
+            return ['match' => $match->load('participants:id,name,avatar')];
         });
     }
 
@@ -204,7 +204,7 @@ class MatchSlotService
                 Log::error('Activity feed failed: ' . $e->getMessage());
             }
 
-            return ['match' => $match->load('participants:id,name,profile_picture')];
+            return ['match' => $match->load('participants:id,name,avatar')];
         });
     }
 }

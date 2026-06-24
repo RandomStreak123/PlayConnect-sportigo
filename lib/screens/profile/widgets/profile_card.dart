@@ -309,28 +309,11 @@ class _ProfileCardState extends State<ProfileCard> {
                             onTap: (widget.isCurrentUser && !_isUploading) ? () => _pickAndUploadImage(context) : null,
                             child: Hero(
                               tag: 'profile_avatar_hero',
-                              child: Container(
-                                width: 126,
-                                height: 126,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Theme.of(context).colorScheme.surfaceDim,
-                                ),
-                                child: (photoUrl != null && AvatarImageHelper.resolveUrl(photoUrl) != null)
-                                    ? ClipOval(
-                                        child: Image.network(
-                                          AvatarImageHelper.resolveUrl(photoUrl)!,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return const Icon(Icons.person, size: 60, color: Colors.white70);
-                                          },
-                                          loadingBuilder: (context, child, loadingProgress) {
-                                            if (loadingProgress == null) return child;
-                                            return const Center(child: AppLoadingIndicator());
-                                          },
-                                        ),
-                                      )
-                                    : const Icon(Icons.person, size: 60, color: Colors.white70),
+                              child: AvatarImageHelper.circleAvatar(
+                                path: photoUrl,
+                                radius: 63,
+                                backgroundColor: Theme.of(context).colorScheme.surfaceDim,
+                                foregroundColor: Colors.white70,
                               ),
                             ),
                           ),

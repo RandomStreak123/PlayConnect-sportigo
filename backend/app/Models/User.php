@@ -62,6 +62,35 @@ class User extends Authenticatable
         return $this->belongsToMany(Tournament::class, 'tournament_user')->withPivot('team_name')->withTimestamps();
     }
 
+    public function followers()
+    {
+        return $this->belongsToMany(User::class, 'follows', 'followed_id', 'follower_id')->withTimestamps();
+    }
+
+    public function following()
+    {
+        return $this->belongsToMany(User::class, 'follows', 'follower_id', 'followed_id')->withTimestamps();
+    }
+
+    public function getFollowersCountAttribute()
+    {
+        return $this->followers()->count();
+    }
+
+    public function getFollowingCountAttribute()
+    {
+        return $this->following()->count();
+    }
+
+    public function getIsFollowedAttribute()
+    {
+        $currentUser = auth('sanctum')->user();
+        if (!$currentUser) {
+            return false;
+        }
+        return $this->followers()->where('follower_id', $currentUser->id)->exists();
+    }
+
     public function hostedMatches()
     {
         return $this->hasMany(SportsMatch::class, 'creator_id');
@@ -93,7 +122,6 @@ class User extends Authenticatable
 
     public function getStatsAttribute()
     {
-        $startTime = microtime(true);
         $uid = $this->id;
 
         $joinedMatches = $this->relationLoaded('joinedMatches')
@@ -208,7 +236,7 @@ class User extends Authenticatable
         $avgRating = \App\Models\PlayerRating::where('rated_id', $uid)->avg('rating');
         $averageRating = $avgRating !== null ? round((float) $avgRating, 1) : 0.0;
 
-        $stats = [
+        return [
             'xp' => (int) $xp,
             'level' => (int) $level,
             'currentLevelXp' => (int) $currentLevelXp,
@@ -221,11 +249,6 @@ class User extends Authenticatable
             'averageRating' => (float) $averageRating,
             'totalGames' => (int) $totalGames
         ];
-
-        $duration = (microtime(true) - $startTime) * 1000;
-        \Illuminate\Support\Facades\Log::info("User stats calculated in {$duration}ms for User ID {$uid}");
-
-        return $stats;
     }
 
     // Mutators for writing using legacy field names

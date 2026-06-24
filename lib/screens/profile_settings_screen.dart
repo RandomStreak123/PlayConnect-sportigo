@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../core/constants/colors.dart';
 import '../core/theme/app_spacing.dart';
+import '../logic/blocs/auth/auth_bloc.dart';
 import 'profile_settings/widgets/settings_tile_list.dart';
+import 'profile_settings/widgets/edit_profile_dialog.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
-  const ProfileSettingsScreen({super.key});
+  final bool showEditProfileOnLoad;
+  const ProfileSettingsScreen({super.key, this.showEditProfileOnLoad = false});
 
   @override
   State<ProfileSettingsScreen> createState() => _ProfileSettingsScreenState();
@@ -13,6 +17,22 @@ class ProfileSettingsScreen extends StatefulWidget {
 
 class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   bool _isLoggingOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.showEditProfileOnLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final user = context.read<AuthBloc>().state.user;
+        if (user != null) {
+          showDialog(
+            context: context,
+            builder: (context) => EditProfileDialog(user: user),
+          );
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
