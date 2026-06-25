@@ -21,16 +21,17 @@ class SendMatchReminders extends Command
      *
      * @var string
      */
-    protected $description = 'Send notifications to match participants 1 hour before start';
+    protected $description = 'Send notifications to match participants 3 hours before start';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        // Find matches starting between 50 and 70 minutes from now
-        $startTime = Carbon::now()->addMinutes(50);
-        $endTime = Carbon::now()->addMinutes(70);
+        // Find matches starting between 170 and 190 minutes (approx. 3 hours) from now in local timezone (Asia/Kolkata)
+        $now = Carbon::now('Asia/Kolkata');
+        $startTime = $now->copy()->addMinutes(170);
+        $endTime = $now->copy()->addMinutes(190);
 
         $matches = SportsMatch::with('participants')
             ->whereBetween('date_time', [$startTime, $endTime])
@@ -39,6 +40,7 @@ class SendMatchReminders extends Command
         $sentCount = 0;
 
         foreach ($matches as $match) {
+            $formattedTime = Carbon::parse($match->date_time)->format('g:i A');
             foreach ($match->participants as $user) {
                 // Check if a reminder for this match was already created for this user
                 $exists = Notification::where('user_id', $user->id)
@@ -50,8 +52,8 @@ class SendMatchReminders extends Command
                     Notification::create([
                         'user_id' => $user->id,
                         'type' => 'match_reminder',
-                        'title' => 'Match Starting Soon ⚽',
-                        'message' => "Your match \"{$match->title}\" at {$match->location} starts in 1 hour!",
+                        'title' => 'Upcoming Match Alert',
+                        'message' => "You have an upcoming match: {$match->sport_type} match \"{$match->title}\" at {$match->location} scheduled for {$formattedTime}.",
                         'is_read' => false,
                         'meta' => [
                             'match_id' => $match->id,

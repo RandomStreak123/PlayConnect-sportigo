@@ -11,6 +11,7 @@ class NotificationController extends Controller
     public function index(Request $request)
     {
         $notifications = Notification::where('user_id', $request->user()->id)
+            ->whereIn('type', ['match_reminder', 'social'])
             ->orderBy('id', 'desc')
             ->cursorPaginate(20);
 

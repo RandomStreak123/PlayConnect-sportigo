@@ -38,7 +38,7 @@ class NotificationCard extends StatelessWidget {
   }
 
   IconData _getIconForType(String type, String? sportType) {
-    if (type == 'match_joined') {
+    if (type == 'match_joined' || type == 'match_reminder') {
       switch (sportType?.toLowerCase()) {
         case 'football':
           return Icons.sports_soccer_rounded;
@@ -55,12 +55,14 @@ class NotificationCard extends StatelessWidget {
       }
     } else if (type == 'match_left') {
       return Icons.exit_to_app_rounded;
+    } else if (type == 'social') {
+      return Icons.waving_hand_rounded;
     }
     return Icons.notifications_rounded;
   }
 
   Color _getColorForType(BuildContext context, String type, String? sportType) {
-    if (type == 'match_joined') {
+    if (type == 'match_joined' || type == 'match_reminder') {
       switch (sportType?.toLowerCase()) {
         case 'football':
           return const Color(0xFF4CAF50);
@@ -77,6 +79,8 @@ class NotificationCard extends StatelessWidget {
       }
     } else if (type == 'match_left') {
       return Colors.redAccent;
+    } else if (type == 'social') {
+      return const Color(0xFF3F51B5);
     }
     return Theme.of(context).colorScheme.primaryContainer;
   }
@@ -90,7 +94,7 @@ class NotificationCard extends StatelessWidget {
 
     Widget? iconWidget;
     IconData? iconData;
-    if (notification.type == 'match_joined') {
+    if (notification.type == 'match_joined' || notification.type == 'match_reminder') {
       iconWidget = SportIconHelper.widgetForSport(
         sportType ?? '',
         size: 32,

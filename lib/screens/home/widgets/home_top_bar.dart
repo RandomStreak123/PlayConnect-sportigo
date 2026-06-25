@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../../logic/blocs/auth/auth_bloc.dart';
 import '../../../logic/blocs/notification/notification_bloc.dart';
 import '../../../logic/blocs/notification/notification_state.dart';
-import '../../notifications_screen.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/utils/avatar_image_helper.dart';
@@ -92,12 +92,7 @@ class HomeTopBar extends StatelessWidget {
                         color: Color(0xFFFFD700), // Golden yellow
                       ),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const NotificationsScreen(),
-                          ),
-                        );
+                        context.push('/notifications');
                       },
                     ),
                     if (hasUnread)
