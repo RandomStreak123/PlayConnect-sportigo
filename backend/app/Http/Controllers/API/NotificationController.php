@@ -16,16 +16,16 @@ class NotificationController extends Controller
             ->orderBy('id', 'desc')
             ->cursorPaginate(20);
 
-        // 2. Fetch upcoming matches starting within the next 6 hours (Kolkata/Kochi timezone-aligned)
+        // 2. Fetch upcoming matches starting within the next 3 hours (Kolkata/Kochi timezone-aligned)
         $now = now('Asia/Kolkata');
-        $sixHoursLater = now('Asia/Kolkata')->addHours(6);
+        $threeHoursLater = now('Asia/Kolkata')->addHours(3);
 
         $joined = $request->user()->joinedMatches()
-            ->whereBetween('date_time', [$now->toDateTimeString(), $sixHoursLater->toDateTimeString()])
+            ->whereBetween('date_time', [$now->toDateTimeString(), $threeHoursLater->toDateTimeString()])
             ->get();
 
         $hosted = \App\Models\SportsMatch::where('creator_id', $request->user()->id)
-            ->whereBetween('date_time', [$now->toDateTimeString(), $sixHoursLater->toDateTimeString()])
+            ->whereBetween('date_time', [$now->toDateTimeString(), $threeHoursLater->toDateTimeString()])
             ->get();
 
         $upcomingMatches = $joined->merge($hosted)->unique('id');
