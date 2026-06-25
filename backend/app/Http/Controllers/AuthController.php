@@ -156,28 +156,7 @@ class AuthController extends Controller
                     }
                     $user->save();
                 } else {
-                    // 3. Create a new user
-                    // Generate unique username
-                    $baseUsername = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode('@', $email)[0]));
-                    if (strlen($baseUsername) < 3) {
-                        $baseUsername = 'user_' . $baseUsername;
-                    }
-                    $username = $baseUsername;
-                    $counter = 1;
-                    while (User::where('username', $username)->exists()) {
-                        $username = $baseUsername . $counter;
-                        $counter++;
-                    }
-
-                    $user = User::create([
-                        'name' => $name,
-                        'username' => $username,
-                        'email' => $email,
-                        'google_id' => $googleId,
-                        'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(24)),
-                        'role' => 'athlete',
-                        'avatar' => $picture,
-                    ]);
+                    return response()->json(['message' => 'No user found'], 404);
                 }
             }
 
@@ -194,7 +173,10 @@ class AuthController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Authentication failed: ' . $e->getMessage()], 500);
+            \Illuminate\Support\Facades\Log::error('Google login authentication exception: ' . $e->getMessage(), [
+                'exception' => $e
+            ]);
+            return response()->json(['message' => 'No user found'], 404);
         }
     }
 

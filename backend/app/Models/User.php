@@ -144,11 +144,7 @@ class User extends Authenticatable
         }
         
         $allPlayedMatches = $hostedMatches->merge($joinedMatches)
-            ->unique('id')
-            ->filter(function($m) {
-                $time = $m->date_time ?? $m->date;
-                return $time ? new \DateTime($time) < now()->addHours(24) : false;
-            });
+            ->unique('id');
 
         $xp = 0;
         $wins = 0;

@@ -50,19 +50,11 @@ class GoogleAuthTest extends TestCase
             'credential' => 'valid-token',
         ]);
 
-        $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'access_token',
-                     'token_type',
-                     'user' => ['id', 'name', 'username', 'email', 'google_id', 'avatar']
-                 ]);
+        $response->assertStatus(404)
+                 ->assertJson(['message' => 'No user found']);
 
-        $this->assertDatabaseHas('users', [
+        $this->assertDatabaseMissing('users', [
             'email' => 'messi@example.com',
-            'google_id' => 'google-id-123',
-            'username' => 'messi',
-            'name' => 'Lionel Messi',
-            'avatar' => 'https://example.com/avatar.jpg',
         ]);
     }
 
@@ -87,12 +79,11 @@ class GoogleAuthTest extends TestCase
             'credential' => 'valid-token',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(404)
+                 ->assertJson(['message' => 'No user found']);
 
-        // Should auto-increment username to messi1
-        $this->assertDatabaseHas('users', [
+        $this->assertDatabaseMissing('users', [
             'email' => 'messi@example.com',
-            'username' => 'messi1',
         ]);
     }
 

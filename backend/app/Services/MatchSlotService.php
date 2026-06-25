@@ -109,14 +109,25 @@ class MatchSlotService
             $match->participants()->attach($user->id);
             $match->syncAvailableSlots();
 
-            // Create notification for match creator if they are not the joining user
-            if ((int) $match->creator_id !== (int) $user->id) {
+            // Create notification for all other participants (creator and other players)
+            $participants = $match->participants()->get();
+            foreach ($participants as $participant) {
+                if ((int) $participant->id === (int) $user->id) {
+                    continue; // Skip the user who joined
+                }
+
                 try {
+                    $isCreator = (int) $match->creator_id === (int) $participant->id;
+                    $title = $isCreator ? 'Player Joined' : 'Player Joined Match';
+                    $message = $isCreator 
+                        ? "{$user->name} joined your {$match->sport_type} match: \"{$match->title}\"."
+                        : "{$user->name} joined the {$match->sport_type} match: \"{$match->title}\".";
+
                     \App\Models\Notification::create([
-                        'user_id' => $match->creator_id,
+                        'user_id' => $participant->id,
                         'type' => 'match_joined',
-                        'title' => 'Player Joined',
-                        'message' => "{$user->name} joined your {$match->sport_type} match: \"{$match->title}\".",
+                        'title' => $title,
+                        'message' => $message,
                         'meta' => [
                             'match_id' => $match->id,
                             'sport_type' => $match->sport_type,
@@ -169,14 +180,25 @@ class MatchSlotService
             $match->participants()->detach($user->id);
             $match->syncAvailableSlots();
 
-            // Create notification for match creator if they are not the leaving user
-            if ((int) $match->creator_id !== (int) $user->id) {
+            // Create notification for all other participants (creator and other remaining players)
+            $participants = $match->participants()->get();
+            foreach ($participants as $participant) {
+                if ((int) $participant->id === (int) $user->id) {
+                    continue; // Skip the user who left
+                }
+
                 try {
+                    $isCreator = (int) $match->creator_id === (int) $participant->id;
+                    $title = $isCreator ? 'Player Left' : 'Player Left Match';
+                    $message = $isCreator 
+                        ? "{$user->name} left your {$match->sport_type} match: \"{$match->title}\"."
+                        : "{$user->name} left the {$match->sport_type} match: \"{$match->title}\".";
+
                     \App\Models\Notification::create([
-                        'user_id' => $match->creator_id,
+                        'user_id' => $participant->id,
                         'type' => 'match_left',
-                        'title' => 'Player Left',
-                        'message' => "{$user->name} left your {$match->sport_type} match: \"{$match->title}\".",
+                        'title' => $title,
+                        'message' => $message,
                         'meta' => [
                             'match_id' => $match->id,
                             'sport_type' => $match->sport_type,
