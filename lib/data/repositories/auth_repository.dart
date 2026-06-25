@@ -179,11 +179,8 @@ class AuthRepository {
   Future<void> logOut() async {
     final token = await _getToken();
     if (token != null) {
-      try {
-        await apiClient.post(ApiConstants.logout);
-      } catch (_) {
-        // Ignore network errors to allow local logout to succeed
-      }
+      // Trigger logout request in the background without awaiting it
+      apiClient.post(ApiConstants.logout).catchError((_) => null);
     }
 
     await _removeToken();

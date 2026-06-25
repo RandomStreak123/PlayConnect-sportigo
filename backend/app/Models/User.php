@@ -145,11 +145,7 @@ class User extends Authenticatable
         }
         
         $allPlayedMatches = $hostedMatches->merge($joinedMatches)
-            ->unique('id')
-            ->filter(function($m) {
-                $time = $m->date_time ?? $m->date;
-                return $time ? new \DateTime($time) < now()->addHours(24) : false;
-            });
+            ->unique('id');
 
         $xp = 0;
         $wins = 0;
@@ -251,32 +247,72 @@ class User extends Authenticatable
         ];
     }
 
+    protected static $dbColumns = null;
+
+    protected static function getDbColumns()
+    {
+        if (self::$dbColumns === null) {
+            try {
+                self::$dbColumns = \Illuminate\Support\Facades\Schema::getColumnListing('users');
+            } catch (\Exception $e) {
+                self::$dbColumns = [];
+            }
+        }
+        return self::$dbColumns;
+    }
+
     // Mutators for writing using legacy field names
     public function setPhoneAttribute($value)
     {
-        $this->attributes['phone_number'] = $value;
-        $this->attributes['phone'] = $value;
+        $columns = self::getDbColumns();
+        if (in_array('phone_number', $columns)) {
+            $this->attributes['phone_number'] = $value;
+        }
+        if (in_array('phone', $columns)) {
+            $this->attributes['phone'] = $value;
+        }
     }
 
     public function setAvatarAttribute($value)
     {
-        $this->attributes['avatar'] = $value;
-        $this->attributes['profile_picture'] = $value;
-        $this->attributes['profile_photo'] = $value;
+        $columns = self::getDbColumns();
+        if (in_array('avatar', $columns)) {
+            $this->attributes['avatar'] = $value;
+        }
+        if (in_array('profile_picture', $columns)) {
+            $this->attributes['profile_picture'] = $value;
+        }
+        if (in_array('profile_photo', $columns)) {
+            $this->attributes['profile_photo'] = $value;
+        }
     }
 
     public function setProfilePictureAttribute($value)
     {
-        $this->attributes['avatar'] = $value;
-        $this->attributes['profile_picture'] = $value;
-        $this->attributes['profile_photo'] = $value;
+        $columns = self::getDbColumns();
+        if (in_array('avatar', $columns)) {
+            $this->attributes['avatar'] = $value;
+        }
+        if (in_array('profile_picture', $columns)) {
+            $this->attributes['profile_picture'] = $value;
+        }
+        if (in_array('profile_photo', $columns)) {
+            $this->attributes['profile_photo'] = $value;
+        }
     }
 
     public function setProfilePhotoAttribute($value)
     {
-        $this->attributes['avatar'] = $value;
-        $this->attributes['profile_picture'] = $value;
-        $this->attributes['profile_photo'] = $value;
+        $columns = self::getDbColumns();
+        if (in_array('avatar', $columns)) {
+            $this->attributes['avatar'] = $value;
+        }
+        if (in_array('profile_picture', $columns)) {
+            $this->attributes['profile_picture'] = $value;
+        }
+        if (in_array('profile_photo', $columns)) {
+            $this->attributes['profile_photo'] = $value;
+        }
     }
 
     // Accessors for reading using legacy field names

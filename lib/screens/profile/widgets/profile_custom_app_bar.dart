@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../profile_settings_screen.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfileCustomAppBar extends StatelessWidget {
   final bool isCurrentUser;
@@ -32,12 +32,7 @@ class ProfileCustomAppBar extends StatelessWidget {
             IconButton(
               icon: Icon(Icons.menu_rounded, color: Theme.of(context).colorScheme.onSurface),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProfileSettingsScreen(),
-                  ),
-                );
+                context.push('/settings');
               },
             )
           else

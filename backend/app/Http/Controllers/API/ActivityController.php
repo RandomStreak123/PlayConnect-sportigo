@@ -15,9 +15,24 @@ class ActivityController extends Controller
      */
     public function index()
     {
-        $paginated = Activity::with('user:id,name,avatar,gender')
-            ->latest()
-            ->paginate(15);
+        $user = auth()->user();
+
+        // 1. Get all match IDs created by the authenticated user
+        $myMatchIds = \App\Models\SportsMatch::where('creator_id', $user->id)->pluck('id');
+
+        // 2. Query activities:
+        // - match_joined/match_left activities by other users on matches created by the current user
+        if ($myMatchIds->isEmpty()) {
+            // Return empty paginated structure
+            $paginated = Activity::whereRaw('1 = 0')->paginate(15);
+        } else {
+            $paginated = Activity::with('user:id,name,avatar,gender')
+                ->whereIn('type', ['match_joined', 'match_left'])
+                ->where('user_id', '!=', $user->id)
+                ->whereIn('meta->match_id', $myMatchIds)
+                ->latest()
+                ->paginate(15);
+        }
 
         return response()->json([
             'data'      => $paginated->items(),
