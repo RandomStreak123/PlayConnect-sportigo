@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../widgets/app_loading_indicator.dart';
 import '../../../../widgets/custom_text_field.dart';
+import '../../../../widgets/feedback_banner.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
+
 
 class RequestResetLinkForm extends StatefulWidget {
   final String? usernameOrEmail;
@@ -86,60 +88,10 @@ class _RequestResetLinkFormState extends State<RequestResetLinkForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_successMessage != null) ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm + 4,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F8F5),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: const Color(0xFFA2E8DD)),
-            ),
-            child: Text(
-              _successMessage!,
-              style: const TextStyle(
-                color: Color(0xFF0E8A74),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
-        if (_errorMessage != null) ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm + 4,
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .errorContainer
-                  .withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .error
-                    .withValues(alpha: 0.3),
-              ),
-            ),
-            child: Text(
-              _errorMessage!,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onErrorContainer,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
+        FeedbackBanner(
+          successMessage: _successMessage,
+          errorMessage: _errorMessage,
+        ),
         if (_successMessage == null) ...[
           CustomTextField(
             textFieldKey: const ValueKey('reset_username_field'),

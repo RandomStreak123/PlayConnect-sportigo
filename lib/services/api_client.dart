@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -29,7 +30,19 @@ class ApiClient {
   Future<String?> _getOrLoadToken() async {
     if (_token != null) return _token;
     final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('auth_token');
+    final oldToken = prefs.getString('auth_token');
+    const secureStorage = FlutterSecureStorage();
+    if (oldToken != null && oldToken.isNotEmpty) {
+      try {
+        await secureStorage.write(key: 'auth_token', value: oldToken);
+        await prefs.remove('auth_token');
+      } catch (_) {}
+      _token = oldToken;
+      return _token;
+    }
+    try {
+      _token = await secureStorage.read(key: 'auth_token');
+    } catch (_) {}
     return _token;
   }
 

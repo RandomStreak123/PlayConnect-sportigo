@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../services/api_client.dart';
 import '../models/user_model.dart';
 import '../models/match_model.dart';
@@ -12,6 +13,7 @@ class AuthRepository {
   final ApiClient apiClient;
   final _controller = StreamController<AuthStatus>.broadcast();
   final _userController = StreamController<UserModel>.broadcast();
+  final _secureStorage = const FlutterSecureStorage();
 
   AuthRepository({required this.apiClient});
 
@@ -29,20 +31,33 @@ class AuthRepository {
     yield* _controller.stream;
   }
 
+  Future<void> _migrateTokenIfNecessary() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.containsKey('auth_token')) {
+        final token = prefs.getString('auth_token');
+        if (token != null && token.isNotEmpty) {
+          await _secureStorage.write(key: 'auth_token', value: token);
+        }
+        await prefs.remove('auth_token');
+      }
+    } catch (_) {
+      // Fail silently
+    }
+  }
+
   Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+    await _migrateTokenIfNecessary();
+    return _secureStorage.read(key: 'auth_token');
   }
 
   Future<void> _saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_token', token);
+    await _secureStorage.write(key: 'auth_token', value: token);
     apiClient.setToken(token);
   }
 
   Future<void> _removeToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
+    await _secureStorage.delete(key: 'auth_token');
     apiClient.setToken(null);
   }
 
