@@ -5,6 +5,7 @@ import '../../../core/constants/colors.dart';
 import '../../../logic/blocs/auth/auth_bloc.dart';
 import '../../../logic/blocs/matches/match_bloc.dart';
 import '../../../data/models/match_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../data/repositories/match_repository.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -203,6 +204,7 @@ class _MatchActionButtonsState extends State<MatchActionButtons> {
 
             return _buildActiveMatchActions(
               context: context,
+              user: authState.user,
               isJoined: isJoined,
               isCreator: isCreator,
               isFull: isFull,
@@ -313,6 +315,7 @@ class _MatchActionButtonsState extends State<MatchActionButtons> {
 
   Widget _buildActiveMatchActions({
     required BuildContext context,
+    required UserModel? user,
     required bool isJoined,
     required bool isCreator,
     required bool isFull,
@@ -325,7 +328,7 @@ class _MatchActionButtonsState extends State<MatchActionButtons> {
             _isSubmitting = true;
             _pendingAction = 'leave';
           });
-          context.read<MatchBloc>().add(MatchLeft(_matchState.id));
+          context.read<MatchBloc>().add(MatchLeft(matchId: _matchState.id, userId: user!.id));
         },
         style: OutlinedButton.styleFrom(
           foregroundColor: Theme.of(context).colorScheme.error,
@@ -428,7 +431,7 @@ class _MatchActionButtonsState extends State<MatchActionButtons> {
           _isSubmitting = true;
           _pendingAction = 'join';
         });
-        context.read<MatchBloc>().add(MatchJoined(_matchState.id));
+        context.read<MatchBloc>().add(MatchJoined(matchId: _matchState.id, user: user!));
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,

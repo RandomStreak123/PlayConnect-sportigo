@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/models/match_model.dart';
-import '../../match_details_screen.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_icon_size.dart';
@@ -42,14 +42,7 @@ class SearchMatchTile extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MatchDetailsScreen(
-              match: match,
-            ),
-          ),
-        );
+        context.push('/match-details', extra: match);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/app_loading_indicator.dart';
-import '../screens/match_details_screen.dart';
 
 import '../data/models/match_model.dart';
 import '../logic/blocs/auth/auth_bloc.dart';
@@ -162,7 +162,7 @@ class _MatchCardState extends State<MatchCard> {
                             _isSubmitting = true;
                           });
                           context.read<MatchBloc>().add(
-                            MatchJoined(match.id),
+                            MatchJoined(matchId: match.id, user: authState.user!),
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -202,15 +202,10 @@ class _MatchCardState extends State<MatchCard> {
       },
       child: GestureDetector(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MatchDetailsScreen(
-                match: match,
-                fromPastMatches: widget.fromPastMatches,
-              ),
-            ),
-          );
+          context.push('/match-details', extra: {
+            'match': match,
+            'fromPastMatches': widget.fromPastMatches,
+          });
         },
         child: Container(
           margin: margin ?? const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),

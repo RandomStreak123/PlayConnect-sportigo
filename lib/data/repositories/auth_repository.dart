@@ -14,6 +14,7 @@ class AuthRepository {
   final _controller = StreamController<AuthStatus>.broadcast();
   final _userController = StreamController<UserModel>.broadcast();
   final _secureStorage = const FlutterSecureStorage();
+  UserModel? _cachedUserMemory;
 
   AuthRepository({required this.apiClient});
 
@@ -117,8 +118,10 @@ class AuthRepository {
       final user = UserModel.fromJson(data['user']);
       final token = data['access_token'];
 
+      _cachedUserMemory = user;
       await _saveToken(token);
       await _saveUserLocally(user);
+      _userController.add(user);
       _controller.add(AuthStatus.authenticated);
       return user;
     } on ApiException catch (e) {
@@ -177,6 +180,7 @@ class AuthRepository {
 
 
   Future<void> logOut() async {
+    _cachedUserMemory = null;
     final token = await _getToken();
     if (token != null) {
       // Trigger logout request in the background without awaiting it
@@ -207,6 +211,7 @@ class AuthRepository {
       final data = await apiClient.get(ApiConstants.user) as Map<String, dynamic>?;
       if (data != null) {
         final user = UserModel.fromJson(data);
+        _cachedUserMemory = user;
         await _saveUserLocally(user);
         _userController.add(user);
       }
@@ -225,6 +230,7 @@ class AuthRepository {
         return null;
       }
       final user = UserModel.fromJson(data);
+      _cachedUserMemory = user;
       await _saveUserLocally(user);
       return user;
     } on ApiException {
@@ -240,9 +246,14 @@ class AuthRepository {
     final token = await _getToken();
     if (token == null) return null;
 
+    if (_cachedUserMemory != null && !forceRefresh) {
+      return _cachedUserMemory;
+    }
+
     if (!forceRefresh) {
       final cachedUser = await _getCachedUser();
       if (cachedUser != null) {
+        _cachedUserMemory = cachedUser;
         _refreshUserInBackground(token);
         return cachedUser;
       }
@@ -250,7 +261,11 @@ class AuthRepository {
       return UserModel(id: 0, name: 'User');
     }
 
-    return _fetchUserFromServer(token);
+    final user = await _fetchUserFromServer(token);
+    if (user != null) {
+      _cachedUserMemory = user;
+    }
+    return user;
   }
 
   Future<UserModel> uploadProfilePhoto(String filePath) async {
@@ -261,7 +276,9 @@ class AuthRepository {
       ) as Map<String, dynamic>;
 
       final user = UserModel.fromJson(data['user']);
+      _cachedUserMemory = user;
       await _saveUserLocally(user);
+      _userController.add(user);
       return user;
     } on ApiException catch (e) {
       throw Exception(e.message);
@@ -295,7 +312,9 @@ class AuthRepository {
     try {
       final data = await apiClient.put('/profile', body: body) as Map<String, dynamic>;
       final user = UserModel.fromJson(data['user']);
+      _cachedUserMemory = user;
       await _saveUserLocally(user);
+      _userController.add(user);
       return user;
     } on ApiException catch (e) {
       throw Exception(e.message);

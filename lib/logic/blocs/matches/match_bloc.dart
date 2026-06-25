@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/match_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../data/repositories/match_repository.dart';
 
 part 'match_event.dart';
@@ -233,19 +235,20 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     emit(state.copyWith(clearMessage: true));
     try {
       final newMatch = await _matchRepository.createMatch(event.match);
-      // Refresh from page 1 after creating so the new match appears correctly.
-      final result = await _fetchNearbyMatches();
-      final myMatches = await _matchRepository.getMyMatches();
+      
       final isUnfiltered = (_lastSportType == null || _lastSportType == 'All') &&
           (_lastSkillLevel == null || _lastSkillLevel == 'All') &&
           (_lastSearch == null || _lastSearch!.isEmpty);
+
+      final matches = [newMatch, ...state.matches];
+      final trendingMatches = isUnfiltered ? [newMatch, ...state.trendingMatches] : state.trendingMatches;
+      final myMatches = [newMatch, ...state.myMatches];
+
       emit(state.copyWith(
         status: MatchStatus.success,
         myMatchesStatus: MatchStatus.success,
-        matches: result.matches,
-        trendingMatches: isUnfiltered ? result.matches : [newMatch, ...state.trendingMatches],
-        nextCursor: result.nextCursor,
-        hasMore: result.nextCursor != null,
+        matches: matches,
+        trendingMatches: trendingMatches,
         myMatches: myMatches,
         message: 'Match created successfully!',
         isActionSuccess: true,
@@ -263,12 +266,57 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     MatchLeft event,
     Emitter<MatchState> emit,
   ) async {
+    final matchId = event.matchId;
+    MatchModel? match;
+    try {
+      match = state.matches.firstWhere((m) => m.id == matchId);
+    } catch (_) {
+      try {
+        match = state.trendingMatches.firstWhere((m) => m.id == matchId);
+      } catch (_) {
+        try {
+          match = state.myMatches.firstWhere((m) => m.id == matchId);
+        } catch (_) {
+          // Skip optimistic
+        }
+      }
+    }
+
+    final originalMatches = state.matches;
+    final originalTrending = state.trendingMatches;
+    final originalMyMatches = state.myMatches;
+
     _cache.clear();
     _cacheCursors.clear();
     _cacheTimestamps.clear();
     emit(state.copyWith(clearMessage: true));
+
+    if (match != null) {
+      final updatedParticipants = match.participants
+          .where((p) => p.id != event.userId)
+          .toList();
+
+      final optimisticMatch = match.copyWith(
+        participants: updatedParticipants,
+        availableSlots: match.availableSlots + 1,
+        joinedCount: math.max(0, match.joinedCount - 1),
+      );
+
+      final matches = _upsertMatch(state.matches, optimisticMatch);
+      final trending = _upsertMatch(state.trendingMatches, optimisticMatch);
+      final myMatches = state.myMatches
+          .where((m) => m.id != optimisticMatch.id)
+          .toList(growable: false);
+
+      emit(state.copyWith(
+        matches: matches,
+        trendingMatches: trending,
+        myMatches: myMatches,
+      ));
+    }
+
     try {
-      final updated = await _matchRepository.leaveMatch(event.matchId);
+      final updated = await _matchRepository.leaveMatch(matchId);
       final matches = _upsertMatch(state.matches, updated);
       final trending = _upsertMatch(state.trendingMatches, updated);
       final myMatches = state.myMatches
@@ -284,30 +332,16 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         isActionSuccess: true,
       ));
     } catch (e) {
-      try {
-        final result = await _fetchNearbyMatches();
-        final myMatches = await _matchRepository.getMyMatches();
-        final isUnfiltered = (_lastSportType == null || _lastSportType == 'All') &&
-            (_lastSkillLevel == null || _lastSkillLevel == 'All') &&
-            (_lastSearch == null || _lastSearch!.isEmpty);
-        emit(state.copyWith(
-          status: MatchStatus.success,
-          myMatchesStatus: MatchStatus.success,
-          matches: result.matches,
-          trendingMatches: isUnfiltered ? result.matches : state.trendingMatches,
-          nextCursor: result.nextCursor,
-          hasMore: result.nextCursor != null,
-          myMatches: myMatches,
-          message: e.toString().replaceAll('Exception: ', ''),
-          isActionSuccess: false,
-        ));
-      } catch (_) {
-        emit(state.copyWith(
-          status: MatchStatus.success,
-          message: e.toString().replaceAll('Exception: ', ''),
-          isActionSuccess: false,
-        ));
-      }
+      // Rollback on error
+      emit(state.copyWith(
+        status: MatchStatus.success,
+        myMatchesStatus: MatchStatus.success,
+        matches: originalMatches,
+        trendingMatches: originalTrending,
+        myMatches: originalMyMatches,
+        message: e.toString().replaceAll('Exception: ', ''),
+        isActionSuccess: false,
+      ));
     }
   }
 
@@ -315,12 +349,61 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     MatchJoined event,
     Emitter<MatchState> emit,
   ) async {
+    final matchId = event.matchId;
+    MatchModel? match;
+    try {
+      match = state.matches.firstWhere((m) => m.id == matchId);
+    } catch (_) {
+      try {
+        match = state.trendingMatches.firstWhere((m) => m.id == matchId);
+      } catch (_) {
+        try {
+          match = state.myMatches.firstWhere((m) => m.id == matchId);
+        } catch (_) {
+          // Skip optimistic
+        }
+      }
+    }
+
+    final originalMatches = state.matches;
+    final originalTrending = state.trendingMatches;
+    final originalMyMatches = state.myMatches;
+
     _cache.clear();
     _cacheCursors.clear();
     _cacheTimestamps.clear();
     emit(state.copyWith(clearMessage: true));
+
+    if (match != null) {
+      final isAlreadyJoined = match.participants.any((p) => p.id == event.user.id);
+      if (!isAlreadyJoined) {
+        final updatedParticipants = List<MatchParticipant>.from(match.participants)
+          ..add(MatchParticipant(
+            id: event.user.id,
+            name: event.user.name,
+            profilePicture: event.user.profilePicture,
+          ));
+
+        final optimisticMatch = match.copyWith(
+          participants: updatedParticipants,
+          availableSlots: math.max(0, match.availableSlots - 1),
+          joinedCount: match.joinedCount + 1,
+        );
+
+        final matches = _upsertMatch(state.matches, optimisticMatch);
+        final trending = _upsertMatch(state.trendingMatches, optimisticMatch);
+        final myMatches = _upsertOrAppendMyMatch(state.myMatches, optimisticMatch);
+
+        emit(state.copyWith(
+          matches: matches,
+          trendingMatches: trending,
+          myMatches: myMatches,
+        ));
+      }
+    }
+
     try {
-      final updated = await _matchRepository.joinMatch(event.matchId);
+      final updated = await _matchRepository.joinMatch(matchId);
       final matches = _upsertMatch(state.matches, updated);
       final trending = _upsertMatch(state.trendingMatches, updated);
       final myMatches = _upsertOrAppendMyMatch(state.myMatches, updated);
@@ -334,30 +417,16 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         isActionSuccess: true,
       ));
     } catch (e) {
-      try {
-        final result = await _fetchNearbyMatches();
-        final myMatches = await _matchRepository.getMyMatches();
-        final isUnfiltered = (_lastSportType == null || _lastSportType == 'All') &&
-            (_lastSkillLevel == null || _lastSkillLevel == 'All') &&
-            (_lastSearch == null || _lastSearch!.isEmpty);
-        emit(state.copyWith(
-          status: MatchStatus.success,
-          myMatchesStatus: MatchStatus.success,
-          matches: result.matches,
-          trendingMatches: isUnfiltered ? result.matches : state.trendingMatches,
-          nextCursor: result.nextCursor,
-          hasMore: result.nextCursor != null,
-          myMatches: myMatches,
-          message: e.toString().replaceAll('Exception: ', ''),
-          isActionSuccess: false,
-        ));
-      } catch (_) {
-        emit(state.copyWith(
-          status: MatchStatus.success,
-          message: e.toString().replaceAll('Exception: ', ''),
-          isActionSuccess: false,
-        ));
-      }
+      // Rollback on error
+      emit(state.copyWith(
+        status: MatchStatus.success,
+        myMatchesStatus: MatchStatus.success,
+        matches: originalMatches,
+        trendingMatches: originalTrending,
+        myMatches: originalMyMatches,
+        message: e.toString().replaceAll('Exception: ', ''),
+        isActionSuccess: false,
+      ));
     }
   }
 

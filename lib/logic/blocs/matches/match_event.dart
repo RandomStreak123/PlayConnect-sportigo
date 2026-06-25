@@ -29,13 +29,15 @@ final class MyMatchesFetched extends MatchEvent {
 }
 
 final class MatchJoined extends MatchEvent {
-  const MatchJoined(this.matchId);
+  const MatchJoined({required this.matchId, required this.user});
   final String matchId;
+  final UserModel user;
 }
 
 final class MatchLeft extends MatchEvent {
-  const MatchLeft(this.matchId);
+  const MatchLeft({required this.matchId, required this.userId});
   final String matchId;
+  final int userId;
 }
 
 final class MatchCreated extends MatchEvent {

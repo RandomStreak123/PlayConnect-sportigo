@@ -86,10 +86,15 @@ final GoRouter appRouter = GoRouter(
           return MatchDetailsScreen(
             match: extra['match'] as MatchModel?,
             matchId: extra['matchId'] as String?,
+            fromPastMatches: extra['fromPastMatches'] as bool? ?? false,
           );
         } else {
           final queryId = state.uri.queryParameters['id'];
-          return MatchDetailsScreen(matchId: queryId);
+          final fromPast = state.uri.queryParameters['fromPastMatches'] == 'true';
+          return MatchDetailsScreen(
+            matchId: queryId,
+            fromPastMatches: fromPast,
+          );
         }
       },
     ),

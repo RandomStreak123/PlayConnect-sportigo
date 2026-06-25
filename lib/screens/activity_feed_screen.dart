@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../data/models/activity_model.dart';
-import '../data/repositories/match_repository.dart';
-import '../core/di/service_locator.dart';
 import '../logic/blocs/activity/activity_bloc.dart';
-import 'match_details_screen.dart';
 import '../core/theme/app_spacing.dart';
 import 'activity_feed/widgets/activity_card.dart';
 import 'activity_feed/widgets/activity_empty_state.dart';
@@ -21,7 +19,6 @@ class ActivityFeedScreen extends StatefulWidget {
 
 class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
   final ScrollController _scrollController = ScrollController();
-  bool _isLoadingMatch = false;
 
   @override
   void initState() {
@@ -51,144 +48,87 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
     return currentScroll >= (maxScroll * 0.9);
   }
 
-  Future<void> _handleActivityTap(ActivityModel activity) async {
+  void _handleActivityTap(ActivityModel activity) {
     final meta = activity.meta;
     if (meta == null) return;
 
     final matchId = meta['match_id']?.toString() ?? meta['match_id'];
-    if (matchId == null) return;
-
-    setState(() {
-      _isLoadingMatch = true;
-    });
-
-    try {
-      final matchRepository = getIt<MatchRepository>();
-      final match = await matchRepository.getMatch(matchId);
-      
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MatchDetailsScreen(match: match),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not load match details: ${e.toString().replaceAll('Exception: ', '')}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingMatch = false;
-        });
-      }
+    if (matchId != null) {
+      context.push('/match-details?id=$matchId');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          appBar: AppBar(
-            title: Text(
-              'Sports Feed',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            elevation: 0,
-            centerTitle: false,
-          ),
-          body: BlocBuilder<ActivityBloc, ActivityState>(
-            builder: (context, state) {
-              if (state.status == ActivityStatus.initial ||
-                  (state.status == ActivityStatus.loading && state.activities.isEmpty)) {
-                return const ActivityShimmerLoader();
-              }
-
-              if (state.status == ActivityStatus.failure && state.activities.isEmpty) {
-                return ActivityErrorState(
-                  message: state.errorMessage ?? 'An error occurred',
-                  onRetry: () {
-                    context.read<ActivityBloc>().add(const ActivityFetched());
-                  },
-                );
-              }
-
-              if (state.activities.isEmpty) {
-                return ActivityEmptyState(
-                  onRefresh: () {
-                    context.read<ActivityBloc>().add(const ActivityFetched());
-                  },
-                );
-              }
-
-              return RefreshIndicator(
-                onRefresh: () async {
-                  context.read<ActivityBloc>().add(const ActivityFetched());
-                },
-                color: Theme.of(context).colorScheme.primaryContainer,
-                child: ListView.builder(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                  itemCount: state.hasMore ? state.activities.length + 1 : state.activities.length,
-                  itemBuilder: (context, index) {
-                    if (index >= state.activities.length) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                        child: Center(
-                          child: AppLoadingIndicator(),
-                        ),
-                      );
-                    }
-
-                    final activity = state.activities[index];
-                    final meta = activity.meta;
-                    return ActivityCard(
-                      activity: activity,
-                      onTap: meta != null && meta['match_id'] != null ? () => _handleActivityTap(activity) : null,
-                    );
-                  },
-                ),
-              );
-            },
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        title: Text(
+          'Sports Feed',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
         ),
-        if (_isLoadingMatch)
-          Container(
-            color: Colors.black54,
-            child: const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppLoadingIndicator(color: Colors.white),
-                  SizedBox(height: AppSpacing.md),
-                  Text(
-                    'Loading match details...',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ],
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        elevation: 0,
+      ),
+      body: SafeArea(
+        child: BlocBuilder<ActivityBloc, ActivityState>(
+          builder: (context, state) {
+            if (state.status == ActivityStatus.initial ||
+                (state.status == ActivityStatus.loading && state.activities.isEmpty)) {
+              return const ActivityShimmerLoader();
+            }
+
+            if (state.status == ActivityStatus.failure) {
+              return ActivityErrorState(
+                message: state.errorMessage ?? 'An error occurred',
+                onRetry: () {
+                  context.read<ActivityBloc>().add(const ActivityFetched());
+                },
+              );
+            }
+
+            if (state.activities.isEmpty) {
+              return ActivityEmptyState(
+                onRefresh: () {
+                  context.read<ActivityBloc>().add(const ActivityFetched());
+                },
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<ActivityBloc>().add(const ActivityFetched());
+              },
+              color: Theme.of(context).colorScheme.primaryContainer,
+              child: ListView.builder(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                itemCount: state.hasMore ? state.activities.length + 1 : state.activities.length,
+                itemBuilder: (context, index) {
+                  if (index >= state.activities.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                      child: Center(
+                        child: AppLoadingIndicator(),
+                      ),
+                    );
+                  }
+
+                  final activity = state.activities[index];
+                  final meta = activity.meta;
+                  return ActivityCard(
+                    activity: activity,
+                    onTap: meta != null && meta['match_id'] != null ? () => _handleActivityTap(activity) : null,
+                  );
+                },
               ),
-            ),
-          ),
-      ],
+            );
+          },
+        ),
+      ),
     );
   }
 }
