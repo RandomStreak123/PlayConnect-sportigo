@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->enum('gender', ['male', 'female', 'other'])->nullable()->after('username');
-            $table->boolean('hide_phone')->default(false)->after('phone_number');
+            $table->boolean('hide_phone')->default(false)->after('password');
         });
     }
 
