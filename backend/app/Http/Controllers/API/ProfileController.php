@@ -64,6 +64,7 @@ class ProfileController extends Controller
     {
         /** @var User $user */
         $user = auth()->user();
+        $oldEmail = $user->email;
 
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
@@ -106,6 +107,21 @@ class ProfileController extends Controller
         }
 
         $user->save();
+
+        if (empty($oldEmail) && !empty($user->email)) {
+            $frontendUrl = $request->header('Origin') ?: $request->header('Referer');
+            if ($frontendUrl) {
+                $frontendUrl = preg_replace('/(\/auth|\/login|\/forgot-password|\/register|\/reset-password).*$/', '', $frontendUrl);
+                $frontendUrl = rtrim($frontendUrl, '/');
+            } else {
+                $frontendUrl = 'https://playconnect-vue.ddev.site';
+            }
+            try {
+                \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\WelcomeMail($user->name, $frontendUrl));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to send welcome email on profile update to {$user->email}: " . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'message' => 'Profile updated successfully',

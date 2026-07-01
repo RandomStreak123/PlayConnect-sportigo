@@ -98,4 +98,40 @@ class UserTest extends TestCase
                      'bio' => 'Public bio',
                  ]);
     }
+
+    public function test_adds_email_to_profile_sends_welcome_email()
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $user = User::factory()->create([
+            'email' => null,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')->putJson('/api/profile', [
+            'email' => 'welcome@example.com',
+        ]);
+
+        $response->assertStatus(200);
+
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\WelcomeMail::class, function ($mail) {
+            return $mail->hasTo('welcome@example.com');
+        });
+    }
+
+    public function test_updating_existing_email_does_not_send_welcome_email()
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $user = User::factory()->create([
+            'email' => 'old@example.com',
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')->putJson('/api/profile', [
+            'email' => 'new@example.com',
+        ]);
+
+        $response->assertStatus(200);
+
+        \Illuminate\Support\Facades\Mail::assertNotSent(\App\Mail\WelcomeMail::class);
+    }
 }
