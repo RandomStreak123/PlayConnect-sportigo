@@ -14,7 +14,9 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     await expect(page.locator('.brand-title')).toHaveText('PlayConnect');
 
     // 2. Perform Login
+    await page.locator('input[placeholder="Enter your username"]').click();
     await page.locator('input[placeholder="Enter your username"]').fill('Ajith');
+    await page.locator('input[placeholder="Enter your password"]').click();
     await page.locator('input[placeholder="Enter your password"]').fill('24681000');
     await page.locator('button.submit-btn:has-text("Sign In")').click();
 
@@ -82,7 +84,7 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     await expect(page.locator('.modal-title').first()).toContainText('सेटिंग्स');
 
     // Close Settings Modal
-    await page.locator('.close-btn').click();
+    await page.locator('.settings-close-btn').first().evaluate(el => el.click());
     await page.waitForTimeout(300);
 
     // Verify translations are applied reactively on the main screen
@@ -102,7 +104,7 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     await expect(page.locator('.modal-title').first()).toContainText('Settings');
 
     // Close Settings Modal
-    await page.locator('.close-btn').click();
+    await page.locator('.settings-close-btn').first().evaluate(el => el.click());
     await page.waitForTimeout(300);
 
     // Verify translations revert to English

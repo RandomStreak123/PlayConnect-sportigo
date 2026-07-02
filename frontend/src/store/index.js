@@ -332,7 +332,7 @@ const recordResults = async (matchId, results) => {
   return null
 }
 
-const createMatch = async (sportType, title, dateTime, location, maxSlots, skillLevel, price, womenOnly) => {
+const createMatch = async (sportType, title, dateTime, location, maxSlots, skillLevel, price, womenOnly, latitude = null, longitude = null) => {
   if (!state.currentUser) return null
   const data = await safeFetch(`${API_URL}/matches`, {
     method: 'POST',
@@ -349,7 +349,9 @@ const createMatch = async (sportType, title, dateTime, location, maxSlots, skill
       is_women_only: Boolean(womenOnly),
       available_slots: Number(maxSlots),
       max_slots: Number(maxSlots),
-      skill_level: skillLevel
+      skill_level: skillLevel,
+      latitude: latitude !== null ? Number(latitude) : null,
+      longitude: longitude !== null ? Number(longitude) : null
     })
   })
   if (data && data.id) {

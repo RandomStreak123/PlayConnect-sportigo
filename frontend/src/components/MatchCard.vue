@@ -2,6 +2,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { getSportImage, getPlayerAvatar, getSportIconUrl } from '../utils/sportImageHelper'
 import { store } from '../store'
+import { calculateDistance, userLocation } from '../utils/distanceHelper'
 
 const props = defineProps({
   match: {
@@ -82,6 +83,20 @@ const handleJoin = async (e) => {
     isJoining.value = false
   }
 }
+
+const distanceDisplay = computed(() => {
+  if (!userLocation.value || props.match.latitude === null || props.match.longitude === null) {
+    return null
+  }
+  const dist = calculateDistance(
+    userLocation.value.latitude,
+    userLocation.value.longitude,
+    props.match.latitude,
+    props.match.longitude
+  )
+  if (dist === null) return null
+  return dist.toFixed(1) + ' km away'
+})
 </script>
 
 <template>
@@ -135,7 +150,12 @@ const handleJoin = async (e) => {
               <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
               <circle cx="12" cy="10" r="3"/>
             </svg>
-            <span class="meta-text location">{{ match.location }}</span>
+            <span class="meta-text location">
+              {{ match.location }}
+              <span v-if="distanceDisplay" class="match-card-distance" style="font-weight: 700; color: var(--primary); font-size: 0.8rem; margin-left: 4px;">
+                • {{ distanceDisplay }}
+              </span>
+            </span>
           </div>
         </div>
       </div>
