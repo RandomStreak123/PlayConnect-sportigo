@@ -20,7 +20,7 @@ class CleanupMatches extends Command
      *
      * @var string
      */
-    protected $description = 'Cleanup matches older than 12 hours';
+    protected $description = 'Cleanup matches older than 360 hours';
 
     /**
      * Execute the console command.
@@ -34,7 +34,7 @@ class CleanupMatches extends Command
         foreach ($matches as $match) {
             try {
                 $matchDate = Carbon::parse($match->date);
-                if ($matchDate->isPast() && $matchDate->diffInHours($now, false) > 12) {
+                if ($matchDate->isPast() && $matchDate->diffInHours($now, false) > 360) {
                     $match->delete();
                     $deletedCount++;
                 }

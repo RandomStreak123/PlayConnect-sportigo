@@ -30,8 +30,8 @@ class FeaturedMatchesCarousel extends StatelessWidget {
               match.parsedDateTime.isAtSameMomentAs(now);
         }).toList();
 
-        // Sort chronologically (closest first)
-        upcomingMatches.sort((a, b) => a.parsedDateTime.compareTo(b.parsedDateTime));
+        // Sort by distance (closest first)
+        upcomingMatches.sort((a, b) => a.distance.compareTo(b.distance));
 
         if (upcomingMatches.isEmpty) {
           return const SliverFillRemaining(

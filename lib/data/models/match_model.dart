@@ -42,6 +42,8 @@ class MatchModel {
   final String? organizerPhoto;
   final bool womenOnly;
   final int? creatorId;
+  final double? latitude;
+  final double? longitude;
 
   /// Open spots — prefer server `slots_left`, else capacity minus joined count.
   int get slotsLeft => math.max(0, maxSlots - joinedCount);
@@ -79,7 +81,23 @@ class MatchModel {
     this.organizerPhoto,
     this.womenOnly = false,
     this.creatorId,
+    this.latitude,
+    this.longitude,
   });
+
+  static double? _parseCoordinate(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  static double _parseDistance(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
 
   factory MatchModel.fromJson(Map<String, dynamic> json) {
     final participants = (json['users'] as List?)
@@ -104,7 +122,7 @@ class MatchModel {
       joinedCount: joinedCount,
       skillLevel: json['skill_level'],
       participants: participants,
-      distance: (json['distance'] ?? 0.0).toDouble(),
+      distance: _parseDistance(json['distance']),
       organizer:
           (json['organizer'] as String?) ??
           (json['organizer_name'] as String?) ??
@@ -115,6 +133,8 @@ class MatchModel {
           (json['user']?['avatar'] as String?),
       womenOnly: json['women_only'] == 1 || json['women_only'] == true,
       creatorId: json['creator_id'] as int?,
+      latitude: _parseCoordinate(json['latitude']),
+      longitude: _parseCoordinate(json['longitude']),
     );
   }
 
@@ -130,6 +150,8 @@ class MatchModel {
       'joined_count': joinedCount,
       'skill_level': skillLevel,
       'women_only': womenOnly,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -142,6 +164,8 @@ class MatchModel {
       'available_slots': availableSlots,
       'skill_level': skillLevel,
       'women_only': womenOnly,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -161,6 +185,8 @@ class MatchModel {
     String? organizerPhoto,
     bool? womenOnly,
     int? creatorId,
+    double? latitude,
+    double? longitude,
   }) {
     return MatchModel(
       id: id ?? this.id,
@@ -178,6 +204,8 @@ class MatchModel {
       organizerPhoto: organizerPhoto ?? this.organizerPhoto,
       womenOnly: womenOnly ?? this.womenOnly,
       creatorId: creatorId ?? this.creatorId,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 }

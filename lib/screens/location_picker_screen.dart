@@ -8,6 +8,8 @@ import 'package:geolocator/geolocator.dart';
 import 'location_picker/widgets/location_search_bar.dart';
 import 'location_picker/widgets/location_address_card.dart';
 import 'location_picker/widgets/location_map_container.dart';
+import '../core/constants/api_constants.dart';
+import '../services/mappls_service.dart';
 
 class LocationResult {
   final String address;
@@ -39,6 +41,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   Timer? _debounceTimer;
   bool _isSearching = false;
   String? _customAddressQuery;
+  List<Map<String, dynamic>> _searchResults = [];
 
   @override
   void initState() {
@@ -160,10 +163,25 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     return sanitized;
   }
 
-  Future<void> _reverseGeocode(LatLng position) async {
+  Future<void> _reverseGeocode(LatLng position, {String? fallbackAddress}) async {
     setState(() {
       _isGeocoding = true;
     });
+
+    if (ApiConstants.isMapplsConfigured) {
+      try {
+        final address = await MapplsService.reverseGeocode(position.latitude, position.longitude);
+        if (address != null && address.isNotEmpty) {
+          setState(() {
+            _address = _sanitizeAddress(address);
+            _isGeocoding = false;
+          });
+          return;
+        }
+      } catch (e) {
+        // Fallback to OSM Nominatim
+      }
+    }
 
     try {
       final url = Uri.parse(
@@ -189,7 +207,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
 
     setState(() {
-      _address = 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
+      _address = fallbackAddress ?? 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
       _isGeocoding = false;
     });
   }
@@ -201,6 +219,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _currentCenter = camera.center;
       _address = 'Locating...';
       _isGeocoding = true;
+      _searchResults = [];
     });
 
     _debounceTimer?.cancel();
@@ -214,9 +233,23 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _currentCenter = point;
       _address = _sanitizeAddress(address);
       _customAddressQuery = null;
+      _searchResults = [];
     });
     _mapController.move(point, 15.0);
-    _reverseGeocode(point);
+    _reverseGeocode(point, fallbackAddress: address);
+  }
+
+  void _onSuggestionTapped(int index) {
+    final result = _searchResults[index];
+    final lat = result['lat'] is double
+        ? result['lat'] as double
+        : double.parse(result['lat'].toString());
+    final lon = result['lon'] is double
+        ? result['lon'] as double
+        : double.parse(result['lon'].toString());
+    final displayName = (result['display_name'] ?? _searchController.text.trim()) as String;
+    FocusScope.of(context).unfocus();
+    _onSearchResultSelected(LatLng(lat, lon), displayName);
   }
 
   Future<void> _searchAddress() async {
@@ -225,14 +258,42 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
     setState(() {
       _isSearching = true;
+      _customAddressQuery = null;
+      _searchResults = [];
     });
 
-    final lat = _currentCenter.latitude;
-    final lon = _currentCenter.longitude;
-    final left = lon - 0.5;
-    final right = lon + 0.5;
-    final top = lat + 0.5;
-    final bottom = lat - 0.5;
+    if (ApiConstants.isMapplsConfigured) {
+      try {
+        final results = await MapplsService.autoSuggest(
+          query,
+          latitude: 8.5241,  // Trivandrum center
+          longitude: 76.9366, // Trivandrum center
+        );
+        if (results.isNotEmpty) {
+          // Filter to Trivandrum district bounds only
+          final filtered = results.where((r) {
+            final lat = (r['lat'] as num).toDouble();
+            final lon = (r['lon'] as num).toDouble();
+            return lat >= 8.25 && lat <= 8.80 && lon >= 76.65 && lon <= 77.20;
+          }).toList();
+          if (filtered.isNotEmpty) {
+            setState(() {
+              _searchResults = filtered;
+              _isSearching = false;
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        // Fallback to OSM Nominatim
+      }
+    }
+
+    // Trivandrum district bounds (fixed)
+    const double left = 76.65;
+    const double right = 77.20;
+    const double top = 8.80;
+    const double bottom = 8.25;
 
     try {
       final url = Uri.parse(
@@ -241,6 +302,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         '&q=${Uri.encodeComponent(query)}'
         '&countrycodes=in'
         '&viewbox=$left,$top,$right,$bottom'
+        '&bounded=1'
         '&limit=5',
       );
       final response = await http.get(url, headers: {
@@ -250,10 +312,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
         if (data.isNotEmpty) {
-          final lat = double.parse(data[0]['lat']);
-          final lon = double.parse(data[0]['lon']);
-          final LatLng newCenter = LatLng(lat, lon);
-          _onSearchResultSelected(newCenter, data[0]['display_name'] ?? query);
+          setState(() {
+            _searchResults = data.map((item) => {
+              'lat': item['lat'],
+              'lon': item['lon'],
+              'display_name': item['display_name'],
+            }).toList();
+          });
         } else {
           setState(() {
             _customAddressQuery = query;
@@ -331,10 +396,59 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             top: 16,
             left: 16,
             right: 16,
-            child: LocationSearchBar(
-              controller: _searchController,
-              isSearching: _isSearching,
-              onSearchPressed: _searchAddress,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LocationSearchBar(
+                  controller: _searchController,
+                  isSearching: _isSearching,
+                  onSearchPressed: _searchAddress,
+                ),
+                if (_searchResults.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    constraints: const BoxConstraints(maxHeight: 250),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      itemCount: _searchResults.length,
+                      separatorBuilder: (_, _) => Divider(
+                        height: 1,
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                      itemBuilder: (context, index) {
+                        final result = _searchResults[index];
+                        final name = (result['display_name'] ?? 'Unknown') as String;
+                        return ListTile(
+                          dense: true,
+                          leading: Icon(
+                            Icons.location_on_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 20,
+                          ),
+                          title: Text(
+                            name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          onTap: () => _onSuggestionTapped(index),
+                        );
+                      },
+                    ),
+                  ),
+              ],
             ),
           ),
           Positioned(

@@ -5,6 +5,13 @@ class ApiConstants {
     defaultValue: 'http://10.0.2.2:8000/api'
   );
 
+  static const String mapplsApiKey = String.fromEnvironment(
+    'MAPPLS_REST_API_KEY',
+    defaultValue: 'cxtvvrmhlvdiwftzifhzmqpuoxsrenpusqqh',
+  );
+
+  static bool get isMapplsConfigured => mapplsApiKey.isNotEmpty;
+
   /// Base URL for storage assets (without /api suffix).
   static String get assetBaseUrl {
     if (baseUrl.endsWith('/api')) {

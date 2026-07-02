@@ -1,8 +1,10 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/match_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/match_repository.dart';
+import 'package:geolocator/geolocator.dart';
 
 part 'match_event.dart';
 part 'match_state.dart';
@@ -156,9 +158,10 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     // 4. Fetch the fresh data in the background
     try {
       final result = await _fetchNearbyMatches();
+      final matchesWithDistance = await _calculateDistances(result.matches);
       
       // Update cache
-      _cache[key] = result.matches;
+      _cache[key] = matchesWithDistance;
       _cacheCursors[key] = result.nextCursor;
       _cacheTimestamps[key] = DateTime.now();
 
@@ -168,8 +171,8 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
           _lastSearch == event.search) {
         emit(state.copyWith(
           status: MatchStatus.success,
-          matches: result.matches,
-          trendingMatches: isUnfiltered ? result.matches : state.trendingMatches,
+          matches: matchesWithDistance,
+          trendingMatches: isUnfiltered ? matchesWithDistance : state.trendingMatches,
           sportType: event.sportType,
           skillLevel: event.skillLevel,
           search: event.search,
@@ -177,7 +180,9 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
           hasMore: result.nextCursor != null,
         ));
       }
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint('MATCH_FETCH_ERROR: $e');
+      debugPrint(stackTrace.toString());
       // If we already have cached/local matches, don't show failure screen, just keep what we have
       if (_cache.containsKey(key) || state.matches.isNotEmpty) {
         emit(state.copyWith(status: MatchStatus.success));
@@ -205,7 +210,8 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
           (_lastSkillLevel == null || _lastSkillLevel == 'All') &&
           (_lastSearch == null || _lastSearch!.isEmpty);
       
-      final updatedMatches = [...state.matches, ...result.matches];
+      final matchesWithDistance = await _calculateDistances(result.matches);
+      final updatedMatches = [...state.matches, ...matchesWithDistance];
 
       // Update cache for this key so it includes the appended page
       _cache[key] = updatedMatches;
@@ -219,9 +225,63 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         nextCursor: result.nextCursor,
         hasMore: result.nextCursor != null,
       ));
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint('MATCH_FETCH_MORE_ERROR: $e');
+      debugPrint(stackTrace.toString());
       // On failure keep the existing list and clear the loading indicator.
       emit(state.copyWith(status: MatchStatus.success));
+    }
+  }
+
+  Future<List<MatchModel>> _calculateDistances(List<MatchModel> matches) async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return matches;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        return matches;
+      }
+
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 4),
+          forceAndroidLocationManager: true,
+        );
+      } catch (_) {
+        position = await Geolocator.getLastKnownPosition();
+      }
+
+      if (position == null) {
+        return matches;
+      }
+
+      final double userLat = position.latitude;
+      final double userLng = position.longitude;
+
+      return matches.map((match) {
+        if (match.latitude != null && match.longitude != null) {
+          final double distanceInMeters = Geolocator.distanceBetween(
+            userLat,
+            userLng,
+            match.latitude!,
+            match.longitude!,
+          );
+          return match.copyWith(distance: distanceInMeters / 1000.0);
+        }
+        return match;
+      }).toList();
+    } catch (e, stackTrace) {
+      debugPrint('CALCULATE_DISTANCES_ERROR: Failed to calculate distances: $e');
+      debugPrint(stackTrace.toString());
+      return matches;
     }
   }
 
