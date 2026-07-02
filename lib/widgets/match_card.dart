@@ -61,6 +61,10 @@ class _MatchCardState extends State<MatchCard> {
 
     final paddingVal = isHorizontal ? 12.0 : 16.0;
     
+    final locationText = match.distance > 0
+        ? '${match.location} • ${match.distance.toStringAsFixed(1)} km'
+        : match.location;
+    
     final detailsContent = Padding(
       padding: EdgeInsets.all(paddingVal),
       child: Column(
@@ -106,13 +110,13 @@ class _MatchCardState extends State<MatchCard> {
           if (isHorizontal) ...[
             _buildMetadataRow(context, Icons.calendar_today, match.dateTime),
             const SizedBox(height: 6),
-            _buildMetadataRow(context, Icons.location_on, match.location),
+            _buildMetadataRow(context, Icons.location_on, locationText),
           ] else ...[
             Row(
               children: [
                 Expanded(child: _buildMetadataRow(context, Icons.calendar_today, match.dateTime)),
                 const SizedBox(width: 16),
-                Expanded(child: _buildMetadataRow(context, Icons.location_on, match.location)),
+                Expanded(child: _buildMetadataRow(context, Icons.location_on, locationText)),
               ],
             ),
           ],

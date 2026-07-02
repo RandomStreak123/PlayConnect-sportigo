@@ -114,6 +114,8 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         participants: const [],
         distance: 0.0,
         womenOnly: _womenOnly,
+        latitude: _selectedLatitude,
+        longitude: _selectedLongitude,
       );
 
       setState(() => _isSubmitting = true);
