@@ -1089,6 +1089,11 @@ const achievementsList = computed(() => {
   ]
 })
 
+const latestUnlockedMilestone = computed(() => {
+  const milestones = achievementsList.value.filter(a => a.type === 'milestone' && a.unlocked)
+  return milestones.length ? milestones[milestones.length - 1] : null
+})
+
 // Profile Background Style
 const profileBackgroundStyle = computed(() => {
   if (isLavenderTheme.value) {
@@ -1185,6 +1190,17 @@ const weekDaysStatus = computed(() => {
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#00a3ff"><path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-13 5l-4-4 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
         </span>
         <div class="unlocked-inline-badges">
+          <!-- Render the latest unlocked milestone badge first -->
+          <div 
+            v-if="latestUnlockedMilestone"
+            class="inline-badge-item"
+            :title="latestUnlockedMilestone.title"
+          >
+            <img v-if="latestUnlockedMilestone.icon.startsWith('/')" :src="latestUnlockedMilestone.icon" class="inline-badge-img" :alt="latestUnlockedMilestone.title" />
+            <span v-else class="inline-badge-emoji">{{ latestUnlockedMilestone.icon }}</span>
+          </div>
+
+          <!-- Other unlocked badges -->
           <div 
             v-for="item in achievementsList.filter(a => a.type === 'badge' && a.unlocked).slice(-1)" 
             :key="item.id"
