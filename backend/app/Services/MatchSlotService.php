@@ -57,7 +57,7 @@ class MatchSlotService
                 ActivityService::create(
                     $user->id,
                     'match_created',
-                    "{$user->name} created a {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
+                    "{$user->name} created a {$match->sport_type} match: \"{$match->title}\"",
                     [
                         'match_id' => $match->id,
                         'sport_type' => $match->sport_type,
@@ -132,7 +132,7 @@ class MatchSlotService
                 ActivityService::create(
                     $user->id,
                     'match_joined',
-                    "{$user->name} joined the {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
+                    "{$user->name} joined the {$match->sport_type} match: \"{$match->title}\"",
                     [
                         'match_id' => $match->id,
                         'sport_type' => $match->sport_type,
@@ -192,7 +192,7 @@ class MatchSlotService
                 ActivityService::create(
                     $user->id,
                     'match_left',
-                    "{$user->name} left the {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
+                    "{$user->name} left the {$match->sport_type} match: \"{$match->title}\"",
                     [
                         'match_id' => $match->id,
                         'sport_type' => $match->sport_type,
