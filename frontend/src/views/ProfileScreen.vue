@@ -1006,46 +1006,61 @@ const achievementsList = computed(() => {
     // Milestones
     {
       id: 'rookie',
+      level: 1,
       type: 'milestone',
-      title: 'Rookie Milestone',
-      description: 'Welcome to Sportigo! Level 1 reached.',
+      title: 'Rookie Athlete',
+      req: '0+ XP',
+      description: "You've taken your first steps on the court. Join local matches to earn XP and level up!",
+      rewards: 'Rookie Badge 👟',
       icon: '/assets/images/rookie_milestone.png',
       unlocked: true,
       progressText: `Level ${lvl} / 1`
     },
     {
       id: 'rising_star',
+      level: 2,
       type: 'milestone',
-      title: 'Rising Star Milestone',
-      description: 'Reach Level 2 to show your potential.',
-      icon: '✨',
+      title: 'Rising Star',
+      req: '1,000+ XP',
+      description: 'Unlocked for active participants. Your dedication is showing. Unlocks basic profile customization features (like active themes).',
+      rewards: 'Rising Star Badge 💫, Theme Selector',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="#fef08a" stroke="#eab308"></polygon><path d="M3 17c3-3 8-3 10-1" stroke="#fde047" stroke-width="1.5" stroke-dasharray="3,3"></path><path d="M5 20c2-2 6-2 8 0" stroke="#fde047" stroke-width="1.5" stroke-dasharray="3,3"></path></svg>',
       unlocked: lvl >= 2,
       progressText: `Level ${lvl} / 2`
     },
     {
       id: 'veteran',
+      level: 5,
       type: 'milestone',
-      title: 'Veteran Milestone',
-      description: 'Reach Level 5. Unlocks the Lavender Dusk profile theme.',
-      icon: '🎖️',
+      title: 'Seasoned Veteran',
+      req: '4,000+ XP',
+      description: 'Unlocked for experienced players. You have a deep history of matchups. Unlocks the Silver Profile Frame and access to co-hosting matches.',
+      rewards: 'Veteran Badge 🎖️, Silver Frame, Lavender Dusk Theme',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8v8H8z" fill="#ef4444" stroke="#dc2626"></path><path d="M11 2h2v8h-2z" fill="#ffffff" stroke="transparent"></path><circle cx="12" cy="15" r="5" fill="#fcd34d" stroke="#f59e0b"></circle><polygon points="12 12.8 13 14.8 15.2 15.1 13.6 16.7 14 18.9 12 17.8 10 18.9 10.4 16.7 8.8 15.1 11 14.8" fill="#eab308" stroke="#ca8a04" stroke-width="0.5"></polygon></svg>',
       unlocked: lvl >= 5,
       progressText: `Level ${lvl} / 5`
     },
     {
       id: 'competitor',
+      level: 10,
       type: 'milestone',
-      title: 'Elite Competitor Milestone',
-      description: 'Reach Level 10. Unlocks the Gold Rush profile theme.',
-      icon: '🏆',
+      title: 'Elite Competitor',
+      req: '9,000+ XP',
+      description: 'Unlocked for master players. You are a regular face in the community. Unlocks the Gold Profile Badge and custom status options on your profile card.',
+      rewards: 'Gold Badge 🥇, Gold Rush Theme',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2l5 5 5-5v6l-5 5-5-5z" fill="#3b82f6" stroke="#2563eb"></path><circle cx="12" cy="15" r="5" fill="#fbbf24" stroke="#d97706"></circle><text x="12" y="17.5" font-size="6.5" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" fill="#78350f" text-anchor="middle" dominant-baseline="middle">1</text></svg>',
       unlocked: lvl >= 10,
       progressText: `Level ${lvl} / 10`
     },
     {
       id: 'legend',
+      level: 25,
       type: 'milestone',
-      title: 'Sportigo Legend Milestone',
-      description: 'Reach Level 25. Unlocks the animated Golden Legend profile theme.',
-      icon: '👑',
+      title: 'Sportigo Legend',
+      req: '24,000+ XP',
+      description: 'The ultimate milestone. Reserved for the most dedicated athletes. Unlocks the premium Golden Profile Theme (with custom ambient animations) and high-priority badge on the match lobbies you organize.',
+      rewards: 'Legend Badge 🏆, Golden Theme & Frame, Ambient animations',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" fill="#fde047"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" fill="#fde047"></path><path d="M4 22h16" stroke="#451a03"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" fill="#a16207"></path><path d="M12 2a6 6 0 0 1 6 6v5a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z" fill="#fbbf24"></path></svg>',
       unlocked: lvl >= 25,
       progressText: `Level ${lvl} / 25`
     },
@@ -1054,37 +1069,41 @@ const achievementsList = computed(() => {
       id: 'community_pillar',
       type: 'badge',
       title: 'Community Pillar',
-      description: 'Organize at least 40% of the matches you play (minimum 1 game).',
-      icon: '📣',
+      req: 'Organize 40%+ of played games',
+      description: 'Awarded to players who actively bring people together by organizing games. You are the heartbeat of the local sports community!',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" fill="#fde047"></path><path d="M3 20h18a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1z" fill="#fbbf24"></path><circle cx="2" cy="4" r="1" fill="#ca8a04"></circle><circle cx="22" cy="4" r="1" fill="#ca8a04"></circle><circle cx="12" cy="4" r="1" fill="#ca8a04"></circle></svg>',
       unlocked: isCommunityPillar.value,
-      progressText: `${total > 0 ? Math.round((created / total) * 100) : 0}% matches organized (${created}/${total})`
+      progressText: `Current: ${total > 0 ? Math.round((created / total) * 100) : 0}%`
     },
     {
       id: 'invincible',
       type: 'badge',
       title: 'Invincible',
-      description: 'Maintain a winning streak of 5 matches or more.',
-      icon: '🔥',
+      req: 'Win streak of 5+ games',
+      description: 'Awarded to players on a dominant winning run. There is no stopping you right now!',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" fill="#f97316" /></svg>',
       unlocked: isInvincible.value,
-      progressText: `Streak: ${calculatedStreak.value} / 5`
+      progressText: `Current streak: ${calculatedStreak.value}`
     },
     {
       id: 'fair_play',
       type: 'badge',
       title: 'Fair Play Ambassador',
-      description: 'Maintain an average rating of 4.5+ with at least 5 games played.',
-      icon: '🤝',
+      req: 'Average rating of 4.5+ (over 5+ games)',
+      description: 'Awarded for excellent sportsmanship, friendliness, and reliable play style as rated by other community members.',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>',
       unlocked: isFairPlayAmbassador.value,
-      progressText: `Rating: ${Number(profileStats.value.averageRating || 0).toFixed(1)}/4.5 (${profileStats.value.totalGames || 0}/5 games)`
+      progressText: `Rating: ${Number(profileStats.value.averageRating || 0).toFixed(1)} ⭐ (Games: ${profileStats.value.totalGames || 0})`
     },
     {
       id: 'all_rounder',
       type: 'badge',
       title: 'Ultimate All-Rounder',
-      description: 'Play at least 3 unique sport types.',
-      icon: '🎯',
+      req: 'Play 3+ different sport types',
+      description: "You don't stick to just one game. You dominate across multiple courts and disciplines!",
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2l5 5 5-5v6l-5 5-5-5z" fill="#3b82f6" stroke="#2563eb"></path><circle cx="12" cy="15" r="5" fill="#fbbf24" stroke="#d97706"></circle><text x="12" y="17.5" font-size="6.5" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" fill="#78350f" text-anchor="middle" dominant-baseline="middle">1</text></svg>',
       unlocked: isUltimateAllRounder.value,
-      progressText: `${uniqueSportsPlayedCount.value} / 3 sports played`
+      progressText: `Sports: ${uniqueSportsPlayedCount.value}`
     }
   ]
 })
@@ -1093,6 +1112,8 @@ const latestUnlockedMilestone = computed(() => {
   const milestones = achievementsList.value.filter(a => a.type === 'milestone' && a.unlocked)
   return milestones.length ? milestones[milestones.length - 1] : null
 })
+
+// Obsolete helpers removed
 
 // Profile Background Style
 const profileBackgroundStyle = computed(() => {
@@ -1194,6 +1215,7 @@ const weekDaysStatus = computed(() => {
             :title="latestUnlockedMilestone.title"
           >
             <img v-if="latestUnlockedMilestone.icon.startsWith('/')" :src="latestUnlockedMilestone.icon" class="inline-badge-img" :alt="latestUnlockedMilestone.title" />
+            <span v-else-if="latestUnlockedMilestone.icon.startsWith('<svg')" v-html="latestUnlockedMilestone.icon" class="inline-badge-svg-wrapper"></span>
             <span v-else class="inline-badge-emoji">{{ latestUnlockedMilestone.icon }}</span>
           </div>
 
@@ -1205,6 +1227,7 @@ const weekDaysStatus = computed(() => {
             :title="item.title"
           >
             <img v-if="item.icon.startsWith('/')" :src="item.icon" class="inline-badge-img" :alt="item.title" />
+            <span v-else-if="item.icon.startsWith('<svg')" v-html="item.icon" class="inline-badge-svg-wrapper"></span>
             <span v-else class="inline-badge-emoji">{{ item.icon }}</span>
           </div>
         </div>
@@ -1369,55 +1392,78 @@ const weekDaysStatus = computed(() => {
       <!-- Achievements -->
       <div v-else-if="activeSegmentTab === 1" class="panel-content achievements-panel animate-fade-in">
         <!-- Milestone Header -->
-        <h4 class="achievements-section-title">Level Milestones</h4>
-        <div class="achievements-grid">
+        <h4 class="achievements-section-title">
+          <span style="font-size: 1.15rem; margin-right: 8px;">🏆</span>Level Progression Milestones
+        </h4>
+        <div class="milestones-list">
           <div 
             v-for="item in achievementsList.filter(a => a.type === 'milestone')" 
             :key="item.id"
-            class="achievement-item-card"
+            class="achievement-item-card-horizontal"
             :class="{ locked: !item.unlocked, 'unlocked-milestone': item.unlocked }"
           >
-            <div class="achievement-icon-wrapper">
+            <!-- Left: Circle icon -->
+            <div class="card-icon-wrapper">
               <img v-if="item.icon.startsWith('/')" :src="item.icon" class="achievement-icon-img" alt="achievement icon" />
+              <span v-else-if="item.icon.startsWith('<svg')" v-html="item.icon" class="achievement-icon-svg-wrapper"></span>
               <span v-else class="achievement-icon">{{ item.icon }}</span>
-              <span v-if="!item.unlocked" class="lock-indicator">🔒</span>
             </div>
-            <div class="achievement-details">
-              <h5 class="achievement-name">{{ item.title }}</h5>
-              <p class="achievement-desc">{{ item.description }}</p>
-              <div class="achievement-progress-row">
-                <span class="achievement-progress-text">{{ item.progressText }}</span>
-                <span class="achievement-status" :class="item.unlocked ? 'status-unlocked' : 'status-locked'">
-                  {{ item.unlocked ? 'Unlocked' : 'Locked' }}
+            
+            <!-- Right: Details column -->
+            <div class="card-details-column">
+              <!-- Title and status row -->
+              <div class="card-title-row">
+                <h5 class="achievement-name">Level {{ item.level }}: {{ item.title }}</h5>
+                <span class="card-status-badge" :class="item.unlocked ? 'unlocked' : 'locked'">
+                  {{ item.unlocked ? 'UNLOCKED' : 'LOCKED' }}
                 </span>
+              </div>
+              
+              <!-- Requirement -->
+              <p class="card-requirement">Requirement: {{ item.req }}</p>
+              
+              <!-- Description -->
+              <p class="achievement-desc">{{ item.description }}</p>
+              
+              <!-- Rewards box -->
+              <div class="card-rewards-box">
+                Rewards: {{ item.rewards }}
               </div>
             </div>
           </div>
         </div>
 
         <!-- Badges Header -->
-        <h4 class="achievements-section-title" style="margin-top: 24px;">Stat-Based Badges</h4>
+        <h4 class="achievements-section-title" style="margin-top: 24px;">
+          <span style="font-size: 1.15rem; margin-right: 8px;">⚡</span>Stat-Based Achievements
+        </h4>
         <div class="achievements-grid">
           <div 
             v-for="item in achievementsList.filter(a => a.type === 'badge')" 
             :key="item.id"
-            class="achievement-item-card"
+            class="achievement-item-card-vertical"
             :class="{ locked: !item.unlocked, 'unlocked-badge': item.unlocked }"
           >
-            <div class="achievement-icon-wrapper">
-              <img v-if="item.icon.startsWith('/')" :src="item.icon" class="achievement-icon-img" alt="achievement icon" />
-              <span v-else class="achievement-icon">{{ item.icon }}</span>
-              <span v-if="!item.unlocked" class="lock-indicator">🔒</span>
-            </div>
-            <div class="achievement-details">
-              <h5 class="achievement-name">{{ item.title }}</h5>
-              <p class="achievement-desc">{{ item.description }}</p>
-              <div class="achievement-progress-row">
-                <span class="achievement-progress-text">{{ item.progressText }}</span>
-                <span class="achievement-status" :class="item.unlocked ? 'status-unlocked' : 'status-locked'">
-                  {{ item.unlocked ? 'Active' : 'Inactive' }}
-                </span>
+            <!-- Top Row: Icon and status badge -->
+            <div class="card-top-row">
+              <div class="card-icon-wrapper">
+                <img v-if="item.icon.startsWith('/')" :src="item.icon" class="achievement-icon-img" alt="achievement icon" />
+                <span v-else-if="item.icon.startsWith('<svg')" v-html="item.icon" class="achievement-icon-svg-wrapper"></span>
+                <span v-else class="achievement-icon">{{ item.icon }}</span>
               </div>
+              <span class="card-status-badge" :class="item.unlocked ? 'unlocked' : 'locked'">
+                {{ item.unlocked ? 'ACTIVE' : 'LOCKED' }}
+              </span>
+            </div>
+            <!-- Middle Content -->
+            <div class="card-mid-content">
+              <h5 class="achievement-name">{{ item.title }}</h5>
+              <p class="card-requirement">{{ item.req }}</p>
+              <p class="achievement-desc">{{ item.description }}</p>
+            </div>
+            <!-- Bottom progress pill -->
+            <div class="card-progress-pill">
+              {{ item.progressText }}
             </div>
           </div>
         </div>
@@ -2098,6 +2144,32 @@ const weekDaysStatus = computed(() => {
   width: 24px;
   height: 24px;
   object-fit: contain;
+}
+
+.inline-badge-svg-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inline-badge-svg-wrapper svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.achievement-icon-svg-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.achievement-icon-svg-wrapper svg {
+  width: 32px;
+  height: 32px;
+  display: block;
 }
 
 .inline-badge-emoji {
@@ -3389,135 +3461,193 @@ input:checked + .toggle-slider:before {
   gap: 16px;
 }
 
-.achievement-item-card {
+.milestones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.achievement-item-card-horizontal {
   background-color: #ffffff;
   border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-md);
+  border-radius: 20px;
   padding: 16px;
   display: flex;
   gap: 16px;
-  align-items: center;
+  align-items: flex-start;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-  position: relative;
+  text-align: left;
 }
 
-.achievement-item-card:hover {
+.achievement-item-card-horizontal:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
-.achievement-item-card.locked {
+.achievement-item-card-horizontal.locked {
+  opacity: 0.85;
+  background-color: #fbf8ff;
+}
+
+.achievement-item-card-horizontal.locked .card-details-column .achievement-name,
+.achievement-item-card-horizontal.locked .card-details-column .achievement-desc,
+.achievement-item-card-horizontal.locked .card-details-column .card-rewards-box {
   opacity: 0.65;
-  background-color: var(--surface-dim);
-  border-color: var(--outline-variant);
 }
 
-.achievement-item-card.unlocked-milestone {
-  border-left: 4px solid var(--primary);
+.card-details-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  width: 100%;
 }
 
-.achievement-item-card.unlocked-badge {
-  border-left: 4px solid #f59e0b;
-  background: linear-gradient(135deg, #ffffff 0%, rgba(245, 158, 11, 0.02) 100%);
+.card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
 }
 
-.achievement-icon-wrapper {
-  width: 50px;
-  height: 50px;
+.card-rewards-box {
+  width: 100%;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
+.achievement-item-card-vertical {
+  background-color: #ffffff;
+  border: 1px solid var(--outline-variant);
+  border-radius: 20px; /* highly rounded card */
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  position: relative;
+  text-align: left;
+}
+
+.achievement-item-card-vertical:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.achievement-item-card-vertical.locked {
+  background-color: #fbf8ff;
+  opacity: 0.95;
+}
+
+.achievement-item-card-vertical.locked .card-mid-content .achievement-name,
+.achievement-item-card-vertical.locked .card-mid-content .achievement-desc {
+  opacity: 0.65;
+}
+
+.card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.card-icon-wrapper {
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background-color: var(--surface-dim);
+  background-color: #f1f5f9;
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
   flex-shrink: 0;
-  border: 1px solid var(--outline-variant);
 }
 
-.unlocked-milestone .achievement-icon-wrapper {
-  background-color: rgba(0, 196, 159, 0.1);
-  border-color: rgba(0, 196, 159, 0.2);
+.unlocked-milestone .card-icon-wrapper {
+  background-color: rgba(16, 185, 129, 0.1);
 }
 
-.unlocked-badge .achievement-icon-wrapper {
-  background-color: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.2);
+.unlocked-badge .card-icon-wrapper {
+  background-color: rgba(245, 158, 11, 0.15);
 }
 
 .achievement-icon {
   font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .achievement-icon-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 50%;
 }
 
-.lock-indicator {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  font-size: 0.8rem;
-  background-color: #ffffff;
-  border-radius: 50%;
-  padding: 2px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.card-status-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.achievement-details {
+.card-status-badge.locked {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.card-status-badge.unlocked {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.card-mid-content {
   display: flex;
   flex-direction: column;
+  gap: 6px;
   flex: 1;
-  text-align: left;
 }
 
 .achievement-name {
   font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: var(--on-surface);
-  margin-bottom: 2px;
+  color: #0f172a;
+  margin: 0;
+}
+
+.card-requirement {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1b6d24; /* Green matching mockup */
+  margin: 0;
 }
 
 .achievement-desc {
-  font-size: 0.78rem;
-  color: var(--on-surface-variant);
-  margin-bottom: 8px;
-  line-height: 1.3;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0;
 }
 
-.achievement-progress-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.achievement-progress-text {
-  color: var(--outline);
-}
-
-.achievement-status {
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: 0.68rem;
-}
-
-.status-unlocked {
-  background-color: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-}
-
-.status-locked {
-  background-color: var(--outline-variant);
-  color: var(--outline);
+.card-progress-pill {
+  width: 100%;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 10px;
+  border-radius: 12px;
+  text-align: center;
 }
 
 /* Streaks Tab Custom Styles */
