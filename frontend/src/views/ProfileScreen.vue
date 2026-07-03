@@ -2095,8 +2095,8 @@ const weekDaysStatus = computed(() => {
 }
 
 .inline-badge-img {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 
