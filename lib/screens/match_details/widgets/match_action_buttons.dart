@@ -186,12 +186,18 @@ class _MatchActionButtonsState extends State<MatchActionButtons> {
             final userId = authState.user?.id;
             final userGender = authState.user?.gender;
             final isRestricted = _matchState.womenOnly && userGender != 'female';
-            final isJoined = _matchState.isJoinedBy(userId);
             final isCreator = (_matchState.creatorId != null && _matchState.creatorId == userId) ||
                 (authState.user != null && _matchState.organizer == authState.user?.name);
             final isFull = _matchState.joinedCount >= _matchState.maxSlots;
+            
+            bool isJoined = _matchState.isJoinedBy(userId);
+            if (_isSubmitting && _pendingAction == 'join') {
+              isJoined = false;
+            } else if (_isSubmitting && _pendingAction == 'leave') {
+              isJoined = true;
+            }
 
-            if (_isSubmitting) {
+            if (_isSubmitting && (_pendingAction == 'recordResults' || _pendingAction == 'submitRatings')) {
               return const SizedBox(
                 height: 52,
                 child: Center(child: AppLoadingIndicator()),
@@ -323,13 +329,15 @@ class _MatchActionButtonsState extends State<MatchActionButtons> {
   }) {
     if (isJoined && !isCreator) {
       return OutlinedButton(
-        onPressed: () {
-          setState(() {
-            _isSubmitting = true;
-            _pendingAction = 'leave';
-          });
-          context.read<MatchBloc>().add(MatchLeft(matchId: _matchState.id, userId: user!.id));
-        },
+        onPressed: _isSubmitting
+            ? null
+            : () {
+                setState(() {
+                  _isSubmitting = true;
+                  _pendingAction = 'leave';
+                });
+                context.read<MatchBloc>().add(MatchLeft(matchId: _matchState.id, userId: user!.id));
+              },
         style: OutlinedButton.styleFrom(
           foregroundColor: Theme.of(context).colorScheme.error,
           side: BorderSide(color: Theme.of(context).colorScheme.error),
@@ -338,10 +346,16 @@ class _MatchActionButtonsState extends State<MatchActionButtons> {
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
         ),
-        child: const Text(
-          'Leave Match',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
+        child: _isSubmitting && _pendingAction == 'leave'
+            ? SizedBox(
+                height: 20,
+                width: 20,
+                child: AppLoadingIndicator(color: Theme.of(context).colorScheme.error),
+              )
+            : const Text(
+                'Leave Match',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
       );
     }
 
@@ -426,13 +440,15 @@ class _MatchActionButtonsState extends State<MatchActionButtons> {
     }
 
     return ElevatedButton(
-      onPressed: () {
-        setState(() {
-          _isSubmitting = true;
-          _pendingAction = 'join';
-        });
-        context.read<MatchBloc>().add(MatchJoined(matchId: _matchState.id, user: user!));
-      },
+      onPressed: _isSubmitting
+          ? null
+          : () {
+              setState(() {
+                _isSubmitting = true;
+                _pendingAction = 'join';
+              });
+              context.read<MatchBloc>().add(MatchJoined(matchId: _matchState.id, user: user!));
+            },
       style: ElevatedButton.styleFrom(
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         foregroundColor: Colors.white,
@@ -442,10 +458,16 @@ class _MatchActionButtonsState extends State<MatchActionButtons> {
         ),
         elevation: 0,
       ),
-      child: Text(
-        'Join Match (${_matchState.slotsLeft} spots left)',
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-      ),
+      child: _isSubmitting && _pendingAction == 'join'
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: AppLoadingIndicator(color: Colors.white),
+            )
+          : Text(
+              'Join Match (${_matchState.slotsLeft} spots left)',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
     );
   }
 }

@@ -132,27 +132,16 @@ class _MatchCardState extends State<MatchCard> {
               builder: (context, authState) {
                 final userId = authState.user?.id;
                 final userGender = authState.user?.gender;
-                final isJoined = match.isJoinedBy(userId);
                 final isCreator = (match.creatorId != null && match.creatorId == userId) ||
                     (authState.user != null && match.organizer == authState.user?.name);
                 final isRestricted = match.womenOnly && userGender != 'female';
+                
+                bool isJoined = match.isJoinedBy(userId);
+                if (_isSubmitting) {
+                  isJoined = false;
+                }
 
                 if (isJoined || isCreator || isRestricted) return const SizedBox.shrink();
-
-                if (_isSubmitting) {
-                  return Column(
-                    children: [
-                      SizedBox(height: isHorizontal ? 8 : 16),
-                      SizedBox(
-                        width: double.infinity,
-                        height: isHorizontal ? 40 : 48,
-                        child: const Center(
-                          child: AppLoadingIndicator(),
-                        ),
-                      ),
-                    ],
-                  );
-                }
 
                 return Column(
                   children: [
@@ -161,14 +150,16 @@ class _MatchCardState extends State<MatchCard> {
                       width: double.infinity,
                       height: isHorizontal ? 40 : 48,
                       child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _isSubmitting = true;
-                          });
-                          context.read<MatchBloc>().add(
-                            MatchJoined(matchId: match.id, user: authState.user!),
-                          );
-                        },
+                        onPressed: _isSubmitting
+                            ? null
+                            : () {
+                                setState(() {
+                                  _isSubmitting = true;
+                                });
+                                context.read<MatchBloc>().add(
+                                  MatchJoined(matchId: match.id, user: authState.user!),
+                                );
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                           foregroundColor: Colors.white,
@@ -177,13 +168,19 @@ class _MatchCardState extends State<MatchCard> {
                           ),
                           elevation: 0,
                         ),
-                        child: Text(
-                          'Join Match',
-                          style: TextStyle(
-                            fontSize: isHorizontal ? 14 : 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: AppLoadingIndicator(color: Colors.white),
+                              )
+                            : Text(
+                                'Join Match',
+                                style: TextStyle(
+                                  fontSize: isHorizontal ? 14 : 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                   ],

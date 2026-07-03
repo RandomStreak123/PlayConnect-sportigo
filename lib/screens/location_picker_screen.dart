@@ -42,6 +42,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   bool _isSearching = false;
   String? _customAddressQuery;
   List<Map<String, dynamic>> _searchResults = [];
+  bool _hasSelectedSuggestion = false;
 
   @override
   void initState() {
@@ -215,6 +216,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   void _onMapPositionChanged(MapCamera camera, bool hasGesture) {
     if (!hasGesture) return;
 
+    if (_hasSelectedSuggestion) {
+      setState(() {
+        _currentCenter = camera.center;
+      });
+      return;
+    }
+
     setState(() {
       _currentCenter = camera.center;
       _address = 'Locating...';
@@ -228,7 +236,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     });
   }
 
-  void _onSearchResultSelected(LatLng point, String address) {
+  void _onSearchResultSelected(LatLng point, String address, {bool skipReverseGeocode = false}) {
     setState(() {
       _currentCenter = point;
       _address = _sanitizeAddress(address);
@@ -236,20 +244,78 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _searchResults = [];
     });
     _mapController.move(point, 15.0);
-    _reverseGeocode(point, fallbackAddress: address);
+    if (!skipReverseGeocode) {
+      _reverseGeocode(point, fallbackAddress: address);
+    }
   }
 
-  void _onSuggestionTapped(int index) {
+  Future<void> _onSuggestionTapped(int index) async {
     final result = _searchResults[index];
-    final lat = result['lat'] is double
-        ? result['lat'] as double
-        : double.parse(result['lat'].toString());
-    final lon = result['lon'] is double
-        ? result['lon'] as double
-        : double.parse(result['lon'].toString());
     final displayName = (result['display_name'] ?? _searchController.text.trim()) as String;
+    
+    // Clear search results and hide keyboard
+    setState(() {
+      _searchResults = [];
+    });
     FocusScope.of(context).unfocus();
-    _onSearchResultSelected(LatLng(lat, lon), displayName);
+
+    // Default coordinates to Trivandrum center
+    double lat = 8.5241;
+    double lon = 76.9366;
+
+    // Check if suggestion has actual coordinates
+    final rawLat = result['lat'] is double
+        ? result['lat'] as double
+        : double.tryParse(result['lat']?.toString() ?? '') ?? 0.0;
+    final rawLon = result['lon'] is double
+        ? result['lon'] as double
+        : double.tryParse(result['lon']?.toString() ?? '') ?? 0.0;
+
+    if (rawLat != 0.0 && rawLon != 0.0) {
+      lat = rawLat;
+      lon = rawLon;
+    } else {
+      // Try to extract pincode from the address (6 consecutive digits)
+      final RegExp pincodeRegex = RegExp(r'\b\d{6}\b');
+      final match = pincodeRegex.firstMatch(displayName);
+      if (match != null) {
+        final pincode = match.group(0);
+        debugPrint('ELOC_GEOCODE: Found pincode $pincode. Geocoding via Nominatim...');
+        
+        setState(() {
+          _isGeocoding = true;
+          _address = 'Resolving location...';
+        });
+
+        try {
+          final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$pincode,+India&format=json&limit=1');
+          final response = await http.get(url, headers: {
+            'User-Agent': 'sportigo-app/1.0',
+          });
+          if (response.statusCode == 200) {
+            final List data = json.decode(response.body);
+            if (data.isNotEmpty) {
+              lat = double.parse(data[0]['lat']);
+              lon = double.parse(data[0]['lon']);
+              debugPrint('ELOC_GEOCODE: Resolved coordinates $lat, $lon from pincode $pincode');
+            }
+          }
+        } catch (e) {
+          debugPrint('ELOC_GEOCODE_ERROR: Pincode geocoding failed: $e');
+        } finally {
+          setState(() {
+            _isGeocoding = false;
+          });
+        }
+      } else {
+        debugPrint('ELOC_GEOCODE: No pincode found in address. Falling back to Trivandrum center.');
+      }
+    }
+
+    _onSearchResultSelected(LatLng(lat, lon), displayName, skipReverseGeocode: true);
+    setState(() {
+      _hasSelectedSuggestion = true;
+    });
   }
 
   Future<void> _searchAddress() async {
@@ -260,6 +326,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _isSearching = true;
       _customAddressQuery = null;
       _searchResults = [];
+      _hasSelectedSuggestion = false;
     });
 
     if (ApiConstants.isMapplsConfigured) {
@@ -270,11 +337,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           longitude: 76.9366, // Trivandrum center
         );
         if (results.isNotEmpty) {
-          // Filter to Trivandrum district bounds only
+          // Filter to Trivandrum / Kerala locations using text-based checks
           final filtered = results.where((r) {
-            final lat = (r['lat'] as num).toDouble();
-            final lon = (r['lon'] as num).toDouble();
-            return lat >= 8.25 && lat <= 8.80 && lon >= 76.65 && lon <= 77.20;
+            final address = (r['display_name'] ?? '').toString().toLowerCase();
+            return address.contains('trivandrum') || 
+                   address.contains('thiruvananthapuram') || 
+                   address.contains('kerala');
           }).toList();
           if (filtered.isNotEmpty) {
             setState(() {
@@ -363,6 +431,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 _currentCenter = point;
                 _isGeocoding = true;
                 _address = 'Locating...';
+                _hasSelectedSuggestion = false;
               });
               _mapController.move(point, _mapController.camera.zoom);
               _reverseGeocode(point);

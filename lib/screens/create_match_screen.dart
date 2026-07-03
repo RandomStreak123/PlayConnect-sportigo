@@ -89,10 +89,25 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     );
 
     if (result != null && result.address.isNotEmpty) {
+      if (!mounted) return;
+      double lat = result.latitude;
+      double lon = result.longitude;
+
+      // Scan existing matches in the Bloc state to see if we can reuse precise coordinates
+      final matches = context.read<MatchBloc>().state.matches;
+      for (final m in matches) {
+        if (m.location == result.address && m.latitude != null && m.latitude != 0.0) {
+          lat = m.latitude!;
+          lon = m.longitude!;
+          debugPrint('REUSE_COORDS: Inherited precise coordinates ($lat, $lon) from existing match at: ${m.location}');
+          break;
+        }
+      }
+
       setState(() {
         _locationController.text = result.address;
-        _selectedLatitude = result.latitude;
-        _selectedLongitude = result.longitude;
+        _selectedLatitude = lat;
+        _selectedLongitude = lon;
       });
     }
   }
