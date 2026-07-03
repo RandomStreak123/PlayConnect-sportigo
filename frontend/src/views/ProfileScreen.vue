@@ -1186,9 +1186,6 @@ const weekDaysStatus = computed(() => {
       <div class="name-row">
         <h3 class="card-name">{{ currentUser.name }}</h3>
         <span v-if="currentUser.name && currentUser.name.toLowerCase().includes('pele')" class="shoe-emoji">👟</span>
-        <span class="verified-badge">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#00a3ff"><path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-13 5l-4-4 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-        </span>
         <div class="unlocked-inline-badges">
           <!-- Render the latest unlocked milestone badge first -->
           <div 
@@ -1211,6 +1208,9 @@ const weekDaysStatus = computed(() => {
             <span v-else class="inline-badge-emoji">{{ item.icon }}</span>
           </div>
         </div>
+        <span class="verified-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#00a3ff"><path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-13 5l-4-4 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        </span>
       </div>
 
 
@@ -2084,6 +2084,10 @@ const weekDaysStatus = computed(() => {
   align-items: center;
   justify-content: center;
   transition: transform 0.2s ease;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 .inline-badge-item:hover {
