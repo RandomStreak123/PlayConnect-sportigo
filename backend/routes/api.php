@@ -8,6 +8,42 @@ use App\Http\Controllers\MatchController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\UserController;
 
+Route::get('/mappls/autosuggest', function (Illuminate\Http\Request $request) {
+    $query = $request->query('query');
+    $location = $request->query('location', '8.5668,76.8711');
+    $apiKey = 'cxtvvrmhlvdiwftzifhzmqpuoxsrenpusqqh';
+    $url = "https://search.mappls.com/search/places/autosuggest/json?query=" . urlencode($query) . "&location=" . urlencode($location) . "&access_token=" . $apiKey;
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Referer: https://sportigo.com"
+    ]);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    return response($response)->header('Content-Type', 'application/json');
+});
+
+Route::get('/mappls/rev-geocode', function (Illuminate\Http\Request $request) {
+    $lat = $request->query('lat');
+    $lng = $request->query('lng');
+    $apiKey = 'cxtvvrmhlvdiwftzifhzmqpuoxsrenpusqqh';
+    $url = "https://search.mappls.com/search/address/rev-geocode?lat=" . urlencode($lat) . "&lng=" . urlencode($lng) . "&access_token=" . $apiKey;
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Referer: https://sportigo.com"
+    ]);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    return response($response)->header('Content-Type', 'application/json');
+});
+
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
