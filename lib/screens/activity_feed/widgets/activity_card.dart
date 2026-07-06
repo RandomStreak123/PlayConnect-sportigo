@@ -39,6 +39,17 @@ class ActivityCard extends StatelessWidget {
     }
   }
 
+  String _sanitizeMessage(String message) {
+    final lastQuoteIndex = message.lastIndexOf('"');
+    if (lastQuoteIndex != -1) {
+      final suffix = message.substring(lastQuoteIndex + 1);
+      if (suffix.trim().startsWith('at ')) {
+        return message.substring(0, lastQuoteIndex + 1);
+      }
+    }
+    return message;
+  }
+
   Color _getActivityColor(String type, String? sportType) {
     if (type == 'match_created') {
       return AppColors.sportsGreen;
@@ -185,7 +196,7 @@ class ActivityCard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  activity.message,
+                                  _sanitizeMessage(activity.message),
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                                     height: 1.4,

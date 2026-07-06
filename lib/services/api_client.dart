@@ -17,6 +17,7 @@ class ApiClient {
   final String baseUrl;
   final http.Client _client;
   String? _token;
+  bool _hasCheckedStorage = false;
 
   ApiClient({
     required this.baseUrl,
@@ -25,10 +26,13 @@ class ApiClient {
 
   void setToken(String? token) {
     _token = token;
+    _hasCheckedStorage = true;
   }
 
   Future<String?> _getOrLoadToken() async {
     if (_token != null) return _token;
+    if (_hasCheckedStorage) return null;
+
     final prefs = await SharedPreferences.getInstance();
     final oldToken = prefs.getString('auth_token');
     const secureStorage = FlutterSecureStorage();
@@ -38,11 +42,13 @@ class ApiClient {
         await prefs.remove('auth_token');
       } catch (_) {}
       _token = oldToken;
+      _hasCheckedStorage = true;
       return _token;
     }
     try {
       _token = await secureStorage.read(key: 'auth_token');
     } catch (_) {}
+    _hasCheckedStorage = true;
     return _token;
   }
 

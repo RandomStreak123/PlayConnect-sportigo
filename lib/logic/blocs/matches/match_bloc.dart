@@ -24,6 +24,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
   }
 
   final MatchRepository _matchRepository;
+  Position? _lastUserPosition;
 
   String? _lastSportType;
   String? _lastSkillLevel;
@@ -158,27 +159,50 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     // 4. Fetch the fresh data in the background
     try {
       final result = await _fetchNearbyMatches();
-      final matchesWithDistance = await _calculateDistances(result.matches);
       
-      // Update cache
-      _cache[key] = matchesWithDistance;
-      _cacheCursors[key] = result.nextCursor;
-      _cacheTimestamps[key] = DateTime.now();
+      // Optimistically apply the last cached position if we have one
+      final initialMatches = _applyDistances(result.matches, _lastUserPosition);
 
-      // Only emit the results if the filters haven't changed while we were fetching
+      // Emit fresh matches immediately
       if (_lastSportType == event.sportType &&
           _lastSkillLevel == event.skillLevel &&
           _lastSearch == event.search) {
         emit(state.copyWith(
           status: MatchStatus.success,
-          matches: matchesWithDistance,
-          trendingMatches: isUnfiltered ? matchesWithDistance : state.trendingMatches,
+          matches: initialMatches,
+          trendingMatches: isUnfiltered ? initialMatches : state.trendingMatches,
           sportType: event.sportType,
           skillLevel: event.skillLevel,
           search: event.search,
           nextCursor: result.nextCursor,
           hasMore: result.nextCursor != null,
         ));
+      }
+
+      // Fetch fresh location and calculate updated distances asynchronously
+      final freshPosition = await _getUserPosition();
+      if (freshPosition != null) {
+        final matchesWithDistance = _applyDistances(result.matches, freshPosition);
+        
+        // Update cache
+        _cache[key] = matchesWithDistance;
+        _cacheCursors[key] = result.nextCursor;
+        _cacheTimestamps[key] = DateTime.now();
+
+        if (_lastSportType == event.sportType &&
+            _lastSkillLevel == event.skillLevel &&
+            _lastSearch == event.search) {
+          emit(state.copyWith(
+            status: MatchStatus.success,
+            matches: matchesWithDistance,
+            trendingMatches: isUnfiltered ? matchesWithDistance : state.trendingMatches,
+          ));
+        }
+      } else {
+        // Just cache the initial matches if location isn't available
+        _cache[key] = initialMatches;
+        _cacheCursors[key] = result.nextCursor;
+        _cacheTimestamps[key] = DateTime.now();
       }
     } catch (e, stackTrace) {
       debugPrint('MATCH_FETCH_ERROR: $e');
@@ -210,14 +234,11 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
           (_lastSkillLevel == null || _lastSkillLevel == 'All') &&
           (_lastSearch == null || _lastSearch!.isEmpty);
       
-      final matchesWithDistance = await _calculateDistances(result.matches);
-      final updatedMatches = [...state.matches, ...matchesWithDistance];
+      // Optimistically apply distances with last cached position
+      final initialNewMatches = _applyDistances(result.matches, _lastUserPosition);
+      final updatedMatches = [...state.matches, ...initialNewMatches];
 
-      // Update cache for this key so it includes the appended page
-      _cache[key] = updatedMatches;
-      _cacheCursors[key] = result.nextCursor;
-      _cacheTimestamps[key] = DateTime.now();
-
+      // Emit immediately
       emit(state.copyWith(
         status: MatchStatus.success,
         matches: updatedMatches,
@@ -225,6 +246,32 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         nextCursor: result.nextCursor,
         hasMore: result.nextCursor != null,
       ));
+
+      // Fetch fresh location and calculate updated distances asynchronously
+      final freshPosition = await _getUserPosition();
+      if (freshPosition != null) {
+        // Re-calculate distance for the new matches
+        final newMatchesWithDistance = _applyDistances(result.matches, freshPosition);
+        // Also update distances for existing matches in case position changed
+        final allMatchesWithDistance = _applyDistances([
+          ...state.matches.sublist(0, state.matches.length - result.matches.length),
+          ...newMatchesWithDistance
+        ], freshPosition);
+
+        _cache[key] = allMatchesWithDistance;
+        _cacheCursors[key] = result.nextCursor;
+        _cacheTimestamps[key] = DateTime.now();
+
+        emit(state.copyWith(
+          status: MatchStatus.success,
+          matches: allMatchesWithDistance,
+          trendingMatches: isUnfiltered ? allMatchesWithDistance : state.trendingMatches,
+        ));
+      } else {
+        _cache[key] = updatedMatches;
+        _cacheCursors[key] = result.nextCursor;
+        _cacheTimestamps[key] = DateTime.now();
+      }
     } catch (e, stackTrace) {
       debugPrint('MATCH_FETCH_MORE_ERROR: $e');
       debugPrint(stackTrace.toString());
@@ -233,56 +280,46 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     }
   }
 
-  Future<List<MatchModel>> _calculateDistances(List<MatchModel> matches) async {
+  Future<Position?> _getUserPosition() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        return matches;
-      }
+      if (!serviceEnabled) return null;
 
       LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-        return matches;
+        return null;
       }
 
-      Position? position;
-      try {
-        position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 4),
-          forceAndroidLocationManager: true,
-        );
-      } catch (_) {
-        position = await Geolocator.getLastKnownPosition();
-      }
-
-      if (position == null) {
-        return matches;
-      }
-
-      final double userLat = position.latitude;
-      final double userLng = position.longitude;
-
-      return matches.map((match) {
-        if (match.latitude != null && match.longitude != null) {
-          final double distanceInMeters = Geolocator.distanceBetween(
-            userLat,
-            userLng,
-            match.latitude!,
-            match.longitude!,
-          );
-          return match.copyWith(distance: distanceInMeters / 1000.0);
-        }
-        return match;
-      }).toList();
-    } catch (e, stackTrace) {
-      debugPrint('CALCULATE_DISTANCES_ERROR: Failed to calculate distances: $e');
-      debugPrint(stackTrace.toString());
-      return matches;
+      Position? position = await Geolocator.getLastKnownPosition();
+      position ??= await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low,
+        timeLimit: const Duration(seconds: 1),
+        forceAndroidLocationManager: true,
+      );
+      _lastUserPosition = position;
+      return position;
+    } catch (_) {
+      return _lastUserPosition;
     }
+  }
+
+  List<MatchModel> _applyDistances(List<MatchModel> matches, Position? position) {
+    if (position == null) return matches;
+    final double userLat = position.latitude;
+    final double userLng = position.longitude;
+
+    return matches.map((match) {
+      if (match.latitude != null && match.longitude != null) {
+        final double distanceInMeters = Geolocator.distanceBetween(
+          userLat,
+          userLng,
+          match.latitude!,
+          match.longitude!,
+        );
+        return match.copyWith(distance: distanceInMeters / 1000.0);
+      }
+      return match;
+    }).toList();
   }
 
   Future<void> _onMatchCreated(

@@ -100,6 +100,22 @@ class NotificationCard extends StatelessWidget {
         size: 32,
         color: iconColor,
       );
+    } else if (notification.type == 'social') {
+      iconWidget = Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: iconColor.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Image.asset(
+            'assets/images/wave_hand.png',
+            width: 24,
+            height: 24,
+          ),
+        ),
+      );
     } else {
       iconData = _getIconForType(notification.type, sportType);
     }

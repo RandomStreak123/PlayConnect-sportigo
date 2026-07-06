@@ -56,6 +56,17 @@ class _ActivityLogTabState extends State<ActivityLogTab> {
     }
   }
 
+  String _sanitizeMessage(String message) {
+    final lastQuoteIndex = message.lastIndexOf('"');
+    if (lastQuoteIndex != -1) {
+      final suffix = message.substring(lastQuoteIndex + 1);
+      if (suffix.trim().startsWith('at ')) {
+        return message.substring(0, lastQuoteIndex + 1);
+      }
+    }
+    return message;
+  }
+
   Widget _buildTimelineActivity({
     required String title,
     required String subtitle,
@@ -160,10 +171,9 @@ class _ActivityLogTabState extends State<ActivityLogTab> {
               final meta = activity.meta ?? {};
               final sportType = meta['sport_type'] as String? ?? 'Football';
               final matchTitle = meta['title'] as String? ?? '';
-              final location = meta['location'] as String? ?? '';
               final dateStr = _formatDateTime(activity.createdAt.toIso8601String());
 
-              String title = activity.message;
+              String title = _sanitizeMessage(activity.message);
               if (activity.type == 'match_created') {
                 title = 'Organized $sportType Match';
               } else if (activity.type == 'match_joined') {
@@ -173,12 +183,10 @@ class _ActivityLogTabState extends State<ActivityLogTab> {
               }
 
               String subtitle = '';
-              if (matchTitle.isNotEmpty && location.isNotEmpty) {
-                subtitle = '$matchTitle at $location • $dateStr';
-              } else if (matchTitle.isNotEmpty) {
+              if (matchTitle.isNotEmpty) {
                 subtitle = '$matchTitle • $dateStr';
               } else {
-                subtitle = '${activity.message} • $dateStr';
+                subtitle = '${_sanitizeMessage(activity.message)} • $dateStr';
               }
 
               final xp = _getActivityXp(activity.type);
