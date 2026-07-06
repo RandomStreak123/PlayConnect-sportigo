@@ -104,7 +104,6 @@ const handleDragEnd = (e) => {
 
     <div 
       class="players-slider" 
-      @wheel.prevent="handleWheelScroll"
       @mousedown="handleDragStart"
       @mousemove="handleDragMove"
       @mouseup="handleDragEnd"

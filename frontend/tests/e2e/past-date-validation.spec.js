@@ -11,7 +11,7 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     await page.goto('/');
 
     // Verify brand title is shown
-    await expect(page.locator('.brand-title')).toHaveText('PlayConnect');
+    await expect(page.locator('.brand-title')).toHaveText('PLAYCONNECT');
 
     // 2. Perform Login
     await page.locator('input[placeholder="Enter your username"]').click();
@@ -32,7 +32,7 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     // 4. Fill in Match Details with a PAST date
     await page.locator('button.sport-chip:has-text("Football")').click();
 
-    await page.locator('input[placeholder="e.g. Friday Evening 5v5"]').fill('E2E Past Date Match');
+    await page.locator('input[placeholder="e.g., Friday Evening 5v5"]').fill('E2E Past Date Match');
 
     // Set Date & Time to 1 day in the past
     const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -48,7 +48,7 @@ test.describe('PlayConnect E2E Past Date Validation & Language Switcher', () => 
     await page.locator('input[placeholder="e.g. Central Park Court 2"]').fill('Sportigo Arena, Madhapur');
 
     // Enter Slots
-    await page.locator('input[placeholder="e.g. 10"]').fill('6');
+    await page.locator('input[placeholder="e.g., 10"]').fill('6');
 
     // Submit Match Creation (Should trigger validation error)
     await page.locator('button.submit-btn:has-text("Create Match")').click();

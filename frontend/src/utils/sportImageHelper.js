@@ -95,7 +95,7 @@ export const getSportIconUrl = (sportOrType) => {
     cricket:    'https://cdn-icons-png.flaticon.com/128/2160/2160064.png',
     // Actions & Notifications
     left:       'https://cdn-icons-png.flaticon.com/128/1828/1828490.png',
-    wave:       'https://cdn-icons-png.flaticon.com/128/4650/4650393.png',
+    wave:       'https://cdn-icons-png.flaticon.com/128/9437/9437514.png',
     bell:       'https://cdn-icons-png.flaticon.com/128/3602/3602145.png',
     default:    'https://cdn-icons-png.flaticon.com/128/3602/3602145.png'
   }

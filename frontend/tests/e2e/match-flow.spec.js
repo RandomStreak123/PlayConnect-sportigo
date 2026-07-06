@@ -14,7 +14,7 @@ test.describe('PlayConnect E2E Match Flow', () => {
       await page.goto('/');
 
       // Verify brand title is shown
-      await expect(page.locator('.brand-title')).toHaveText('PlayConnect');
+      await expect(page.locator('.brand-title')).toHaveText('PLAYCONNECT');
 
       // 2. Perform Login
       await page.locator('input[placeholder="Enter your username"]').click();
@@ -38,7 +38,7 @@ test.describe('PlayConnect E2E Match Flow', () => {
       await page.locator('button.sport-chip:has-text("Football")').click();
 
       const testTitle = `E2E Playwright Football Match ${Date.now()}`;
-      await page.locator('input[placeholder="e.g. Friday Evening 5v5"]').fill(testTitle);
+      await page.locator('input[placeholder="e.g., Friday Evening 5v5"]').fill(testTitle);
 
       // Set Date & Time (using standard ISO format)
       const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days in the future
@@ -54,7 +54,7 @@ test.describe('PlayConnect E2E Match Flow', () => {
       await page.locator('input[placeholder="e.g. Central Park Court 2"]').fill('HotFut Turf, Gachibowli');
 
       // Enter Slots
-      await page.locator('input[placeholder="e.g. 10"]').fill('8');
+      await page.locator('input[placeholder="e.g., 10"]').fill('8');
 
       // Wait for the POST response to /api/matches
       const responsePromise = page.waitForResponse(response => 

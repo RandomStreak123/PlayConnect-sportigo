@@ -1012,7 +1012,7 @@ const achievementsList = computed(() => {
       req: '0+ XP',
       description: "You've taken your first steps on the court. Join local matches to earn XP and level up!",
       rewards: 'Rookie Badge 👟',
-      icon: '/assets/images/rookie_milestone.png',
+      icon: '👟',
       unlocked: true,
       progressText: `Level ${lvl} / 1`
     },
@@ -1024,7 +1024,7 @@ const achievementsList = computed(() => {
       req: '1,000+ XP',
       description: 'Unlocked for active participants. Your dedication is showing. Unlocks basic profile customization features (like active themes).',
       rewards: 'Rising Star Badge 💫, Theme Selector',
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="#fef08a" stroke="#eab308"></polygon><path d="M3 17c3-3 8-3 10-1" stroke="#fde047" stroke-width="1.5" stroke-dasharray="3,3"></path><path d="M5 20c2-2 6-2 8 0" stroke="#fde047" stroke-width="1.5" stroke-dasharray="3,3"></path></svg>',
+      icon: '💫',
       unlocked: lvl >= 2,
       progressText: `Level ${lvl} / 2`
     },
@@ -1036,7 +1036,7 @@ const achievementsList = computed(() => {
       req: '4,000+ XP',
       description: 'Unlocked for experienced players. You have a deep history of matchups. Unlocks the Silver Profile Frame and access to co-hosting matches.',
       rewards: 'Veteran Badge 🎖️, Silver Frame, Lavender Dusk Theme',
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8v8H8z" fill="#ef4444" stroke="#dc2626"></path><path d="M11 2h2v8h-2z" fill="#ffffff" stroke="transparent"></path><circle cx="12" cy="15" r="5" fill="#fcd34d" stroke="#f59e0b"></circle><polygon points="12 12.8 13 14.8 15.2 15.1 13.6 16.7 14 18.9 12 17.8 10 18.9 10.4 16.7 8.8 15.1 11 14.8" fill="#eab308" stroke="#ca8a04" stroke-width="0.5"></polygon></svg>',
+      icon: '🎖️',
       unlocked: lvl >= 5,
       progressText: `Level ${lvl} / 5`
     },
@@ -1048,7 +1048,7 @@ const achievementsList = computed(() => {
       req: '9,000+ XP',
       description: 'Unlocked for master players. You are a regular face in the community. Unlocks the Gold Profile Badge and custom status options on your profile card.',
       rewards: 'Gold Badge 🥇, Gold Rush Theme',
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2l5 5 5-5v6l-5 5-5-5z" fill="#3b82f6" stroke="#2563eb"></path><circle cx="12" cy="15" r="5" fill="#fbbf24" stroke="#d97706"></circle><text x="12" y="17.5" font-size="6.5" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" fill="#78350f" text-anchor="middle" dominant-baseline="middle">1</text></svg>',
+      icon: '🥇',
       unlocked: lvl >= 10,
       progressText: `Level ${lvl} / 10`
     },
@@ -1060,7 +1060,7 @@ const achievementsList = computed(() => {
       req: '24,000+ XP',
       description: 'The ultimate milestone. Reserved for the most dedicated athletes. Unlocks the premium Golden Profile Theme (with custom ambient animations) and high-priority badge on the match lobbies you organize.',
       rewards: 'Legend Badge 🏆, Golden Theme & Frame, Ambient animations',
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" fill="#fde047"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" fill="#fde047"></path><path d="M4 22h16" stroke="#451a03"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" fill="#a16207"></path><path d="M12 2a6 6 0 0 1 6 6v5a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z" fill="#fbbf24"></path></svg>',
+      icon: '🏆',
       unlocked: lvl >= 25,
       progressText: `Level ${lvl} / 25`
     },
@@ -1071,7 +1071,7 @@ const achievementsList = computed(() => {
       title: 'Community Pillar',
       req: 'Organize 40%+ of played games',
       description: 'Awarded to players who actively bring people together by organizing games. You are the heartbeat of the local sports community!',
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" fill="#fde047"></path><path d="M3 20h18a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1z" fill="#fbbf24"></path><circle cx="2" cy="4" r="1" fill="#ca8a04"></circle><circle cx="22" cy="4" r="1" fill="#ca8a04"></circle><circle cx="12" cy="4" r="1" fill="#ca8a04"></circle></svg>',
+      icon: '👑',
       unlocked: isCommunityPillar.value,
       progressText: `Current: ${total > 0 ? Math.round((created / total) * 100) : 0}%`
     },
@@ -1081,7 +1081,7 @@ const achievementsList = computed(() => {
       title: 'Invincible',
       req: 'Win streak of 5+ games',
       description: 'Awarded to players on a dominant winning run. There is no stopping you right now!',
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" fill="#f97316" /></svg>',
+      icon: '🔥',
       unlocked: isInvincible.value,
       progressText: `Current streak: ${calculatedStreak.value}`
     },
@@ -1091,7 +1091,7 @@ const achievementsList = computed(() => {
       title: 'Fair Play Ambassador',
       req: 'Average rating of 4.5+ (over 5+ games)',
       description: 'Awarded for excellent sportsmanship, friendliness, and reliable play style as rated by other community members.',
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>',
+      icon: '🤝',
       unlocked: isFairPlayAmbassador.value,
       progressText: `Rating: ${Number(profileStats.value.averageRating || 0).toFixed(1)} ⭐ (Games: ${profileStats.value.totalGames || 0})`
     },
@@ -1101,7 +1101,7 @@ const achievementsList = computed(() => {
       title: 'Ultimate All-Rounder',
       req: 'Play 3+ different sport types',
       description: "You don't stick to just one game. You dominate across multiple courts and disciplines!",
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2l5 5 5-5v6l-5 5-5-5z" fill="#3b82f6" stroke="#2563eb"></path><circle cx="12" cy="15" r="5" fill="#fbbf24" stroke="#d97706"></circle><text x="12" y="17.5" font-size="6.5" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" fill="#78350f" text-anchor="middle" dominant-baseline="middle">1</text></svg>',
+      icon: '🏅',
       unlocked: isUltimateAllRounder.value,
       progressText: `Sports: ${uniqueSportsPlayedCount.value}`
     }
@@ -1217,18 +1217,6 @@ const weekDaysStatus = computed(() => {
             <img v-if="latestUnlockedMilestone.icon.startsWith('/')" :src="latestUnlockedMilestone.icon" class="inline-badge-img" :alt="latestUnlockedMilestone.title" />
             <span v-else-if="latestUnlockedMilestone.icon.startsWith('<svg')" v-html="latestUnlockedMilestone.icon" class="inline-badge-svg-wrapper"></span>
             <span v-else class="inline-badge-emoji">{{ latestUnlockedMilestone.icon }}</span>
-          </div>
-
-          <!-- Other unlocked badges -->
-          <div 
-            v-for="item in achievementsList.filter(a => a.type === 'badge' && a.unlocked).slice(-1)" 
-            :key="item.id"
-            class="inline-badge-item"
-            :title="item.title"
-          >
-            <img v-if="item.icon.startsWith('/')" :src="item.icon" class="inline-badge-img" :alt="item.title" />
-            <span v-else-if="item.icon.startsWith('<svg')" v-html="item.icon" class="inline-badge-svg-wrapper"></span>
-            <span v-else class="inline-badge-emoji">{{ item.icon }}</span>
           </div>
         </div>
         <span class="verified-badge">
@@ -2935,8 +2923,73 @@ input:checked + .toggle-slider:before {
   .settings-panel-header {
     padding: 20px 24px 16px;
   }
-  .settings-panel-body {
-    padding: 20px 24px;
+}
+
+/* Avatar dynamic border styling */
+.border-bronze {
+  border: 4px solid transparent !important;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #cd7f32, #e5a65d, #cd7f32) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  box-shadow: 0 0 10px rgba(205, 127, 50, 0.4) !important;
+}
+
+.border-silver {
+  border: 4px solid transparent !important;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #c0c0c0, #e8e8e8, #c0c0c0) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  box-shadow: 0 0 12px rgba(192, 192, 192, 0.4) !important;
+}
+
+.border-gold {
+  border: 4px solid transparent !important;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ffd700, #ffeaa7, #ffd700) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.5) !important;
+}
+
+.border-gold-elite {
+  border: 4px solid transparent !important;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ff9f43, #ffcd3c, #ff9f43) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  box-shadow: 0 0 20px rgba(255, 159, 67, 0.6) !important;
+}
+
+.border-legend {
+  border: 4px solid transparent !important;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #7d5fff, #ff5e57, #7d5fff) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  animation: legendBorderPulse 3s infinite alternate !important;
+}
+
+/* Golden Legend Pulsing Radial Glow Overlay */
+.golden-radial-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 350px;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0) 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes legendBorderPulse {
+  0% {
+    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #7d5fff, #ff5e57, #7d5fff);
+    box-shadow: 0 0 16px rgba(125, 95, 255, 0.5);
+  }
+  50% {
+    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ff5e57, #7d5fff, #ff5e57);
+    box-shadow: 0 0 24px rgba(255, 94, 87, 0.7);
+  }
+  100% {
+    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #7d5fff, #ff5e57, #7d5fff);
+    box-shadow: 0 0 16px rgba(125, 95, 255, 0.5);
   }
 }
 
@@ -3355,46 +3408,7 @@ input:checked + .toggle-slider:before {
   opacity: 0;
 }
 
-/* Avatar dynamic border styling */
-.border-bronze {
-  border: 4px solid transparent !important;
-  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #00d2c4, #10b981) !important;
-  background-origin: border-box !important;
-  background-clip: padding-box, border-box !important;
-  box-shadow: 0 4px 12px rgba(0, 210, 196, 0.2) !important;
-}
 
-.border-silver {
-  border: 4px solid transparent !important;
-  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #c0c0c0, #f0f0f0, #8a8a8a) !important;
-  background-origin: border-box !important;
-  background-clip: padding-box, border-box !important;
-  box-shadow: 0 0 12px rgba(192, 192, 192, 0.4) !important;
-}
-
-.border-gold {
-  border: 4px solid transparent !important;
-  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ffd700, #fff3a8, #c5a000) !important;
-  background-origin: border-box !important;
-  background-clip: padding-box, border-box !important;
-  box-shadow: 0 0 16px rgba(255, 215, 0, 0.5) !important;
-}
-
-.border-gold-elite {
-  border: 4px solid transparent !important;
-  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ffd700, #ff8c00, #d97706) !important;
-  background-origin: border-box !important;
-  background-clip: padding-box, border-box !important;
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.7) !important;
-}
-
-.border-legend {
-  border: 4px solid transparent !important;
-  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #8b5cf6, #ec4899, #3b82f6) !important;
-  background-origin: border-box !important;
-  background-clip: padding-box, border-box !important;
-  animation: legendBorderPulse 3s infinite alternate !important;
-}
 
 /* Golden Legend Pulsing Radial Glow Overlay */
 .golden-radial-glow {
@@ -3420,20 +3434,6 @@ input:checked + .toggle-slider:before {
   }
 }
 
-@keyframes legendBorderPulse {
-  0% {
-    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #8b5cf6, #ec4899, #3b82f6);
-    box-shadow: 0 0 16px rgba(139, 92, 246, 0.4);
-  }
-  50% {
-    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ec4899, #3b82f6, #8b5cf6);
-    box-shadow: 0 0 24px rgba(236, 72, 153, 0.7);
-  }
-  100% {
-    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
-    box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
-  }
-}
 
 /* Achievements Section Styles */
 .achievements-panel {

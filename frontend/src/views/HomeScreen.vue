@@ -300,7 +300,6 @@ const handleDragEnd = (e) => {
     <div class="category-section-wrap">
       <div 
         class="category-slider" 
-        @wheel.prevent="handleWheelScroll"
         @mousedown="handleDragStart"
         @mousemove="handleDragMove"
         @mouseup="handleDragEnd"
@@ -336,7 +335,6 @@ const handleDragEnd = (e) => {
     <div 
       v-else
       class="nearby-slider" 
-      @wheel.prevent="handleCardWheelScroll"
       @mousedown="handleDragStart"
       @mousemove="handleDragMove"
       @mouseup="handleDragEnd"
@@ -367,7 +365,6 @@ const handleDragEnd = (e) => {
     <div 
       v-else 
       class="nearby-slider"
-      @wheel.prevent="handleCardWheelScroll"
       @mousedown="handleDragStart"
       @mousemove="handleDragMove"
       @mouseup="handleDragEnd"
