@@ -69,9 +69,15 @@ class AuthController extends Controller
             ->orWhere('email', $validated['username'])
             ->first();
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if (!$user) {
             return response()->json([
-                'message' => 'Invalid login details'
+                'message' => 'no user is exist'
+            ], 401);
+        }
+
+        if (!Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'message' => 'invalid credential'
             ], 401);
         }
 
@@ -234,7 +240,7 @@ class AuthController extends Controller
         // to the sportigo:// deep-link, which Android hands off to the app.
         // APP_URL in .env controls the base (e.g. http://10.0.2.2:8000 for
         // the Android emulator, https://api.yourserver.com in production).
-        $baseUrl = rtrim(config('app.url'), '/');
+        $baseUrl = $request->getSchemeAndHttpHost();
         $resetUrl = $baseUrl . '/reset-password?token=' . $token . '&email=' . urlencode($user->email);
 
         try {
