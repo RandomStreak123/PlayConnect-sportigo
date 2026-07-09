@@ -4,6 +4,8 @@ import '../../../core/di/service_locator.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../logic/blocs/auth/auth_bloc.dart';
+import 'sport_pill_selector.dart';
+import 'profile_dropdown_selector.dart';
 
 class EditProfileDialog extends StatefulWidget {
   final UserModel user;
@@ -183,7 +185,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     const SizedBox(height: 20),
                     Text('Primary Sport', style: labelStyle),
                     const SizedBox(height: 12),
-                    _SportPillSelector(
+                    SportPillSelector(
                       sports: _sports,
                       selectedSport: _selectedSport,
                       isSaving: _isSaving,
@@ -200,7 +202,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     Row(
                       children: [
                         Expanded(
-                          child: _ProfileDropdownSelector(
+                          child: ProfileDropdownSelector(
                             label: 'Gender',
                             value: _selectedGender,
                             items: const [
@@ -223,7 +225,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _ProfileDropdownSelector(
+                          child: ProfileDropdownSelector(
                             label: 'skillTier',
                             value: _selectedSkillTier,
                             items: const [
@@ -370,127 +372,6 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ── Custom Sport Pill Selector Widget ────────────────────────────────────────
-class _SportPillSelector extends StatelessWidget {
-  final List<Map<String, String>> sports;
-  final String? selectedSport;
-  final bool isSaving;
-  final Color textFieldFillColor;
-  final Color textFieldBorderColor;
-  final bool isDark;
-  final ValueChanged<String?> onSportSelected;
-
-  const _SportPillSelector({
-    required this.sports,
-    required this.selectedSport,
-    required this.isSaving,
-    required this.textFieldFillColor,
-    required this.textFieldBorderColor,
-    required this.isDark,
-    required this.onSportSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: sports.map((sport) {
-        final name = sport['name']!;
-        final emoji = sport['emoji']!;
-        final isSelected = selectedSport == name;
-        final pillBgColor = isSelected ? const Color(0xFF10B981) : textFieldFillColor;
-        final pillBorderColor = isSelected ? const Color(0xFF10B981) : textFieldBorderColor;
-        final pillTextColor = isSelected ? Colors.white : (isDark ? Colors.white : const Color(0xFF475569));
-
-        return GestureDetector(
-          onTap: isSaving ? null : () => onSportSelected(name),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: pillBgColor,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: pillBorderColor, width: 1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(emoji, style: const TextStyle(fontSize: 14)),
-                const SizedBox(width: 6),
-                Text(
-                  name,
-                  style: TextStyle(
-                    color: pillTextColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-// ── Custom Dropdown Selector Widget ──────────────────────────────────────────
-class _ProfileDropdownSelector extends StatelessWidget {
-  final String label;
-  final String? value;
-  final List<DropdownMenuItem<String>> items;
-  final ValueChanged<String?>? onChanged;
-  final bool isDark;
-  final Color fillColor;
-  final InputBorder borderStyle;
-  final InputBorder focusedBorderStyle;
-
-  const _ProfileDropdownSelector({
-    required this.label,
-    required this.value,
-    required this.items,
-    required this.onChanged,
-    required this.isDark,
-    required this.fillColor,
-    required this.borderStyle,
-    required this.focusedBorderStyle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final labelStyle = const TextStyle(
-      color: Color(0xFF64748B),
-      fontWeight: FontWeight.bold,
-      fontSize: 13,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: labelStyle),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: value,
-          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
-          decoration: InputDecoration(
-            border: borderStyle,
-            enabledBorder: borderStyle,
-            focusedBorder: focusedBorderStyle,
-            filled: true,
-            fillColor: fillColor,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-          dropdownColor: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
-          items: items,
-          onChanged: onChanged,
-        ),
-      ],
     );
   }
 }

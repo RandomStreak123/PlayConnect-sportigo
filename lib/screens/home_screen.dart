@@ -13,6 +13,8 @@ import 'home/widgets/home_top_bar.dart';
 import 'home/widgets/quick_sport_shortcuts.dart';
 import 'home/widgets/featured_matches_carousel.dart';
 import 'home/widgets/home_match_list.dart';
+import '../logic/blocs/notification/notification_bloc.dart';
+import '../logic/blocs/notification/notification_event.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,6 +31,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Fetch notifications on mount
+    context.read<NotificationBloc>().add(const NotificationFetched());
   }
 
   @override
@@ -60,7 +64,12 @@ class _HomeScreenState extends State<HomeScreen> {
             body: SafeArea(
               child: RefreshIndicator(
                 onRefresh: () async {
-                  context.read<MatchBloc>().add(const MatchFetched(forceRefresh: true));
+                  context.read<MatchBloc>().add(
+                    const MatchFetched(forceRefresh: true),
+                  );
+                  context.read<NotificationBloc>().add(
+                    const NotificationFetched(),
+                  );
                 },
                 child: CustomScrollView(
                   controller: _scrollController,
@@ -80,7 +89,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const AdvancedSearchScreen(),
+                                    builder: (context) =>
+                                        const AdvancedSearchScreen(),
                                   ),
                                 );
                               },
@@ -90,20 +100,36 @@ class _HomeScreenState extends State<HomeScreen> {
                                   vertical: AppSpacing.sm,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.surface.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.md,
+                                  ),
                                   border: Border.all(
-                                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outlineVariant
+                                        .withValues(alpha: 0.5),
                                   ),
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.search, color: Theme.of(context).colorScheme.outline),
+                                    Icon(
+                                      Icons.search,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.outline,
+                                    ),
                                     const SizedBox(width: AppSpacing.sm),
                                     Expanded(
                                       child: Text(
                                         'Find matches or players...',
-                                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                        style: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                        ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -127,7 +153,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const FeaturedMatchesCarousel(),
                     const HomeMatchList(),
-                    const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.bottomNavClearance)),
+                    const SliverPadding(
+                      padding: EdgeInsets.only(
+                        bottom: AppSpacing.bottomNavClearance,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -136,7 +166,9 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const CreateMatchScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const CreateMatchScreen(),
+                  ),
                 );
               },
               backgroundColor: Theme.of(context).colorScheme.primary,
@@ -154,7 +186,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.black.withValues(alpha: 0.35),
                 child: Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 24,
+                    ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(20),
@@ -169,15 +204,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const AppLoadingIndicator(
-                          color: AppColors.sportsGreen,
-                        ),
+                        const AppLoadingIndicator(color: AppColors.sportsGreen),
                         const SizedBox(height: 20),
                         Text(
                           'Signing out...',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),

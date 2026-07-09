@@ -49,11 +49,13 @@ class SendMatchReminders extends Command
                     ->exists();
 
                 if (!$exists) {
+                    $locationParts = explode(',', $match->location);
+                    $shortLocation = trim($locationParts[0]);
                     Notification::create([
                         'user_id' => $user->id,
                         'type' => 'match_reminder',
                         'title' => 'Upcoming Match Alert',
-                        'message' => "You have an upcoming match: {$match->sport_type} match \"{$match->title}\" at {$match->location} scheduled for {$formattedTime}.",
+                        'message' => "You have an upcoming match: \"{$match->title}\" at {$shortLocation} scheduled for {$formattedTime}.",
                         'is_read' => false,
                         'meta' => [
                             'match_id' => $match->id,

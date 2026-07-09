@@ -9,4 +9,13 @@ class AppColors {
   static const Color charcoalBlack = Color(0xFF121212);
   static const Color electricCyan = Color(0xFF00E5FF);
   static const Color warmOrange = Color(0xFFFF9100);
+  static const Color womenOnlyPink = Color(0xFFFF4D8D);
+  static const Color lockPurple = Color(0xFF7B61FF);
+
+  static final Gradient womenOnlyGradient = LinearGradient(
+    colors: [
+      womenOnlyPink.withValues(alpha: 0.1),
+      lockPurple.withValues(alpha: 0.05),
+    ],
+  );
 }

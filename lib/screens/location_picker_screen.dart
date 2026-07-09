@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'location_picker/widgets/location_search_bar.dart';
 import 'location_picker/widgets/location_address_card.dart';
 import 'location_picker/widgets/location_map_container.dart';
+import 'location_picker/widgets/location_search_suggestions.dart';
 import '../core/constants/api_constants.dart';
 import '../services/mappls_service.dart';
 
@@ -35,7 +36,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
 
-  LatLng _currentCenter = const LatLng(8.5668163, 76.8711487); // Default to pincode 695582, Kazhakkoottam, Trivandrum
+  LatLng _currentCenter = const LatLng(
+    8.5668163,
+    76.8711487,
+  ); // Default to pincode 695582, Kazhakkoottam, Trivandrum
   String _address = 'Kazhakkoottam, Thiruvananthapuram, Kerala, 695582, India';
   bool _isGeocoding = false;
   Timer? _debounceTimer;
@@ -78,7 +82,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Location services are disabled. Please enable them in settings.'),
+              content: Text(
+                'Location services are disabled. Please enable them in settings.',
+              ),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -114,7 +120,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Location permissions are permanently denied. We cannot request permissions.'),
+              content: Text(
+                'Location permissions are permanently denied. We cannot request permissions.',
+              ),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -156,22 +164,28 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   String _sanitizeAddress(String address) {
     String sanitized = address;
     final lowercase = address.toLowerCase();
-    if (lowercase.contains('kazhakkoottam') || 
-        lowercase.contains('kazhakootm') || 
+    if (lowercase.contains('kazhakkoottam') ||
+        lowercase.contains('kazhakootm') ||
         lowercase.contains('kazhakuttam')) {
       sanitized = sanitized.replaceAll('695001', '695582');
     }
     return sanitized;
   }
 
-  Future<void> _reverseGeocode(LatLng position, {String? fallbackAddress}) async {
+  Future<void> _reverseGeocode(
+    LatLng position, {
+    String? fallbackAddress,
+  }) async {
     setState(() {
       _isGeocoding = true;
     });
 
     if (ApiConstants.isMapplsConfigured) {
       try {
-        final address = await MapplsService.reverseGeocode(position.latitude, position.longitude);
+        final address = await MapplsService.reverseGeocode(
+          position.latitude,
+          position.longitude,
+        );
         if (address != null && address.isNotEmpty) {
           setState(() {
             _address = _sanitizeAddress(address);
@@ -188,9 +202,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.latitude}&lon=${position.longitude}&zoom=18&addressdetails=1',
       );
-      final response = await http.get(url, headers: {
-        'User-Agent': 'sportigo-app/1.0',
-      });
+      final response = await http.get(
+        url,
+        headers: {'User-Agent': 'sportigo-app/1.0'},
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -208,7 +223,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
 
     setState(() {
-      _address = fallbackAddress ?? 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
+      _address =
+          fallbackAddress ??
+          'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
       _isGeocoding = false;
     });
   }
@@ -236,7 +253,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     });
   }
 
-  void _onSearchResultSelected(LatLng point, String address, {bool skipReverseGeocode = false}) {
+  void _onSearchResultSelected(
+    LatLng point,
+    String address, {
+    bool skipReverseGeocode = false,
+  }) {
     setState(() {
       _currentCenter = point;
       _address = _sanitizeAddress(address);
@@ -251,8 +272,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   Future<void> _onSuggestionTapped(int index) async {
     final result = _searchResults[index];
-    final displayName = (result['display_name'] ?? _searchController.text.trim()) as String;
-    
+    final displayName =
+        (result['display_name'] ?? _searchController.text.trim()) as String;
+
     // Clear search results and hide keyboard
     setState(() {
       _searchResults = [];
@@ -280,24 +302,31 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       final match = pincodeRegex.firstMatch(displayName);
       if (match != null) {
         final pincode = match.group(0);
-        debugPrint('ELOC_GEOCODE: Found pincode $pincode. Geocoding via Nominatim...');
-        
+        debugPrint(
+          'ELOC_GEOCODE: Found pincode $pincode. Geocoding via Nominatim...',
+        );
+
         setState(() {
           _isGeocoding = true;
           _address = 'Resolving location...';
         });
 
         try {
-          final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$pincode,+India&format=json&limit=1');
-          final response = await http.get(url, headers: {
-            'User-Agent': 'sportigo-app/1.0',
-          });
+          final url = Uri.parse(
+            'https://nominatim.openstreetmap.org/search?q=$pincode,+India&format=json&limit=1',
+          );
+          final response = await http.get(
+            url,
+            headers: {'User-Agent': 'sportigo-app/1.0'},
+          );
           if (response.statusCode == 200) {
             final List data = json.decode(response.body);
             if (data.isNotEmpty) {
               lat = double.parse(data[0]['lat']);
               lon = double.parse(data[0]['lon']);
-              debugPrint('ELOC_GEOCODE: Resolved coordinates $lat, $lon from pincode $pincode');
+              debugPrint(
+                'ELOC_GEOCODE: Resolved coordinates $lat, $lon from pincode $pincode',
+              );
             }
           }
         } catch (e) {
@@ -308,11 +337,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           });
         }
       } else {
-        debugPrint('ELOC_GEOCODE: No pincode found in address. Falling back to Trivandrum center.');
+        debugPrint(
+          'ELOC_GEOCODE: No pincode found in address. Falling back to Trivandrum center.',
+        );
       }
     }
 
-    _onSearchResultSelected(LatLng(lat, lon), displayName, skipReverseGeocode: true);
+    _onSearchResultSelected(
+      LatLng(lat, lon),
+      displayName,
+      skipReverseGeocode: true,
+    );
     setState(() {
       _hasSelectedSuggestion = true;
     });
@@ -333,16 +368,25 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       try {
         final results = await MapplsService.autoSuggest(
           query,
-          latitude: 8.5241,  // Trivandrum center
+          latitude: 8.5241, // Trivandrum center
           longitude: 76.9366, // Trivandrum center
         );
         if (results.isNotEmpty) {
-          // Filter to Trivandrum / Kerala locations using text-based checks
+          // Filter strictly to Trivandrum: by coordinate bounds if present, or by text/pincode patterns
           final filtered = results.where((r) {
-            final address = (r['display_name'] ?? '').toString().toLowerCase();
-            return address.contains('trivandrum') || 
-                   address.contains('thiruvananthapuram') || 
-                   address.contains('kerala');
+            final lat = double.tryParse(r['lat']?.toString() ?? '') ?? 0.0;
+            final lon = double.tryParse(r['lon']?.toString() ?? '') ?? 0.0;
+            if (lat != 0.0 && lon != 0.0) {
+              return lat >= 8.25 && lat <= 8.80 && lon >= 76.65 && lon <= 77.20;
+            } else {
+              final address = (r['display_name'] ?? '')
+                  .toString()
+                  .toLowerCase();
+              return address.contains('trivandrum') ||
+                  address.contains('thiruvananthapuram') ||
+                  RegExp(r'\b695\d{3}\b').hasMatch(address) ||
+                  address.contains('kerala');
+            }
           }).toList();
           if (filtered.isNotEmpty) {
             setState(() {
@@ -373,19 +417,41 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         '&bounded=1'
         '&limit=5',
       );
-      final response = await http.get(url, headers: {
-        'User-Agent': 'sportigo-app/1.0',
-      });
+      final response = await http.get(
+        url,
+        headers: {'User-Agent': 'sportigo-app/1.0'},
+      );
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
-        if (data.isNotEmpty) {
+        final mapped = data
+            .map(
+              (item) => {
+                'lat': item['lat'],
+                'lon': item['lon'],
+                'display_name': item['display_name'],
+              },
+            )
+            .toList();
+
+        // Filter strictly to Trivandrum: by coordinate bounds if present, or by text/pincode patterns
+        final filtered = mapped.where((r) {
+          final lat = double.tryParse(r['lat']?.toString() ?? '') ?? 0.0;
+          final lon = double.tryParse(r['lon']?.toString() ?? '') ?? 0.0;
+          if (lat != 0.0 && lon != 0.0) {
+            return lat >= 8.25 && lat <= 8.80 && lon >= 76.65 && lon <= 77.20;
+          } else {
+            final address = (r['display_name'] ?? '').toString().toLowerCase();
+            return address.contains('trivandrum') ||
+                address.contains('thiruvananthapuram') ||
+                RegExp(r'\b695\d{3}\b').hasMatch(address) ||
+                address.contains('kerala');
+          }
+        }).toList();
+
+        if (filtered.isNotEmpty) {
           setState(() {
-            _searchResults = data.map((item) => {
-              'lat': item['lat'],
-              'lon': item['lon'],
-              'display_name': item['display_name'],
-            }).toList();
+            _searchResults = filtered;
           });
         } else {
           setState(() {
@@ -393,16 +459,20 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           });
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('No results for "$query". You can use it as a custom name.')),
+              SnackBar(
+                content: Text(
+                  'No results for "$query" in Trivandrum. You can use it as a custom name.',
+                ),
+              ),
             );
           }
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Search failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Search failed: $e')));
       }
     } finally {
       setState(() {
@@ -474,48 +544,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   onSearchPressed: _searchAddress,
                 ),
                 if (_searchResults.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    constraints: const BoxConstraints(maxHeight: 250),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      padding: EdgeInsets.zero,
-                      itemCount: _searchResults.length,
-                      separatorBuilder: (_, _) => Divider(
-                        height: 1,
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      itemBuilder: (context, index) {
-                        final result = _searchResults[index];
-                        final name = (result['display_name'] ?? 'Unknown') as String;
-                        return ListTile(
-                          dense: true,
-                          leading: Icon(
-                            Icons.location_on_outlined,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 20,
-                          ),
-                          title: Text(
-                            name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          onTap: () => _onSuggestionTapped(index),
-                        );
-                      },
-                    ),
+                  LocationSearchSuggestions(
+                    searchResults: _searchResults,
+                    onSuggestionTapped: _onSuggestionTapped,
                   ),
               ],
             ),

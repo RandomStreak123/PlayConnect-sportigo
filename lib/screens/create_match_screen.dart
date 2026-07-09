@@ -12,6 +12,7 @@ import 'location_picker_screen.dart';
 import 'create_match/widgets/create_match_form_field.dart';
 import 'create_match/widgets/create_match_dropdown.dart';
 import 'create_match/widgets/women_only_toggle.dart';
+import 'create_match/widgets/create_match_date_time_picker.dart';
 
 class CreateMatchScreen extends StatefulWidget {
   const CreateMatchScreen({super.key});
@@ -193,43 +194,9 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                 const SizedBox(height: 20),
 
                 // Date & Time Picker
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.xs, left: AppSpacing.xxs),
-                      child: Text(
-                        'Date & Time',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: _selectDateTime,
-                      child: Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.calendar_today, color: Theme.of(context).colorScheme.primary, size: AppIconSize.sm),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Text(
-                                DateFormat('MMM dd, yyyy - hh:mm a').format(_selectedDate),
-                                style: Theme.of(context).textTheme.bodyLarge,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                CreateMatchDateTimePicker(
+                  selectedDate: _selectedDate,
+                  onTap: _selectDateTime,
                 ),
                 const SizedBox(height: 20),
 

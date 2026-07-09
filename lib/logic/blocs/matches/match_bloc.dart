@@ -4,7 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/match_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/match_repository.dart';
-import 'package:geolocator/geolocator.dart';
+import '../../../services/location_service.dart';
+import '../../../core/di/service_locator.dart';
 
 part 'match_event.dart';
 part 'match_state.dart';
@@ -24,7 +25,6 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
   }
 
   final MatchRepository _matchRepository;
-  Position? _lastUserPosition;
 
   String? _lastSportType;
   String? _lastSkillLevel;
@@ -161,7 +161,8 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
       final result = await _fetchNearbyMatches();
       
       // Optimistically apply the last cached position if we have one
-      final initialMatches = _applyDistances(result.matches, _lastUserPosition);
+      final locationService = getIt<LocationService>();
+      final initialMatches = locationService.applyDistances(result.matches, locationService.lastUserPosition);
 
       // Emit fresh matches immediately
       if (_lastSportType == event.sportType &&
@@ -180,9 +181,9 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
       }
 
       // Fetch fresh location and calculate updated distances asynchronously
-      final freshPosition = await _getUserPosition();
+      final freshPosition = await locationService.getUserPosition();
       if (freshPosition != null) {
-        final matchesWithDistance = _applyDistances(result.matches, freshPosition);
+        final matchesWithDistance = locationService.applyDistances(result.matches, freshPosition);
         
         // Update cache
         _cache[key] = matchesWithDistance;
@@ -235,7 +236,8 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
           (_lastSearch == null || _lastSearch!.isEmpty);
       
       // Optimistically apply distances with last cached position
-      final initialNewMatches = _applyDistances(result.matches, _lastUserPosition);
+      final locationService = getIt<LocationService>();
+      final initialNewMatches = locationService.applyDistances(result.matches, locationService.lastUserPosition);
       final updatedMatches = [...state.matches, ...initialNewMatches];
 
       // Emit immediately
@@ -248,12 +250,12 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
       ));
 
       // Fetch fresh location and calculate updated distances asynchronously
-      final freshPosition = await _getUserPosition();
+      final freshPosition = await locationService.getUserPosition();
       if (freshPosition != null) {
         // Re-calculate distance for the new matches
-        final newMatchesWithDistance = _applyDistances(result.matches, freshPosition);
+        final newMatchesWithDistance = locationService.applyDistances(result.matches, freshPosition);
         // Also update distances for existing matches in case position changed
-        final allMatchesWithDistance = _applyDistances([
+        final allMatchesWithDistance = locationService.applyDistances([
           ...state.matches.sublist(0, state.matches.length - result.matches.length),
           ...newMatchesWithDistance
         ], freshPosition);
@@ -280,47 +282,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     }
   }
 
-  Future<Position?> _getUserPosition() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return null;
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-        return null;
-      }
-
-      Position? position = await Geolocator.getLastKnownPosition();
-      position ??= await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low,
-        timeLimit: const Duration(seconds: 1),
-        forceAndroidLocationManager: true,
-      );
-      _lastUserPosition = position;
-      return position;
-    } catch (_) {
-      return _lastUserPosition;
-    }
-  }
-
-  List<MatchModel> _applyDistances(List<MatchModel> matches, Position? position) {
-    if (position == null) return matches;
-    final double userLat = position.latitude;
-    final double userLng = position.longitude;
-
-    return matches.map((match) {
-      if (match.latitude != null && match.longitude != null) {
-        final double distanceInMeters = Geolocator.distanceBetween(
-          userLat,
-          userLng,
-          match.latitude!,
-          match.longitude!,
-        );
-        return match.copyWith(distance: distanceInMeters / 1000.0);
-      }
-      return match;
-    }).toList();
-  }
 
   Future<void> _onMatchCreated(
     MatchCreated event,

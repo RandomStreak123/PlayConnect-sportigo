@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import '../../services/api_client.dart';
+import '../../services/location_service.dart';
 import '../constants/api_constants.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/match_repository.dart';
@@ -12,6 +13,7 @@ final getIt = GetIt.instance;
 void setupLocator() {
   // Core Services
   getIt.registerLazySingleton<ApiClient>(() => ApiClient(baseUrl: ApiConstants.baseUrl));
+  getIt.registerLazySingleton<LocationService>(() => LocationService());
   getIt.registerLazySingleton<ThemeManager>(() => ThemeManager());
 
   // Repositories

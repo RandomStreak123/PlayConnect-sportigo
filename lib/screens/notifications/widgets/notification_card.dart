@@ -32,7 +32,20 @@ class NotificationCard extends StatelessWidget {
     } else if (difference.inDays < 7) {
       return '${difference.inDays} days ago';
     } else {
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       return '${months[dateTime.month - 1]} ${dateTime.day}';
     }
   }
@@ -94,7 +107,8 @@ class NotificationCard extends StatelessWidget {
 
     Widget? iconWidget;
     IconData? iconData;
-    if (notification.type == 'match_joined' || notification.type == 'match_reminder') {
+    if (notification.type == 'match_joined' ||
+        notification.type == 'match_reminder') {
       iconWidget = SportIconHelper.widgetForSport(
         sportType ?? '',
         size: 32,
@@ -126,14 +140,20 @@ class NotificationCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: isUnread 
-              ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.05)
+          color: isUnread
+              ? Theme.of(
+                  context,
+                ).colorScheme.primaryContainer.withValues(alpha: 0.05)
               : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
-            color: isUnread 
-                ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1)
-                : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+            color: isUnread
+                ? Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withValues(alpha: 0.1)
+                : Theme.of(
+                    context,
+                  ).colorScheme.outlineVariant.withValues(alpha: 0.3),
           ),
         ),
         child: Row(
@@ -151,7 +171,11 @@ class NotificationCard extends StatelessWidget {
                       color: iconColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(iconData!, color: iconColor, size: AppIconSize.sm),
+                    child: Icon(
+                      iconData!,
+                      color: iconColor,
+                      size: AppIconSize.sm,
+                    ),
                   ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -164,9 +188,8 @@ class NotificationCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           notification.title,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -181,7 +204,7 @@ class NotificationCard extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    notification.message,
+                    _formatMessage(notification),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                       height: 1.4,
@@ -205,5 +228,29 @@ class NotificationCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatMessage(NotificationModel notification) {
+    if (notification.type == 'match_reminder') {
+      final meta = notification.meta;
+      final matchTitle = meta?['title'] as String? ?? '';
+      final matchLocation = meta?['location'] as String? ?? '';
+      final shortLocation = matchLocation.split(',')[0].trim();
+
+      // Extract time (e.g. "7:00 PM") from the original message if it exists
+      final timeRegExp = RegExp(r'scheduled for ([^.]+)\.?');
+      final matchTime = timeRegExp
+          .firstMatch(notification.message)
+          ?.group(1)
+          ?.trim();
+
+      if (matchTitle.isNotEmpty && shortLocation.isNotEmpty) {
+        if (matchTime != null) {
+          return 'You have an upcoming match: "$matchTitle" at $shortLocation scheduled for $matchTime.';
+        }
+        return 'You have an upcoming match: "$matchTitle" at $shortLocation.';
+      }
+    }
+    return notification.message;
   }
 }

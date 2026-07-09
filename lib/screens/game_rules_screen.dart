@@ -9,156 +9,184 @@ class GameRulesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     // Define the sports items based on the provided design and exact user-provided text
     final List<SportRuleItem> sportsList = [
       SportRuleItem(
         title: 'Football',
-        cardSubtitle: '5v5/7v7 turf rules and tackle policies',
-        subtitle: 'Guidelines for friendly turf matches, scrimmage games, and tournaments.',
+        cardSubtitle: '11v11, 7v7 or 5v5 action on grass or turf',
+        subtitle:
+            'The beautiful game. 11v11, 7v7 or 5v5 action on grass or turf.',
         emoji: '⚽',
         color: const Color(0xFF10B981), // Green
         rules: const [
           SportRule(
-            title: 'Player Count',
-            description: 'Standard turf matches are 5v5 (min 8 players) or 7v7 (min 12 players).',
+            title: 'Fair Play (No Slides)',
+            description:
+                'Slide tackles are strictly prohibited in recreational play to prevent injury. Stay on your feet!',
           ),
           SportRule(
-            title: 'Match Duration',
-            description: 'Usually played as two halves of 25 or 30 minutes each, with a 5-minute break.',
+            title: 'Goal Area & Keepers',
+            description:
+                'Goalkeepers can only handle the ball inside the designated penalty area. No back-passes can be handled.',
           ),
           SportRule(
-            title: 'Fair Play',
-            description: 'Slide tackles are strictly prohibited on artificial turf to prevent injuries.',
+            title: 'Restarts',
+            description:
+                'Kick-ins or throw-ins from the touchline depending on venue style. All free kicks must respect defensive distance.',
           ),
           SportRule(
-            title: 'Equipments',
-            description: 'Molded studs or turf shoes only. Shin guards are highly recommended.',
+            title: 'Offside Rule',
+            description:
+                'Offside is typically not enforced in 5v5/7v7 small-sided matches unless explicitly agreed beforehand.',
           ),
         ],
       ),
       SportRuleItem(
         title: 'Cricket',
-        cardSubtitle: 'Over limits, bowling direction, and net boundaries',
-        subtitle: 'Guidelines for box cricket, turf leagues, and net practice sessions.',
+        cardSubtitle: 'T20 or custom overs format',
+        subtitle: 'Bat, bowl, field. T20 or custom overs format.',
         emoji: '🏏',
         color: const Color(0xFF3B82F6), // Blue
         rules: const [
           SportRule(
-            title: 'Overs Limit',
-            description: 'Matches are typically 6 to 12 overs per innings, depending on slot duration.',
+            title: 'Format & Overs',
+            description:
+                'Usually played as T20 or custom overs format. Bowlers are restricted to a maximum of 4 overs per match.',
           ),
           SportRule(
-            title: 'Bowler Rules',
-            description: 'Each bowler can bowl a maximum of 2 overs in a standard 8-over match.',
+            title: 'Scoring Runs',
+            description:
+                'Runs are scored by running between wickets or hitting boundaries (4 runs on bounce, 6 runs aerial).',
           ),
           SportRule(
-            title: 'Underarm/Overarm',
-            description: 'Specify bowling type (overarm or underarm) in the match description when organizing.',
+            title: 'Extra Penalties',
+            description:
+                'Wides and No-balls grant 1 extra run to the batting team, and No-balls grant a Free Hit on the next delivery.',
           ),
           SportRule(
-            title: 'Boundary Rules',
-            description: 'Direct hits on the net or walls may count as limited runs (e.g., 1 or 2 runs) or outs.',
+            title: 'Dismissal Types',
+            description:
+                'Batsmen can be dismissed via Bowled, Caught, LBW, Run Out, Stumped, or Hit Wicket.',
           ),
         ],
       ),
       SportRuleItem(
         title: 'Badminton',
-        cardSubtitle: 'Singles/doubles service and scoring system',
-        subtitle: 'Rules for indoor singles and doubles badminton matches.',
+        cardSubtitle: 'Fast-paced racket sport',
+        subtitle:
+            'Fast-paced racket sport played over a net with shuttlecocks.',
         emoji: '🏸',
         color: const Color(0xFF8B5CF6), // Purple
         rules: const [
           SportRule(
+            title: 'Underhand Serve',
+            description:
+                'The serve must be hit underhand from below the server\'s waist. The shuttlecock must travel diagonally into the opponent\'s service court.',
+          ),
+          SportRule(
             title: 'Scoring Format',
-            description: 'Best of 3 games. Each game is played to 21 points using rally scoring.',
+            description:
+                'Matches are played as best of 3 games of 21 points. A point is scored on every rally (rally scoring).',
           ),
           SportRule(
-            title: 'Deuce Rule',
-            description: 'If the score reaches 20-all, the side that gains a 2-point lead first wins the game.',
+            title: 'Fault Calls',
+            description:
+                'It is a fault if the shuttlecock touches the net, lands out of bounds, or if a player touches the net with their body or racket.',
           ),
           SportRule(
-            title: 'Service',
-            description: 'Underhand service only. The shuttle must be struck below the waist level.',
-          ),
-          SportRule(
-            title: 'Double Play',
-            description: 'The service court changes dynamically between partners only when winning a point on service.',
+            title: 'In or Out',
+            description:
+                'Shuttlecocks landing on the boundary line are considered in-bounds.',
           ),
         ],
       ),
       SportRuleItem(
         title: 'Basketball',
-        cardSubtitle: '3v3 half-court and 5v5 fouls',
-        subtitle: 'Guidelines for half-court 3v3 or full-court 5v5 basketball games.',
+        cardSubtitle: '5v5 full-court or 3v3 half-court play',
+        subtitle: 'Hoop action. 5v5 full-court or 3v3 half-court play.',
         emoji: '🏀',
         color: const Color(0xFFF97316), // Orange
         rules: const [
           SportRule(
-            title: 'Match Types',
-            description: '3v3 is played on a single hoop. 5v5 is played full-court.',
+            title: 'Scoring System',
+            description:
+                'Matches can be 5v5 full-court or 3v3 half-court. Baskets inside the arc count for 2 points, outside for 3.',
           ),
           SportRule(
-            title: 'Scoring',
-            description: 'Standard baskets count as 2 points, shots from behind the arc count as 3 points.',
+            title: 'Dribbling Rules',
+            description:
+                'Double dribbling and traveling (taking more than 2 steps without dribbling) are violations.',
           ),
           SportRule(
-            title: 'Fouls & Violations',
-            description: 'Double dribble, traveling, and high contact result in turnover of possession.',
+            title: 'Personal Fouls',
+            description:
+                'Avoid excessive physical contact. Defenders must establish legal guarding position without reaching/blocking.',
           ),
           SportRule(
-            title: 'Game Points',
-            description: 'First to 21 points (in 3v3) or highest score at the end of four 10-minute quarters.',
+            title: 'Possession & Clock',
+            description:
+                'Standard 24-second shot clock (if applicable) or self-refereed turnover flow. Clear the ball past the arc on changes in 3v3.',
           ),
         ],
       ),
       SportRuleItem(
         title: 'Tennis',
-        cardSubtitle: 'Sets, scoring (15/30/40), and tie-breakers',
-        subtitle: 'Singles and doubles rules for clay and hardcourt tennis.',
+        cardSubtitle: 'Classic singles or doubles racket game',
+        subtitle:
+            'Classic singles or doubles racket game on clay, grass, or hard court.',
         emoji: '🎾',
         color: const Color(0xFF06B6D4), // Cyan
         rules: const [
           SportRule(
-            title: 'Scoring',
-            description: 'Points progress as 15, 30, 40, and Game. Deuce is active at 40-40.',
+            title: 'Serving Sequence',
+            description:
+                'Serve diagonally behind the baseline. If it hits the net tape and lands in the correct box, it is a let (replay).',
           ),
           SportRule(
-            title: 'Advantage',
-            description: 'After deuce, a player must win two consecutive points to win the game.',
+            title: 'Scoring Format',
+            description:
+                'Games are scored 15, 30, 40, Game. Winning a set requires winning 6 games, with at least a 2-game lead.',
           ),
           SportRule(
-            title: 'Sets & Match',
-            description: 'Played as best-of-3 sets. A set is won by the first player to win 6 games with a 2-game lead.',
+            title: 'Line Calls',
+            description:
+                'Any ball landing on any part of the boundary line is considered in. Players call lines on their side of the net.',
           ),
           SportRule(
-            title: 'Tie-breaker',
-            description: 'At 6-6 in games, a 7-point tiebreaker is played to decide the set.',
+            title: 'Net Play',
+            description:
+                'No player or their racket may touch the net while the ball is in play. Reaching over the net to hit a ball is a foul.',
           ),
         ],
       ),
       SportRuleItem(
         title: 'Padel',
-        cardSubtitle: 'Enclosed glass wall rules and underhand service',
-        subtitle: 'Rules for doubles padel matches played in enclosed courts.',
+        cardSubtitle: 'Enclosed doubles racket sport',
+        subtitle:
+            'Fast-growing enclosed doubles racket sport combining tennis and squash.',
         emoji: '🏓',
         color: const Color(0xFF6366F1), // Indigo
         rules: const [
           SportRule(
-            title: 'Doubles Format',
-            description: 'Padel is predominantly played as a doubles sport on an enclosed court.',
+            title: 'Court & Equipment',
+            description:
+                'Played in doubles on an enclosed 10x20m court with glass walls. Padel rackets are solid with no strings.',
           ),
           SportRule(
-            title: 'Service',
-            description: 'Must be underhand, struck at or below waist level, and bounce in the opponent\'s crosscourt box.',
+            title: 'Underhand Service',
+            description:
+                'Serves must be hit underhand at or below waist level. The ball must bounce once in the diagonally opposite service box.',
           ),
           SportRule(
-            title: 'Wall Play',
-            description: 'Ball must bounce on the ground before hitting any wall or fence.',
+            title: 'Wall Bounce Rules',
+            description:
+                'After bouncing in the opponent\'s court, the ball may strike any glass or mesh wall. Direct hits to mesh/glass are out.',
           ),
           SportRule(
-            title: 'Rebounds',
-            description: 'Players can strike the ball after it rebounds off their own glass walls to return it.',
+            title: 'Deciding Point (Gold)',
+            description:
+                'If the score reaches Deuce (40-40), a single deciding Golden Point is played. Receivers choose the side.',
           ),
         ],
       ),
@@ -168,20 +196,20 @@ class GameRulesScreen extends StatelessWidget {
     const headerTitleColor = Color(0xFF0F1E4A);
 
     return Scaffold(
-      backgroundColor: isDark ? Theme.of(context).colorScheme.surface : const Color(0xFFFAFAFC),
+      backgroundColor: isDark
+          ? Theme.of(context).colorScheme.surface
+          : const Color(0xFFFAFAFC),
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         centerTitle: false,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : headerTitleColor),
+        iconTheme: IconThemeData(
+          color: isDark ? Colors.white : headerTitleColor,
+        ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.shield,
-              color: Color(0xFF4285F4),
-              size: 24,
-            ),
+            const Icon(Icons.shield, color: Color(0xFF4285F4), size: 24),
             const SizedBox(width: 10),
             Text(
               'Game Rules',
@@ -208,7 +236,10 @@ class GameRulesScreen extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md + 4, vertical: AppSpacing.lg),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md + 4,
+                  vertical: AppSpacing.lg,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -216,7 +247,9 @@ class GameRulesScreen extends StatelessWidget {
                       'Select a sport to view its detailed rules and match guidelines:',
                       style: TextStyle(
                         fontSize: 14,
-                        color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B),
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : const Color(0xFF64748B),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -225,7 +258,8 @@ class GameRulesScreen extends StatelessWidget {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: sportsList.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 16),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 16),
                       itemBuilder: (context, index) {
                         final sport = sportsList[index];
                         return SportRuleCard(sport: sport, isDark: isDark);

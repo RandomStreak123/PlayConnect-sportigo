@@ -5,16 +5,12 @@ import '../../../logic/blocs/auth/auth_bloc.dart';
 import '../../../logic/blocs/notification/notification_bloc.dart';
 import '../../../logic/blocs/notification/notification_state.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/constants/colors.dart';
 import '../../../core/utils/avatar_image_helper.dart';
 
 class HomeTopBar extends StatelessWidget {
   final VoidCallback onProfileTap;
 
-  const HomeTopBar({
-    super.key,
-    required this.onProfileTap,
-  });
+  const HomeTopBar({super.key, required this.onProfileTap});
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -103,7 +99,7 @@ class HomeTopBar extends StatelessWidget {
                           width: 10,
                           height: 10,
                           decoration: BoxDecoration(
-                            color: AppColors.deepBlue,
+                            color: Theme.of(context).colorScheme.primary,
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: Theme.of(context).colorScheme.surface,
