@@ -200,6 +200,8 @@ class MatchController extends Controller
             return response()->json(['message' => 'Unauthorized to delete this match.'], 403);
         }
 
+        $participantIds = $match->participants()->pluck('users.id')->toArray();
+
         \Illuminate\Support\Facades\DB::transaction(function () use ($match) {
             $match->participants()->detach();
             $match->delete();
@@ -208,6 +210,10 @@ class MatchController extends Controller
             Activity::where('meta->match_id', $match->id)->delete();
             Activity::where('message', 'like', "%{$match->title}%")->delete();
         });
+
+        foreach ($participantIds as $pId) {
+            \Illuminate\Support\Facades\Cache::forget("user_stats_{$pId}");
+        }
 
         return response()->noContent();
     }
@@ -306,6 +312,10 @@ class MatchController extends Controller
             }
         });
 
+        foreach ($participantIds as $pId) {
+            \Illuminate\Support\Facades\Cache::forget("user_stats_{$pId}");
+        }
+
         return response()->json([
             'message' => 'Match results recorded successfully!',
             'match' => $match->fresh(['user', 'participants'])
@@ -345,6 +355,7 @@ class MatchController extends Controller
         ]);
 
         $savedRatings = [];
+        $user->clearStatsCache();
 
         foreach ($request->ratings as $entry) {
             $ratedUserId = (int) $entry['user_id'];
@@ -366,6 +377,7 @@ class MatchController extends Controller
             );
 
             $savedRatings[] = $rating;
+            \Illuminate\Support\Facades\Cache::forget("user_stats_{$ratedUserId}");
         }
 
         return response()->json([

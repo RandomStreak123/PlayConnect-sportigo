@@ -26,6 +26,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   String? _selectedGender;
   String? _selectedSkillTier;
   bool _isSaving = false;
+  String? _emailError;
 
   final List<Map<String, String>> _sports = const [
     {'name': 'Football', 'emoji': '⚽'},
@@ -41,6 +42,13 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.user.name);
     _emailController = TextEditingController(text: widget.user.email ?? '');
+    _emailController.addListener(() {
+      if (_emailError != null) {
+        setState(() {
+          _emailError = null;
+        });
+      }
+    });
     _bioController = TextEditingController(text: widget.user.bio ?? '');
     _selectedSport = widget.user.primarySport;
     
@@ -90,6 +98,11 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     final focusedBorderStyle = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.5),
+    );
+
+    final errorBorderStyle = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
     );
 
     return Dialog(
@@ -153,9 +166,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                       controller: _emailController,
                       style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
                       decoration: InputDecoration(
-                        border: borderStyle,
-                        enabledBorder: borderStyle,
-                        focusedBorder: focusedBorderStyle,
+                        border: _emailError != null ? errorBorderStyle : borderStyle,
+                        enabledBorder: _emailError != null ? errorBorderStyle : borderStyle,
+                        focusedBorder: _emailError != null ? errorBorderStyle : focusedBorderStyle,
                         filled: true,
                         fillColor: textFieldFillColor,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -163,6 +176,25 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                       keyboardType: TextInputType.emailAddress,
                       enabled: !_isSaving,
                     ),
+                    if (_emailError != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Text('⚠️', style: TextStyle(fontSize: 13)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _emailError!,
+                              style: const TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Text('Bio (Tell others about yourself)', style: labelStyle),
                     const SizedBox(height: 8),
@@ -324,13 +356,26 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                                         _isSaving = false;
                                       });
                                       if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Failed to update profile: $e'),
-                                            backgroundColor: Theme.of(context).colorScheme.error,
-                                            behavior: SnackBarBehavior.floating,
-                                          ),
-                                        );
+                                        final errorMsg = e.toString().replaceAll('Exception: ', '');
+                                        if (errorMsg.toLowerCase().contains('email')) {
+                                          setState(() {
+                                            _emailError = errorMsg;
+                                          });
+                                        } else {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text('Update Failed'),
+                                              content: Text(errorMsg),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(context),
+                                                  child: const Text('OK'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }
                                       }
                                     }
                                   },

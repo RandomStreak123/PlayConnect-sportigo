@@ -74,12 +74,16 @@ class User extends Authenticatable
 
     public function getFollowersCountAttribute()
     {
-        return $this->followers()->count();
+        return \Illuminate\Support\Facades\Cache::remember("user_followers_count_{$this->id}", 3600, function () {
+            return $this->followers()->count();
+        });
     }
 
     public function getFollowingCountAttribute()
     {
-        return $this->following()->count();
+        return \Illuminate\Support\Facades\Cache::remember("user_following_count_{$this->id}", 3600, function () {
+            return $this->following()->count();
+        });
     }
 
     public function getIsFollowedAttribute()
@@ -120,131 +124,131 @@ class User extends Authenticatable
         return null;
     }
 
+    public function clearStatsCache(): void
+    {
+        \Illuminate\Support\Facades\Cache::forget("user_stats_{$this->id}");
+    }
+
     public function getStatsAttribute()
     {
         $uid = $this->id;
 
-        $joinedMatches = $this->relationLoaded('joinedMatches')
-            ? $this->joinedMatches
-            : $this->joinedMatches()->with(['participants', 'user'])->get();
+        return \Illuminate\Support\Facades\Cache::remember("user_stats_{$uid}", 3600, function () use ($uid) {
+            $joinedMatches = $this->relationLoaded('joinedMatches')
+                ? $this->joinedMatches
+                : $this->joinedMatches()->select('sport_matches.id', 'creator_id', 'date_time', 'sport_type', 'title', 'location')->get();
 
-        if ($joinedMatches->isNotEmpty()) {
-            if (!$joinedMatches->first()->relationLoaded('participants') || !$joinedMatches->first()->relationLoaded('user')) {
-                $joinedMatches->load(['participants', 'user']);
+            $hostedMatches = $this->relationLoaded('hostedMatches')
+                ? $this->hostedMatches
+                : \App\Models\SportsMatch::select('id', 'creator_id', 'date_time', 'sport_type', 'title', 'location')->where('creator_id', $uid)->get();
+
+            $allPlayedMatches = $hostedMatches->merge($joinedMatches)
+                ->unique('id');
+
+            // Get pivot results for this user in a single fast query to avoid loading participants N+1
+            $resultsMap = \Illuminate\Support\Facades\DB::table('sport_match_user')
+                ->where('user_id', $uid)
+                ->pluck('result', 'sport_match_id')
+                ->toArray();
+
+            $xp = 0;
+            $wins = 0;
+            $recordedMatchCount = 0;
+            $createdCount = 0;
+
+            foreach ($allPlayedMatches as $match) {
+                $isCreator = ($match->creator_id ?? $match->user_id) == $uid;
+                
+                if ($isCreator) {
+                    $xp += 20;
+                    $createdCount++;
+                } else {
+                    $xp += 5;
+                }
+
+                $xp += 15;
+
+                $result = $resultsMap[$match->id] ?? null;
+
+                if ($result === 'win') {
+                    $xp += 25;
+                    $wins++;
+                    $recordedMatchCount++;
+                } elseif ($result === 'loss' || $result === 'draw') {
+                    $recordedMatchCount++;
+                }
             }
-        }
 
-        $hostedMatches = $this->relationLoaded('hostedMatches')
-            ? $this->hostedMatches
-            : \App\Models\SportsMatch::with(['participants', 'user'])->where('creator_id', $uid)->get();
+            $totalRatingsGiven = \App\Models\PlayerRating::where('rater_id', $uid)->count();
+            $xp += $totalRatingsGiven * 10;
 
-        if ($hostedMatches->isNotEmpty()) {
-            if (!$hostedMatches->first()->relationLoaded('participants') || !$hostedMatches->first()->relationLoaded('user')) {
-                $hostedMatches->load(['participants', 'user']);
-            }
-        }
-        
-        $allPlayedMatches = $hostedMatches->merge($joinedMatches)
-            ->unique('id');
+            $nextLevelXp = 1000;
+            $level = floor($xp / $nextLevelXp) + 1;
+            $currentLevelXp = $xp % $nextLevelXp;
+            $progressPct = $nextLevelXp > 0 ? round(($currentLevelXp / $nextLevelXp) * 100) : 0;
 
-        $xp = 0;
-        $wins = 0;
-        $recordedMatchCount = 0;
-        $createdCount = 0;
+            $winRate = $recordedMatchCount > 0 ? round(($wins / $recordedMatchCount) * 100) : 0;
 
-        foreach ($allPlayedMatches as $match) {
-            $isCreator = ($match->creator_id ?? $match->user_id) == $uid;
-            
-            if ($isCreator) {
-                $xp += 20;
-                $createdCount++;
-            } else {
-                $xp += 5;
-            }
-
-            $xp += 15;
-
-            $participant = $match->participants->where('id', $uid)->first();
-            $result = $participant ? ($participant->pivot->result ?? null) : null;
-
-            if ($result === 'win') {
-                $xp += 25;
-                $wins++;
-                $recordedMatchCount++;
-            } elseif ($result === 'loss' || $result === 'draw') {
-                $recordedMatchCount++;
-            }
-        }
-
-        $totalRatingsGiven = \App\Models\PlayerRating::where('rater_id', $uid)->count();
-        $xp += $totalRatingsGiven * 10;
-
-        $nextLevelXp = 1000;
-        $level = floor($xp / $nextLevelXp) + 1;
-        $currentLevelXp = $xp % $nextLevelXp;
-        $progressPct = $nextLevelXp > 0 ? round(($currentLevelXp / $nextLevelXp) * 100) : 0;
-
-        $winRate = $recordedMatchCount > 0 ? round(($wins / $recordedMatchCount) * 100) : 0;
-
-        $streak = 0;
-        $playedDates = $allPlayedMatches->map(function($m) {
-            $time = $m->date_time ?? $m->date;
-            return $time ? (new \DateTime($time))->format('Y-m-d') : null;
-        })->filter(function($date) {
-            return $date !== null && $date <= now()->format('Y-m-d');
-        })->unique()->values()->all();
+            $streak = 0;
+            $playedDates = $allPlayedMatches->map(function($m) {
+                $time = $m->date_time ?? $m->date;
+                return $time ? (new \DateTime($time))->format('Y-m-d') : null;
+            })->filter(function($date) {
+                return $date !== null && $date <= now()->format('Y-m-d');
+            })->unique()->values()->all();
 
 
-        if (count($playedDates) > 0) {
-            rsort($playedDates);
-            $nowDate = now()->format('Y-m-d');
-            $yesterdayDate = now()->subDay()->format('Y-m-d');
-            if ($playedDates[0] === $nowDate || $playedDates[0] === $yesterdayDate) {
-                $streak = 1;
-                for ($i = 0; $i < count($playedDates) - 1; $i++) {
-                    $d1 = new \DateTime($playedDates[$i]);
-                    $d2 = new \DateTime($playedDates[$i + 1]);
-                    $diff = $d1->diff($d2)->days;
-                    if ($diff === 1) {
-                        $streak++;
-                    } elseif ($diff > 1) {
-                        break;
+            if (count($playedDates) > 0) {
+                rsort($playedDates);
+                $nowDate = now()->format('Y-m-d');
+                $yesterdayDate = now()->subDay()->format('Y-m-d');
+                if ($playedDates[0] === $nowDate || $playedDates[0] === $yesterdayDate) {
+                    $streak = 1;
+                    for ($i = 0; $i < count($playedDates) - 1; $i++) {
+                        $d1 = new \DateTime($playedDates[$i]);
+                        $d2 = new \DateTime($playedDates[$i + 1]);
+                        $diff = $d1->diff($d2)->days;
+                        if ($diff === 1) {
+                            $streak++;
+                        } elseif ($diff > 1) {
+                            break;
+                        }
                     }
                 }
             }
-        }
 
-        $playStyle = 'All-Rounder';
-        $totalGames = $allPlayedMatches->count();
-        if ($totalGames > 0) {
-            $createRatio = $createdCount / $totalGames;
-            if ($createRatio >= 0.4) {
-                $playStyle = 'Organizer';
-            } elseif ($winRate >= 70) {
-                $playStyle = 'Attacker';
-            } elseif ($winRate < 50 && $recordedMatchCount >= 5) {
-                $playStyle = 'Defender';
+            $playStyle = 'All-Rounder';
+            $totalGames = $allPlayedMatches->count();
+            if ($totalGames > 0) {
+                $createRatio = $createdCount / $totalGames;
+                if ($createRatio >= 0.4) {
+                    $playStyle = 'Organizer';
+                } elseif ($winRate >= 70) {
+                    $playStyle = 'Attacker';
+                } elseif ($winRate < 50 && $recordedMatchCount >= 5) {
+                    $playStyle = 'Defender';
+                }
             }
-        }
 
-        $rankNum = max(1, 1000 - floor($xp / 5));
+            $rankNum = max(1, 1000 - floor($xp / 5));
 
-        $avgRating = \App\Models\PlayerRating::where('rated_id', $uid)->avg('rating');
-        $averageRating = $avgRating !== null ? round((float) $avgRating, 1) : 0.0;
+            $avgRating = \App\Models\PlayerRating::where('rated_id', $uid)->avg('rating');
+            $averageRating = $avgRating !== null ? round((float) $avgRating, 1) : 0.0;
 
-        return [
-            'xp' => (int) $xp,
-            'level' => (int) $level,
-            'currentLevelXp' => (int) $currentLevelXp,
-            'nextLevelXp' => (int) $nextLevelXp,
-            'progressPct' => (int) $progressPct,
-            'winRate' => (int) $winRate,
-            'streak' => (int) $streak,
-            'playStyle' => $playStyle,
-            'globalRank' => "#{$rankNum} Kochi",
-            'averageRating' => (float) $averageRating,
-            'totalGames' => (int) $totalGames
-        ];
+            return [
+                'xp' => (int) $xp,
+                'level' => (int) $level,
+                'currentLevelXp' => (int) $currentLevelXp,
+                'nextLevelXp' => (int) $nextLevelXp,
+                'progressPct' => (int) $progressPct,
+                'winRate' => (int) $winRate,
+                'streak' => (int) $streak,
+                'playStyle' => $playStyle,
+                'globalRank' => "#{$rankNum} Kochi",
+                'averageRating' => (float) $averageRating,
+                'totalGames' => (int) $totalGames
+            ];
+        });
     }
 
     protected static $dbColumns = null;

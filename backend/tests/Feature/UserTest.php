@@ -113,7 +113,7 @@ class UserTest extends TestCase
 
         $response->assertStatus(200);
 
-        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\WelcomeMail::class, function ($mail) {
+        \Illuminate\Support\Facades\Mail::assertQueued(\App\Mail\WelcomeMail::class, function ($mail) {
             return $mail->hasTo('welcome@example.com');
         });
     }
@@ -132,6 +132,6 @@ class UserTest extends TestCase
 
         $response->assertStatus(200);
 
-        \Illuminate\Support\Facades\Mail::assertNotSent(\App\Mail\WelcomeMail::class);
+        \Illuminate\Support\Facades\Mail::assertNotQueued(\App\Mail\WelcomeMail::class);
     }
 }

@@ -53,16 +53,17 @@ class MatchSlotService
             $match->participants()->attach($user->id);
             $match->syncAvailableSlots();
 
+            $user->clearStatsCache();
+
             try {
                 ActivityService::create(
                     $user->id,
                     'match_created',
-                    "{$user->name} created a {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
+                    "{$user->name} created a {$match->sport_type} match: \"{$match->title}\"",
                     [
                         'match_id' => $match->id,
                         'sport_type' => $match->sport_type,
                         'title' => $match->title,
-                        'location' => $match->location,
                     ]
                 );
             } catch (\Exception $e) {
@@ -109,6 +110,8 @@ class MatchSlotService
             $match->participants()->attach($user->id);
             $match->syncAvailableSlots();
 
+            $user->clearStatsCache();
+
             // Create notification for match creator if they are not the joining user
             if ((int) $match->creator_id !== (int) $user->id) {
                 try {
@@ -132,12 +135,11 @@ class MatchSlotService
                 ActivityService::create(
                     $user->id,
                     'match_joined',
-                    "{$user->name} joined the {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
+                    "{$user->name} joined the {$match->sport_type} match: \"{$match->title}\"",
                     [
                         'match_id' => $match->id,
                         'sport_type' => $match->sport_type,
                         'title' => $match->title,
-                        'location' => $match->location,
                     ]
                 );
             } catch (\Exception $e) {
@@ -169,6 +171,8 @@ class MatchSlotService
             $match->participants()->detach($user->id);
             $match->syncAvailableSlots();
 
+            $user->clearStatsCache();
+
             // Create notification for match creator if they are not the leaving user
             if ((int) $match->creator_id !== (int) $user->id) {
                 try {
@@ -192,12 +196,11 @@ class MatchSlotService
                 ActivityService::create(
                     $user->id,
                     'match_left',
-                    "{$user->name} left the {$match->sport_type} match: \"{$match->title}\" at {$match->location}",
+                    "{$user->name} left the {$match->sport_type} match: \"{$match->title}\"",
                     [
                         'match_id' => $match->id,
                         'sport_type' => $match->sport_type,
                         'title' => $match->title,
-                        'location' => $match->location,
                     ]
                 );
             } catch (\Exception $e) {

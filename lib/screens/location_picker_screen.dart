@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
@@ -10,6 +9,7 @@ import 'location_picker/widgets/location_address_card.dart';
 import 'location_picker/widgets/location_map_container.dart';
 import '../core/constants/api_constants.dart';
 import '../services/mappls_service.dart';
+import '../services/google_maps_service.dart';
 
 class LocationResult {
   final String address;
@@ -32,7 +32,7 @@ class LocationPickerScreen extends StatefulWidget {
 }
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  final MapController _mapController = MapController();
+  final UnifiedMapController _mapController = UnifiedMapController();
   final TextEditingController _searchController = TextEditingController();
 
   LatLng _currentCenter = const LatLng(8.5668163, 76.8711487); // Default to pincode 695582, Kazhakkoottam, Trivandrum
@@ -134,7 +134,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       setState(() {
         _currentCenter = newCenter;
       });
-      _mapController.move(newCenter, 15.0);
+      _mapController.move(newCenter.latitude, newCenter.longitude, 15.0);
       await _reverseGeocode(newCenter);
     } catch (e) {
       if (mounted) {
@@ -167,6 +167,21 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     setState(() {
       _isGeocoding = true;
     });
+
+    if (ApiConstants.isGoogleMapsConfigured) {
+      try {
+        final address = await GoogleMapsService.reverseGeocode(position.latitude, position.longitude);
+        if (address != null && address.isNotEmpty) {
+          setState(() {
+            _address = _sanitizeAddress(address);
+            _isGeocoding = false;
+          });
+          return;
+        }
+      } catch (e) {
+        debugPrint('Google Reverse Geocoding failed: $e');
+      }
+    }
 
     if (ApiConstants.isMapplsConfigured) {
       try {
@@ -212,11 +227,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     });
   }
 
-  void _onMapPositionChanged(MapCamera camera, bool hasGesture) {
+  void _onPositionChanged(double lat, double lng, bool hasGesture) {
     if (!hasGesture) return;
 
     setState(() {
-      _currentCenter = camera.center;
+      _currentCenter = LatLng(lat, lng);
       _address = 'Locating...';
       _isGeocoding = true;
       _searchResults = [];
@@ -235,20 +250,46 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _customAddressQuery = null;
       _searchResults = [];
     });
-    _mapController.move(point, 15.0);
+    _mapController.move(point.latitude, point.longitude, 15.0);
     _reverseGeocode(point, fallbackAddress: address);
   }
 
-  void _onSuggestionTapped(int index) {
+  Future<void> _onSuggestionTapped(int index) async {
     final result = _searchResults[index];
+    final displayName = (result['display_name'] ?? _searchController.text.trim()) as String;
+    FocusScope.of(context).unfocus();
+
+    if (result.containsKey('place_id') && result['place_id'] != null && (!result.containsKey('lat') || result['lat'] == null)) {
+      setState(() {
+        _isGeocoding = true;
+        _address = 'Fetching details...';
+      });
+      final details = await GoogleMapsService.getPlaceDetails(result['place_id'] as String);
+      if (details != null) {
+        final double lat = details['lat'] as double;
+        final double lon = details['lon'] as double;
+        final String address = details['address'] as String;
+        _onSearchResultSelected(LatLng(lat, lon), address);
+      } else {
+        setState(() {
+          _isGeocoding = false;
+          _address = displayName;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not fetch location details.')),
+          );
+        }
+      }
+      return;
+    }
+
     final lat = result['lat'] is double
         ? result['lat'] as double
         : double.parse(result['lat'].toString());
     final lon = result['lon'] is double
         ? result['lon'] as double
         : double.parse(result['lon'].toString());
-    final displayName = (result['display_name'] ?? _searchController.text.trim()) as String;
-    FocusScope.of(context).unfocus();
     _onSearchResultSelected(LatLng(lat, lon), displayName);
   }
 
@@ -261,6 +302,25 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _customAddressQuery = null;
       _searchResults = [];
     });
+
+    if (ApiConstants.isGoogleMapsConfigured) {
+      try {
+        final results = await GoogleMapsService.autoSuggest(
+          query,
+          latitude: _currentCenter.latitude,
+          longitude: _currentCenter.longitude,
+        );
+        if (results.isNotEmpty) {
+          setState(() {
+            _searchResults = results;
+            _isSearching = false;
+          });
+          return;
+        }
+      } catch (e) {
+        debugPrint('Google Autocomplete failed: $e');
+      }
+    }
 
     if (ApiConstants.isMapplsConfigured) {
       try {
@@ -356,15 +416,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         children: [
           LocationMapContainer(
             mapController: _mapController,
-            currentCenter: _currentCenter,
-            onPositionChanged: _onMapPositionChanged,
-            onTap: (tapPosition, point) {
+            initialLatitude: _currentCenter.latitude,
+            initialLongitude: _currentCenter.longitude,
+            onPositionChanged: _onPositionChanged,
+            onTap: (lat, lng) {
+              final point = LatLng(lat, lng);
               setState(() {
                 _currentCenter = point;
                 _isGeocoding = true;
                 _address = 'Locating...';
               });
-              _mapController.move(point, _mapController.camera.zoom);
+              _mapController.move(lat, lng, 15.0);
               _reverseGeocode(point);
             },
           ),

@@ -8,7 +8,7 @@ use App\Http\Controllers\MatchController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\UserController;
 
-Route::middleware('throttle:5,1')->group(function () {
+Route::middleware('throttle:auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/auth/google', [AuthController::class, 'googleLogin']);

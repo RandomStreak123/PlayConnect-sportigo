@@ -66,17 +66,22 @@ class ProfileController extends Controller
         $user = auth()->user();
         $oldEmail = $user->email;
 
-        $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
-            'phone_number' => 'nullable|string|max:20|unique:users,phone_number,' . $user->id,
-            'email' => 'nullable|string|email|max:255|unique:users,email,' . $user->id,
-            'hide_phone' => 'nullable|boolean',
-            'theme_preference' => 'nullable|string|in:system,activeSteelBlue,elegantLavender',
-            'bio' => 'nullable|string|max:1000',
-            'primary_sport' => 'nullable|string|max:255',
-            'skill_tier' => 'nullable|string|max:255',
-            'gender' => 'nullable|string|in:male,female,other',
-        ]);
+        try {
+            $validated = $request->validate([
+                'name' => 'nullable|string|max:255',
+                'phone_number' => 'nullable|string|max:20|unique:users,phone_number,' . $user->id,
+                'email' => 'nullable|string|email|max:255|unique:users,email,' . $user->id,
+                'hide_phone' => 'nullable|boolean',
+                'theme_preference' => 'nullable|string|in:system,activeSteelBlue,elegantLavender',
+                'bio' => 'nullable|string|max:1000',
+                'primary_sport' => 'nullable|string|max:255',
+                'skill_tier' => 'nullable|string|max:255',
+                'gender' => 'nullable|string|in:male,female,other',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\Log::info('Profile validation failed. Input: ' . json_encode($request->all()) . ' Errors: ' . json_encode($e->errors()));
+            throw $e;
+        }
 
         if (array_key_exists('name', $validated)) {
             $user->name = $validated['name'];

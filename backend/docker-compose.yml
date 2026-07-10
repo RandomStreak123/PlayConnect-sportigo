@@ -30,6 +30,20 @@ services:
     networks:
       - sportigo-network
 
+  queue-worker:
+    image: sportigo-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    command: php artisan queue:work
+    depends_on:
+      - app
+      - db
+      - redis
+    networks:
+      - sportigo-network
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped

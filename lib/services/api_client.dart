@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -73,65 +74,103 @@ class ApiClient {
     return fallback;
   }
 
+  Future<http.Response> _wrapRequest(Future<http.Response> Function() requestFn) async {
+    try {
+      return await requestFn().timeout(const Duration(seconds: 15));
+    } on TimeoutException catch (_) {
+      throw ApiException(
+        message: 'Connection timed out. Please try again.',
+        statusCode: 408,
+      );
+    } catch (e) {
+      if (e.toString().contains('SocketException') || e.toString().contains('Connection failed')) {
+        throw ApiException(
+          message: 'Network error. Please check your internet connection.',
+          statusCode: 503,
+        );
+      }
+      rethrow;
+    }
+  }
+
   Future<dynamic> get(String path, {Map<String, String>? queryParams}) async {
     var uri = Uri.parse('$baseUrl$path');
     if (queryParams != null && queryParams.isNotEmpty) {
       uri = uri.replace(queryParameters: queryParams);
     }
-    final response = await _client.get(
+    final headers = await _headers();
+    final response = await _wrapRequest(() => _client.get(
       uri,
-      headers: await _headers(),
-    );
+      headers: headers,
+    ));
     return _handleResponse(response, 'Failed request GET $path');
   }
 
   Future<dynamic> post(String path, {dynamic body}) async {
-    final response = await _client.post(
+    final headers = await _headers();
+    final response = await _wrapRequest(() => _client.post(
       Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
+      headers: headers,
       body: body != null ? jsonEncode(body) : null,
-    );
+    ));
     return _handleResponse(response, 'Failed request POST $path');
   }
 
   Future<dynamic> put(String path, {dynamic body}) async {
-    final response = await _client.put(
+    final headers = await _headers();
+    final response = await _wrapRequest(() => _client.put(
       Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
+      headers: headers,
       body: body != null ? jsonEncode(body) : null,
-    );
+    ));
     return _handleResponse(response, 'Failed request PUT $path');
   }
 
   Future<dynamic> delete(String path) async {
-    final response = await _client.delete(
+    final headers = await _headers();
+    final response = await _wrapRequest(() => _client.delete(
       Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
-    );
+      headers: headers,
+    ));
     return _handleResponse(response, 'Failed request DELETE $path');
   }
 
   Future<dynamic> postMultipart(String path, {required Map<String, String> files, Map<String, String>? fields}) async {
-    final uri = Uri.parse('$baseUrl$path');
-    final request = http.MultipartRequest('POST', uri);
-    
-    final token = await _getOrLoadToken();
-    request.headers.addAll({
-      'Accept': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    });
+    try {
+      final uri = Uri.parse('$baseUrl$path');
+      final request = http.MultipartRequest('POST', uri);
+      
+      final token = await _getOrLoadToken();
+      request.headers.addAll({
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      });
 
-    if (fields != null) {
-      request.fields.addAll(fields);
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+
+      for (final entry in files.entries) {
+        request.files.add(await http.MultipartFile.fromPath(entry.key, entry.value));
+      }
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
+      final response = await http.Response.fromStream(streamedResponse).timeout(const Duration(seconds: 15));
+      return _handleResponse(response, 'Failed request POST Multipart $path');
+    } on TimeoutException catch (_) {
+      throw ApiException(
+        message: 'Connection timed out. Please try again.',
+        statusCode: 408,
+      );
+    } catch (e) {
+      if (e.toString().contains('SocketException') || e.toString().contains('Connection failed')) {
+        throw ApiException(
+          message: 'Network error. Please check your internet connection.',
+          statusCode: 503,
+        );
+      }
+      rethrow;
     }
-
-    for (final entry in files.entries) {
-      request.files.add(await http.MultipartFile.fromPath(entry.key, entry.value));
-    }
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-    return _handleResponse(response, 'Failed request POST Multipart $path');
   }
 
   dynamic _handleResponse(http.Response response, String fallback) {

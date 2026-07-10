@@ -12,6 +12,13 @@ class ApiConstants {
 
   static bool get isMapplsConfigured => mapplsApiKey.isNotEmpty;
 
+  static const String googleMapsApiKey = String.fromEnvironment(
+    'GOOGLE_MAPS_API_KEY',
+    defaultValue: '',
+  );
+
+  static bool get isGoogleMapsConfigured => googleMapsApiKey.isNotEmpty;
+
   /// Base URL for storage assets (without /api suffix).
   static String get assetBaseUrl {
     if (baseUrl.endsWith('/api')) {

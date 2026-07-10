@@ -99,6 +99,10 @@ class UserController extends Controller
         if (!$alreadyFollowing) {
             $currentUser->following()->syncWithoutDetaching($targetUser->id);
 
+            // Invalidate cache
+            \Illuminate\Support\Facades\Cache::forget("user_followers_count_{$targetUser->id}");
+            \Illuminate\Support\Facades\Cache::forget("user_following_count_{$currentUser->id}");
+
             // Create notification for B (the target user)
             \App\Models\Notification::create([
                 'user_id' => $targetUser->id,
@@ -120,7 +124,7 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Followed successfully',
-            'followersCount' => $targetUser->followers()->count(),
+            'followersCount' => $targetUser->followersCount,
             'isFollowed' => true
         ]);
     }
@@ -132,10 +136,14 @@ class UserController extends Controller
 
         $currentUser->following()->detach($targetUser->id);
 
+        // Invalidate cache
+        \Illuminate\Support\Facades\Cache::forget("user_followers_count_{$targetUser->id}");
+        \Illuminate\Support\Facades\Cache::forget("user_following_count_{$currentUser->id}");
+
         return response()->json([
             'success' => true,
             'message' => 'Unfollowed successfully',
-            'followersCount' => $targetUser->followers()->count(),
+            'followersCount' => $targetUser->followersCount,
             'isFollowed' => false
         ]);
     }

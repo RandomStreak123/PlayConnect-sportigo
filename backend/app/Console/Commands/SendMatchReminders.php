@@ -53,13 +53,12 @@ class SendMatchReminders extends Command
                         'user_id' => $user->id,
                         'type' => 'match_reminder',
                         'title' => 'Upcoming Match Alert',
-                        'message' => "You have an upcoming match: {$match->sport_type} match \"{$match->title}\" at {$match->location} scheduled for {$formattedTime}.",
+                        'message' => "You have an upcoming match: {$match->sport_type} match \"{$match->title}\" scheduled for {$formattedTime}.",
                         'is_read' => false,
                         'meta' => [
                             'match_id' => $match->id,
                             'sport_type' => $match->sport_type,
                             'title' => $match->title,
-                            'location' => $match->location,
                         ],
                     ]);
                     $sentCount++;
