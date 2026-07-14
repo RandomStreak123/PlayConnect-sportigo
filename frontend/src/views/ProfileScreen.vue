@@ -1129,9 +1129,25 @@ const avatarBorderClass = computed(() => {
   const lvl = profileStats.value.level || 1
   if (lvl >= 25) return 'border-legend'
   if (lvl >= 10) return 'border-gold-elite'
-  if (lvl >= 5) return 'border-gold'
-  if (lvl >= 2) return 'border-silver'
-  return 'border-bronze'
+  if (lvl >= 5) return 'border-silver'
+  if (lvl >= 2) return 'border-bronze'
+  return ''
+})
+
+const avatarBorderStyle = computed(() => {
+  const lvl = profileStats.value.level || 1
+  if (lvl < 2) {
+    const gradient = getSportGradient(currentUser.value.primary_sport || selectedSport.value)
+    const color = getSportColor(currentUser.value.primary_sport || selectedSport.value)
+    return {
+      border: '4px solid transparent',
+      backgroundImage: `linear-gradient(#fff, #fff), ${gradient}`,
+      backgroundOrigin: 'border-box',
+      backgroundClip: 'padding-box, border-box',
+      boxShadow: `0 0 12px ${color}40`
+    }
+  }
+  return {}
 })
 
 // Streaks computed status
@@ -1184,7 +1200,7 @@ const weekDaysStatus = computed(() => {
     <!-- Profile Info Card -->
     <div class="profile-card">
       <div class="avatar-wrap">
-        <img :src="avatarUrl" class="card-avatar" :class="avatarBorderClass" @error="(e) => e.target.src = '/assets/images/players/download.jpg'" />
+        <img :src="avatarUrl" class="card-avatar" :class="avatarBorderClass" :style="avatarBorderStyle" @error="(e) => e.target.src = '/assets/images/players/download.jpg'" />
         <button v-if="isCurrentUser" class="camera-btn" @click="fileInput.click()" :disabled="isUploading">
           <span v-if="isUploading" class="loader" style="width: 16px; height: 16px; border-color: #ffffff; border-bottom-color: transparent;"></span>
           <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">

@@ -13,6 +13,11 @@ const state = reactive({
   isLoading: false
 })
 
+// Auto-theme to elegantLavender on load if female
+if (state.currentUser && state.currentUser.gender === 'female') {
+  state.themePreference = 'elegantLavender'
+}
+
 // Dynamic theme checks matching ThemeManager class logic
 const isWomenMode = computed(() => {
   if (state.currentUser?.gender === 'male') return false
@@ -86,6 +91,9 @@ const init = async () => {
     if (userData) {
       state.currentUser = userData
       sessionStorage.setItem('sportigo_user', JSON.stringify(userData))
+      if (userData.gender === 'female') {
+        setThemePreference('elegantLavender')
+      }
     }
     if (matchesData) {
       const allMatches = Array.isArray(matchesData) ? matchesData : (matchesData.data || [])
@@ -187,6 +195,9 @@ const login = async (username, password) => {
     state.currentUser = data.user
     sessionStorage.setItem('sportigo_user', JSON.stringify(data.user))
     sessionStorage.setItem('sportigo_token', data.access_token)
+    if (data.user && data.user.gender === 'female') {
+      setThemePreference('elegantLavender')
+    }
     await init()
     return true
   }
@@ -206,6 +217,9 @@ const loginWithGoogle = async (credential) => {
     state.currentUser = data.user
     sessionStorage.setItem('sportigo_user', JSON.stringify(data.user))
     sessionStorage.setItem('sportigo_token', data.access_token)
+    if (data.user && data.user.gender === 'female') {
+      setThemePreference('elegantLavender')
+    }
     await init()
     return true
   }
@@ -289,6 +303,9 @@ const updateProfile = async (name, gender, avatar, bio, primarySport, skillTier,
   const data = await res.json()
   state.currentUser = data
   sessionStorage.setItem('sportigo_user', JSON.stringify(data))
+  if (data && data.gender === 'female') {
+    setThemePreference('elegantLavender')
+  }
   await init()
   return true
 }

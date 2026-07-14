@@ -33,12 +33,14 @@ class NotificationController extends Controller
         // 3. Synthesize upcoming match notifications
         $syntheticNotifications = $upcomingMatches->map(function ($match) {
             $formattedTime = \Carbon\Carbon::parse($match->date_time)->format('g:i A');
+            $locationParts = explode(',', $match->location);
+            $turfName = trim($locationParts[0]);
             return [
                 'id' => 'upcoming-' . $match->id, // synthetic string ID
                 'user_id' => $match->creator_id,
                 'type' => 'upcoming_match',
                 'title' => 'Upcoming Match Alert',
-                'message' => "You have an upcoming match: {$match->sport_type} match \"{$match->title}\" at {$match->location} scheduled for {$formattedTime}.",
+                'message' => "You have an upcoming match: {$match->sport_type} match \"{$match->title}\" at {$turfName} scheduled for {$formattedTime}.",
                 'is_read' => false,
                 'meta' => [
                     'match_id' => $match->id,
