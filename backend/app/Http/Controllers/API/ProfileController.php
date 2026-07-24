@@ -4,13 +4,13 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use App\Models\User;
 
 class ProfileController extends Controller
 {
-    public function uploadProfilePhoto(Request $request, \App\Services\SupabaseStorageService $supabaseService)
+    public function uploadProfilePhoto(Request $request)
     {
         $request->validate([
             'profile_photo' => 'required|image|mimes:jpg,jpeg,png|max:2048'
@@ -19,29 +19,18 @@ class ProfileController extends Controller
         /** @var User $user */
         $user = auth()->user();
 
-        // Try to upload to Supabase Storage
-        $publicUrl = $supabaseService->upload($request->file('profile_photo'));
+        // 1. Delete the old photo from Cloudinary if it exists
+        if ($user->avatar) {
+            $this->deleteFromCloudinary($user->avatar);
+        }
 
-        if ($publicUrl) {
-            // Delete old profile photos from Supabase if they exist
-            if ($user->profile_photo && str_starts_with($user->profile_photo, 'http')) {
-                $supabaseService->delete($user->profile_photo);
-            }
-            if ($user->profile_picture && str_starts_with($user->profile_picture, 'http') && $user->profile_picture !== $user->profile_photo) {
-                $supabaseService->delete($user->profile_picture);
-            }
-
-            $path = $publicUrl;
-        } else {
-            // Fallback to local public disk storage
-            if ($user->profile_photo && !str_starts_with($user->profile_photo, 'http')) {
-                Storage::disk('public')->delete($user->profile_photo);
-            }
-            if ($user->profile_picture && !str_starts_with($user->profile_picture, 'assets/') && !str_starts_with($user->profile_picture, 'http') && $user->profile_picture !== $user->profile_photo) {
-                Storage::disk('public')->delete($user->profile_picture);
-            }
-
-            $path = $request->file('profile_photo')->store('profile-images', 'public');
+        // 2. Upload the new photo to Cloudinary
+        try {
+            $path = $this->uploadToCloudinary($request->file('profile_photo'));
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to upload photo to Cloudinary: ' . $e->getMessage()
+            ], 500);
         }
 
         // Sync both attributes, and also the avatar column if it exists in the database
@@ -56,9 +45,91 @@ class ProfileController extends Controller
 
         return response()->json([
             'message' => 'Profile photo updated',
-            'profile_photo_url' => str_starts_with($path, 'http') ? $path : asset('storage/' . $path),
+            'profile_photo_url' => $path,
             'user' => $user
         ]);
+    }
+
+    protected function uploadToCloudinary($file)
+    {
+        $timestamp = time();
+        $params = [
+            'folder' => 'avatars',
+            'timestamp' => $timestamp,
+        ];
+
+        ksort($params);
+
+        $parameterString = '';
+        foreach ($params as $key => $value) {
+            $parameterString .= "{$key}={$value}&";
+        }
+        $parameterString = rtrim($parameterString, '&');
+
+        $apiSecret = env('CLOUDINARY_API_SECRET');
+        $stringToSign = $parameterString . $apiSecret;
+        $signature = sha1($stringToSign);
+
+        $cloudName = env('CLOUDINARY_CLOUD_NAME');
+        $url = "https://api.cloudinary.com/v1_1/{$cloudName}/image/upload";
+
+        $response = Http::attach(
+            'file',
+            file_get_contents($file->getRealPath()),
+            $file->getClientOriginalName()
+        )->post($url, array_merge($params, [
+            'api_key' => env('CLOUDINARY_API_KEY'),
+            'signature' => $signature,
+        ]));
+
+        if ($response->successful()) {
+            return $response->json('secure_url');
+        }
+
+        throw new \Exception($response->json('error.message') ?? 'Unknown Cloudinary error');
+    }
+
+    protected function deleteFromCloudinary($url)
+    {
+        $publicId = $this->getPublicIdFromUrl($url);
+        if (!$publicId) return;
+
+        $timestamp = time();
+        $params = [
+            'public_id' => $publicId,
+            'timestamp' => $timestamp,
+        ];
+
+        ksort($params);
+
+        $parameterString = '';
+        foreach ($params as $key => $value) {
+            $parameterString .= "{$key}={$value}&";
+        }
+        $parameterString = rtrim($parameterString, '&');
+
+        $apiSecret = env('CLOUDINARY_API_SECRET');
+        $stringToSign = $parameterString . $apiSecret;
+        $signature = sha1($stringToSign);
+
+        $cloudName = env('CLOUDINARY_CLOUD_NAME');
+        $destroyUrl = "https://api.cloudinary.com/v1_1/{$cloudName}/image/destroy";
+
+        Http::post($destroyUrl, array_merge($params, [
+            'api_key' => env('CLOUDINARY_API_KEY'),
+            'signature' => $signature,
+        ]));
+    }
+
+    protected function getPublicIdFromUrl($url)
+    {
+        // Extract public_id from Cloudinary URL:
+        // https://res.cloudinary.com/{cloud_name}/image/upload/v{version}/{public_id}.{extension}
+        $pattern = '/image\/upload\/(?:v\d+\/)?([^\.]+)/';
+        if (preg_match($pattern, $url, $matches)) {
+            return $matches[1];
+        }
+        return null;
     }
 
     public function updateProfile(Request $request)

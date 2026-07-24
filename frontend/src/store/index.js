@@ -209,7 +209,7 @@ const loginWithGoogle = async (credential) => {
   const res = await fetch(`${API_URL}/auth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify({ credential })
+    body: JSON.stringify({ id_token: credential })
   })
 
   const data = await res.json().catch(() => null)
@@ -225,6 +225,28 @@ const loginWithGoogle = async (credential) => {
   }
 
   throw new Error(data?.message || 'Google login failed')
+}
+
+const uploadProfilePhoto = async (file) => {
+  const formData = new FormData()
+  formData.append('profile_photo', file)
+
+  const res = await fetch(`${API_URL}/profile/photo`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${sessionStorage.getItem('sportigo_token')}`,
+      'Accept': 'application/json'
+    },
+    body: formData
+  })
+
+  const data = await res.json().catch(() => null)
+  if (res.ok && data && data.user) {
+    state.currentUser = data.user
+    sessionStorage.setItem('sportigo_user', JSON.stringify(data.user))
+    return data
+  }
+  throw new Error(data?.message || 'Failed to upload profile photo')
 }
 
 const register = async (name, username, password, gender) => {
@@ -598,6 +620,7 @@ export const store = {
   init,
   login,
   loginWithGoogle,
+  uploadProfilePhoto,
   register,
   logout,
   updateProfile,

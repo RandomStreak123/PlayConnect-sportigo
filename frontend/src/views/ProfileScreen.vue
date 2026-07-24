@@ -2,7 +2,6 @@
 import { ref, computed, watch } from 'vue'
 import { store } from '../store'
 import { getPlayerAvatar, getSportIconUrl } from '../utils/sportImageHelper'
-import { supabase } from '../utils/supabase'
 import { t } from '../utils/i18n'
 
 const emit = defineEmits(['auth-logout', 'toast-message', 'view-profile'])
@@ -917,34 +916,12 @@ const onFileSelected = async (event) => {
   if (!files || files.length === 0) return
 
   const file = files[0]
-  const userId = currentUser.value.id || 'guest'
 
   try {
     isUploading.value = true
 
-    // 1. Prepare file path
-    const fileExt = file.name.split('.').pop()
-    const filePath = `${userId}/avatar-${Date.now()}.${fileExt}`
-
-    // 2. Upload file to avatar bucket
-    const { error: uploadError } = await supabase.storage
-      .from('avatar')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true
-      })
-
-    if (uploadError) throw uploadError
-
-    // 3. Get public URL
-    const { data: urlData } = supabase.storage
-      .from('avatar')
-      .getPublicUrl(filePath)
-
-    const publicUrl = urlData.publicUrl
-
-    // 4. Update Laravel backend database
-    await store.updateProfile(currentUser.value.name, currentUser.value.gender, publicUrl)
+    // Call Laravel backend API directly using our new store method
+    await store.uploadProfilePhoto(file)
 
     emit('toast-message', 'Profile picture updated successfully!')
   } catch (error) {
