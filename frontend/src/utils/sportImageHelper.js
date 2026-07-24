@@ -15,13 +15,6 @@ export const cleanAvatarUrl = (url) => {
   if (!url) return null
 
   // Clean up any double-prepended storage URLs
-  // E.g. https://playconnect-backend.ddev.site/storage/https://hbgfpnhcixrfgvzpjqvw.supabase.co/...
-  // or /storage/https://hbgfpnhcixrfgvzpjqvw.supabase.co/...
-  const match = url.match(/(https:\/\/hbgfpnhcixrfgvzpjqvw\.supabase\.co\/.*)/)
-  if (match) {
-    return match[1]
-  }
-
   const genericMatch = url.match(/https?:\/\/[^\/]+\/storage\/(https?:\/\/.*)/)
   if (genericMatch) {
     return genericMatch[1]
@@ -53,16 +46,16 @@ export const getPlayerAvatar = (profilePicture, gender) => {
   const cleaned = cleanAvatarUrl(profilePicture)
   
   if (cleaned) {
-    const isLocal = !cleaned.includes('supabase.co') &&
-                    (cleaned.includes('profile-images/') || 
-                     cleaned.includes('/storage/') || 
-                     cleaned.includes('localhost') || 
-                     cleaned.includes('127.0.0.1') || 
-                     cleaned.includes('ddev.site'))
-
-    if (!isLocal && cleaned.startsWith('http')) {
+    // If it is a global cloud URL (like Cloudinary), return it as-is
+    if (cleaned.startsWith('http') && !cleaned.includes('localhost') && !cleaned.includes('127.0.0.1') && !cleaned.includes('ddev.site')) {
       return cleaned
     }
+
+    const isLocal = cleaned.includes('profile-images/') || 
+                    cleaned.includes('/storage/') || 
+                    cleaned.includes('localhost') || 
+                    cleaned.includes('127.0.0.1') || 
+                    cleaned.includes('ddev.site')
 
     if (isLocal) {
       const match = cleaned.match(/(profile-images\/.*)/)
